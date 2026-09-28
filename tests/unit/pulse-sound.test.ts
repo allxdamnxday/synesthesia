@@ -361,20 +361,29 @@ describe('A5 Pulse: scheduling across windows', () => {
   it('a live edit reschedules from the edit without losing or doubling plucks', () => {
     const s = sampler('sweep');
     const offset = 5;
-    const live = lane(s);
-    live.schedule(0, 1.6, offset);
-    const cancelAt = 1.2345 + offset;
-    live.cancelFrom(cancelAt);
-    live.schedule(1.2345, 2.5, cancelAt);
-    const reference = lane(s);
-    reference.schedule(0, 2.5, offset);
-    const got = byTime(live.events);
-    const want = byTime(reference.events);
-    expect(got.map((e) => e.ctx)).toHaveLength(want.length);
-    got.forEach((e, i) => {
-      expect(e.ctx).toBeCloseTo(want[i]?.ctx ?? 0, 9);
-      expect(e.seed).toBe(want[i]?.seed);
-    });
+    // Free timing, plucks waiting for the grid (high Rigidity), and scattered delays.
+    const variants: PropertyValues[] = [{}, { rigidity: 0.8 }, { rigidity: 1, density: 1 }];
+    variants.push({ dispersion: 1, density: 1 });
+    for (const props of variants) {
+      const reference = lane(s);
+      reference.schedule(0, 2.8, offset, props);
+      const want = byTime(reference.events);
+      expect(want.length).toBeGreaterThan(4);
+      for (let edit = 0.3; edit < 2.6; edit += 0.137) {
+        // Scheduled 200 ms ahead, then an edit cancels from `edit` and schedules on.
+        const live = lane(s);
+        live.schedule(0, Math.min(2.8, edit + 0.2), offset, props);
+        live.cancelFrom(edit + offset);
+        live.schedule(edit, 2.8, edit + offset, props);
+        const got = byTime(live.events);
+        const label = `${JSON.stringify(props)}, edit at ${edit.toFixed(3)} s`;
+        expect(got, label).toHaveLength(want.length);
+        got.forEach((e, i) => {
+          expect(e.ctx, label).toBeCloseTo(want[i]?.ctx ?? 0, 9);
+          expect(e.seed, label).toBe(want[i]?.seed);
+        });
+      }
+    }
   });
 
   it('a seek skips what is past and plays on exactly as from the start', () => {
