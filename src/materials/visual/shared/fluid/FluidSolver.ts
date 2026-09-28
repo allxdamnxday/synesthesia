@@ -94,6 +94,12 @@ export interface FluidSolverOptions {
   height: number;
   /** Force the capability fallbacks (tests and Diagnostics only). */
   overrides?: RenderTargetOverrides;
+  /**
+   * Simulation grid short side, cells, instead of the tier's (dye resolution still
+   * follows the tier). For a material whose flow must be solved to convergence, which
+   * is only affordable on a coarse grid (Smoke).
+   */
+  simCells?: number;
 }
 
 /** A signature field as it arrives in a SignatureFrame. */
@@ -275,6 +281,7 @@ export class FluidSolver {
   private readonly filter: number;
   private width: number;
   private height: number;
+  private readonly simCells: number | undefined;
   private scratch!: DoubleRenderTarget;
   private pressure!: DoubleRenderTarget;
   private divergence!: RenderTarget;
@@ -299,6 +306,10 @@ export class FluidSolver {
   constructor(gl: WebGL2RenderingContext, options: FluidSolverOptions) {
     this.gl = gl;
     this.quality = options.quality;
+    this.simCells =
+      options.simCells !== undefined && options.simCells >= 8
+        ? Math.round(options.simCells)
+        : undefined;
     this.width = Math.max(1, Math.round(options.width));
     this.height = Math.max(1, Math.round(options.height));
     const support = detectRenderTargets(gl, options.overrides);
@@ -544,7 +555,7 @@ export class FluidSolver {
 
   private simGridFor(width: number, height: number): GridSize {
     const max = this.gl.getParameter(this.gl.MAX_TEXTURE_SIZE) as number;
-    return gridForCanvas(FLUID_TIERS[this.quality].sim, width, height, max);
+    return gridForCanvas(this.simCells ?? FLUID_TIERS[this.quality].sim, width, height, max);
   }
 
   private dyeGridFor(width: number, height: number): GridSize {
