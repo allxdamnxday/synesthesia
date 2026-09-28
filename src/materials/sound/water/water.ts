@@ -39,6 +39,17 @@ function driveCurve(): Float32Array<ArrayBuffer> {
   return curve;
 }
 
+/** Switch parameters to one value per render quantum where the browser allows it. */
+function setKRate(...params: AudioParam[]): void {
+  for (const param of params) {
+    try {
+      param.automationRate = 'k-rate';
+    } catch {
+      // Some engines fix the rate; a-rate is only slower, never wrong.
+    }
+  }
+}
+
 interface Voice {
   carrier: OscillatorNode;
   modulator: OscillatorNode;
@@ -130,7 +141,8 @@ class WaterSound implements SoundMaterial {
     const drivePre = ctx.createGain();
     const drive = ctx.createWaveShaper();
     drive.curve = driveCurve();
-    drive.oversample = '2x';
+    // Gentle saturation: oversampling would cost more than the little aliasing it removes.
+    drive.oversample = 'none';
     const drivePost = ctx.createGain();
     const tone = ctx.createBiquadFilter();
     tone.type = 'lowpass';
@@ -179,6 +191,10 @@ class WaterSound implements SoundMaterial {
       const level = ctx.createGain();
       level.gain.value = 0;
       const panner = ctx.createStereoPanner();
+      // Pitch and pan move smoothly at the control rate, so once per render quantum
+      // (2.7 ms) is plenty and saves a per-sample exp2 / sin-cos for every voice. The
+      // carrier's frequency stays a-rate: it carries the audio-rate FM.
+      setKRate(modulator.frequency, modulator.detune, carrier.detune, panner.pan);
       buses.pitch.connect(modulator.detune);
       buses.pitch.connect(carrier.detune);
       buses.deviation.connect(depth.gain);

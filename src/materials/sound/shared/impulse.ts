@@ -23,13 +23,21 @@ export interface ImpulseOptions {
 const LN_1000 = Math.log(1000);
 /** Fade-in at the start of the tail, so transients don't crack. */
 const FADE_IN_SEC = 0.004;
+/**
+ * The response stops at 0.8 × RT60 (about −48 dB), fading out over its last 15%: the rest
+ * of a tail is masked in practice, and convolution cost grows with length (offline, Chrome
+ * convolves on the render thread).
+ */
+const LENGTH_FACTOR = 0.8;
+const FADE_OUT_SHARE = 0.15;
 /** Salt that separates reverb noise from every other use of the material seed. */
 const REVERB_SALT = 0x52455642; // "REVB"
 
 /** Length in samples of an impulse response with these options. */
 export function impulseLength(opts: ImpulseOptions): number {
   const pre = opts.preDelaySec ?? 0.012;
-  return Math.max(1, Math.ceil((pre + Math.max(0.05, opts.decaySec)) * opts.sampleRate));
+  const tail = LENGTH_FACTOR * Math.max(0.05, opts.decaySec);
+  return Math.max(1, Math.ceil((pre + tail) * opts.sampleRate));
 }
 
 /**
@@ -44,6 +52,7 @@ export function generateImpulseResponse(opts: ImpulseOptions): Float32Array<Arra
   const length = impulseLength(opts);
   const pre = Math.min(length, Math.round((opts.preDelaySec ?? 0.012) * sr));
   const fadeIn = Math.max(1, Math.round(FADE_IN_SEC * sr));
+  const fadeOut = Math.max(1, Math.round(FADE_OUT_SHARE * (length - pre)));
   // Amplitude falls by 60 dB over `decay` seconds.
   const step = Math.exp(-LN_1000 / (decay * sr));
   // The tail's low-pass cutoff glides from bright to (damping-dependent) dark.
@@ -69,7 +78,9 @@ export function generateImpulseResponse(opts: ImpulseOptions): Float32Array<Arra
       }
       const noise = rng() * 2 - 1;
       lp += coeff * (noise - lp);
-      const fade = j < fadeIn ? 0.5 - 0.5 * Math.cos((Math.PI * j) / fadeIn) : 1;
+      const fromEnd = length - 1 - i;
+      let fade = j < fadeIn ? 0.5 - 0.5 * Math.cos((Math.PI * j) / fadeIn) : 1;
+      if (fromEnd < fadeOut) fade *= 0.5 - 0.5 * Math.cos((Math.PI * fromEnd) / fadeOut);
       const v = lp * env * fade;
       data[i] = v;
       energy += v * v;
