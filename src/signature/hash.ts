@@ -8,6 +8,8 @@
  *   field: frameCount × rows × cols × 2 × f32
  *   features: for each name in FEATURE_NAMES order, frameCount × f64
  *   onsets: count u32, then count × f64
+ * Negative zero is hashed as zero: JSON writes −0 as 0, so a round trip through any JSON
+ * writer must not change the hash.
  */
 import { decodeField } from './fieldCodec';
 import { FEATURE_NAMES, type KineticSignature, type SignatureFeatures } from './types';
@@ -18,6 +20,11 @@ export interface HashInput {
   grid: { cols: number; rows: number };
   field: Float32Array;
   features: SignatureFeatures;
+}
+
+/** Map −0 to +0 (−0 === 0, so this returns +0 for both zeros). */
+function plusZero(x: number): number {
+  return x === 0 ? 0 : x;
 }
 
 export function signatureHashBytes(input: HashInput): Uint8Array<ArrayBuffer> {
@@ -47,7 +54,7 @@ export function signatureHashBytes(input: HashInput): Uint8Array<ArrayBuffer> {
   view.setUint32(o, input.grid.rows, true);
   o += 4;
   for (let i = 0; i < input.field.length; i++) {
-    view.setFloat32(o, input.field[i] ?? 0, true);
+    view.setFloat32(o, plusZero(input.field[i] ?? 0), true);
     o += 4;
   }
   for (const name of FEATURE_NAMES) {
@@ -56,14 +63,14 @@ export function signatureHashBytes(input: HashInput): Uint8Array<ArrayBuffer> {
       throw new Error(`Feature "${name}" has ${values.length} values, expected ${n}`);
     }
     for (let i = 0; i < n; i++) {
-      view.setFloat64(o, values[i] ?? 0, true);
+      view.setFloat64(o, plusZero(values[i] ?? 0), true);
       o += 8;
     }
   }
   view.setUint32(o, input.features.onsets.length, true);
   o += 4;
   for (const onset of input.features.onsets) {
-    view.setFloat64(o, onset, true);
+    view.setFloat64(o, plusZero(onset), true);
     o += 8;
   }
   return new Uint8Array(buffer);

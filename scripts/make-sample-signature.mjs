@@ -195,7 +195,8 @@ for (const name of FEATURE_NAMES) {
 
 // Field bytes (little-endian float32) and the content hash (src/signature/hash.ts).
 const fieldBytes = Buffer.alloc(field.length * 4);
-field.forEach((v, i) => fieldBytes.writeFloatLE(v, i * 4));
+// −0 hashes as +0 (see src/signature/hash.ts).
+field.forEach((v, i) => fieldBytes.writeFloatLE(v === 0 ? 0 : v, i * 4));
 const header = Buffer.alloc(20);
 header.writeDoubleLE(FPS, 0);
 header.writeUInt32LE(FRAMES, 8);
@@ -205,13 +206,13 @@ const featureBytes = Buffer.alloc(FEATURE_NAMES.length * FRAMES * 8);
 let offset = 0;
 for (const name of FEATURE_NAMES) {
   for (const v of features[name]) {
-    featureBytes.writeDoubleLE(v, offset);
+    featureBytes.writeDoubleLE(v === 0 ? 0 : v, offset);
     offset += 8;
   }
 }
 const onsetBytes = Buffer.alloc(4 + onsets.length * 8);
 onsetBytes.writeUInt32LE(onsets.length, 0);
-onsets.forEach((v, i) => onsetBytes.writeDoubleLE(v, 4 + i * 8));
+onsets.forEach((v, i) => onsetBytes.writeDoubleLE(v === 0 ? 0 : v, 4 + i * 8));
 const contentHash = createHash('sha256')
   .update(Buffer.concat([header, fieldBytes, featureBytes, onsetBytes]))
   .digest('hex');

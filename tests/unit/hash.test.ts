@@ -81,3 +81,15 @@ describe('content hash', () => {
     ).rejects.toThrow();
   });
 });
+
+describe('negative zero', () => {
+  it('hashes −0 and +0 identically, so JSON round trips keep the hash', async () => {
+    const a = tinySignature();
+    a.features.energy[0] = -0;
+    const b = tinySignature();
+    b.features.energy[0] = 0;
+    expect(await hashOfSignature(a)).toBe(await hashOfSignature(b));
+    const reimported = JSON.parse(JSON.stringify(a)) as KineticSignature;
+    expect(await hashOfSignature(reimported)).toBe(await hashOfSignature(a));
+  });
+});
