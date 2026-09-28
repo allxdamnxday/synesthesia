@@ -14,9 +14,9 @@
  *   seeded noise (2 decorrelated channels, kept in step with composition time)
  *     ─► split ─► stream A ─► panner (−width) ─┐
  *              └► stream B ─► panner (+width) ─┴─► air
- *   air ─► [main band, chest, hiss, whistle, formant 1, 2, 3] (band-pass) ─► levels
- *   levels, mixed in pairs (bit-identical sums) ─► VCA ─► drive (soft saturation) ─┬─► dry ─► out
- *                                                                               └─► send ─► reverb ─► out
+ *   air ─► levels ─► [main band, chest, hiss, whistle, formant 1, 2, 3] (band-pass)
+ *   bands, mixed in pairs (bit-identical sums) ─► VCA ─► drive (soft saturation) ─┬─► dry ─► out
+ *                                                                              └─► send ─► reverb ─► out
  *
  * Levels, centres and base Qs change only with properties (StaticParams); the movement moves
  * everything through five control buses. After a seek (or a resync of a starved scheduler)
@@ -153,11 +153,13 @@ class BreathSound implements SoundMaterial {
         q = new StaticParam(qGain.gain, 0.05);
         this.nodes.push(qGain);
       }
+      // The level comes before the filter: a band at level 0 (the whistle and the formants
+      // at baseline) then gets silent input, and Chrome stops running its filter.
       const level = ctx.createGain();
       level.gain.value = 0;
-      air.connect(filter);
-      filter.connect(level);
-      bandOutputs.push(level);
+      air.connect(level);
+      level.connect(filter);
+      bandOutputs.push(filter);
       this.bands.push({
         filter,
         frequency: new StaticParam(filter.frequency, 0.05),
