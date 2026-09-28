@@ -268,7 +268,9 @@ test('deleting an album keeps its compositions unless asked', async ({ page }) =
   await page.getByRole('button', { name: 'Generate album' }).click();
   await expect(page.getByRole('heading', { name: 'Brief', level: 1 })).toBeVisible();
   await page.getByRole('link', { name: 'Library' }).first().click();
-  await expect(compositions).toHaveCount(5);
+  // Album tracks are listed in their album; the three from the deleted album show here.
+  await expect(compositions).toHaveCount(3);
+  await expect(page.getByText('2 album tracks are listed in their albums, above.')).toBeVisible();
   await page.getByRole('button', { name: 'More actions for Brief', exact: true }).click();
   await page.getByRole('menuitem', { name: 'Delete' }).click();
   dialog = page.getByRole('dialog', { name: 'Delete “Brief”?' });

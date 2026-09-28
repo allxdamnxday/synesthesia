@@ -78,6 +78,14 @@ export function LibraryScreen() {
   const refresh = useLibraryStore((s) => s.refresh);
   const store = useLibraryStore.getState;
   const albumCount = useAlbumStore((s) => s.albums.length);
+  const albums = useAlbumStore((s) => s.albums);
+  // Album tracks are listed in their album (the Albums section); a track whose album was
+  // deleted (its compositions kept) shows here again.
+  const albumIds = new Set(albums.map((a) => a.album.id));
+  const looseCompositions = compositions.filter(
+    ({ composition }) => !(composition.chance?.albumId && albumIds.has(composition.chance.albumId)),
+  );
+  const albumTracks = compositions.length - looseCompositions.length;
   const refreshAlbums = useAlbumStore((s) => s.refresh);
 
   const [notices, setNotices] = useState<NoticeItem[]>([]);
@@ -395,15 +403,23 @@ export function LibraryScreen() {
               <h2 id="compositions-heading" ref={compositionsHeading} tabIndex={-1}>
                 Compositions
               </h2>
-              <span className={styles.count}>{compositions.length}</span>
+              <span className={styles.count}>{looseCompositions.length}</span>
             </div>
-            {compositions.length === 0 ? (
+            {albumTracks > 0 ? (
               <p className={styles.sectionEmpty}>
-                No compositions yet. Open a signature and start a composition to make one.
+                {countOf(albumTracks, 'album track is', 'album tracks are')} listed in
+                {albumTracks === 1 ? ' its album' : ' their albums'}, above.
               </p>
+            ) : null}
+            {looseCompositions.length === 0 ? (
+              albumTracks > 0 ? null : (
+                <p className={styles.sectionEmpty}>
+                  No compositions yet. Open a signature and start a composition to make one.
+                </p>
+              )
             ) : (
               <ul className={styles.grid} aria-labelledby="compositions-heading">
-                {compositions.map(({ composition: c, signatureAvailable }) => {
+                {looseCompositions.map(({ composition: c, signatureAvailable }) => {
                   const name = compositionName(c.name);
                   const status =
                     c.status === 'kept'
