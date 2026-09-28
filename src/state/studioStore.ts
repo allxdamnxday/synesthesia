@@ -25,6 +25,7 @@ import {
   RENDER_RESOLUTIONS,
   saveComposition,
   saveWorkingState,
+  setAlbumRender,
   userMessage,
 } from '../library';
 import {
@@ -219,6 +220,8 @@ export interface StudioState {
 
   setPresentation: (on: boolean) => void;
   setRenderOpen: (open: boolean) => void;
+  /** The Render dialog closed; `fileName` is the MP4 made, if any. */
+  renderClosed: (fileName: string | null) => void;
 }
 
 const MATERIAL_CHANGED =
@@ -776,6 +779,22 @@ export const useStudioStore = create<StudioState>()((set, get) => {
       if (presentation) get().chancePopover?.close();
       set({ presentation });
       usePresentationStore.getState().setActive(presentation);
+    },
+    renderClosed: (fileName) => {
+      set({ renderOpen: false });
+      const composition = get().composition;
+      const albumId = composition?.chance?.albumId;
+      if (!fileName || !composition || !albumId) return;
+      // The album log records each track's render.
+      setAlbumRender(albumId, composition.id, fileName).catch((error: unknown) => {
+        console.warn('The album could not note the render:', errorDetail(error));
+        set((s) => ({
+          notices: [
+            ...s.notices,
+            notice('warning', `Rendered “${fileName}”, but the album’s log couldn’t note it.`),
+          ],
+        }));
+      });
     },
     setRenderOpen: (renderOpen) => {
       if (renderOpen) {

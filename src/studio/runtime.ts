@@ -20,7 +20,7 @@
  * The same material code, `VisualRunner` and seed helpers drive the offline render: see
  * `renderStill()` for a one-frame example.
  */
-import type { Composition, TimelineSettings } from '../engine/composition';
+import type { Composition } from '../engine/composition';
 import { visualRng, visualSeed } from '../engine/seeds';
 import { snapshotChanges } from '../engine/snapshots';
 import { stepsForTime, VisualRunner } from '../engine/visualRunner';
@@ -33,8 +33,9 @@ import {
 } from '../materials/types';
 import { getVisualContext, releaseVisualContext } from '../materials/visual/shared/gl';
 import { renderOffscreen } from '../perf/offscreenRender';
+import { samplerConfigFor } from '../render/timeline';
 import { createSampler } from '../signature/sampler';
-import type { KineticSignature, SamplerConfig, SignatureSampler } from '../signature/types';
+import type { KineticSignature, SignatureSampler } from '../signature/types';
 import { WallClock, type PlaybackClock } from './clock';
 import { backingSize, fitAspect } from './layout';
 import { StudioSound, type SoundProblem } from './sound';
@@ -101,18 +102,6 @@ export interface StillOptions {
   encoderQuality?: number;
 }
 
-/** The sampler configuration for a composition's timeline. */
-export function samplerConfigOf(timeline: TimelineSettings): SamplerConfig {
-  return {
-    speed: timeline.speed,
-    loops: timeline.loops,
-    tailSec: timeline.tailSec,
-    loopMode: timeline.loopMode,
-    smoothing: timeline.smoothing,
-    strength: timeline.signatureStrength,
-  };
-}
-
 function sameValues(a: PropertyValues, b: PropertyValues): boolean {
   if (a === b) return true;
   const keys = Object.keys(a);
@@ -164,7 +153,7 @@ export class StudioRuntime {
     this.composition = options.composition;
     this.quality = options.quality;
     this.loop = options.loop;
-    this.sampler = createSampler(options.signature, samplerConfigOf(options.composition.timeline));
+    this.sampler = createSampler(options.signature, samplerConfigFor(options.composition.timeline));
     this.wallClock = new WallClock({
       duration: () => this.sampler.duration,
       onEnded: () => this.wake(),
@@ -297,7 +286,7 @@ export class StudioRuntime {
     const changes = snapshotChanges(prev, next);
     const timelineChanged = changes.timeline;
     if (timelineChanged) {
-      this.sampler.configure(samplerConfigOf(next.timeline));
+      this.sampler.configure(samplerConfigFor(next.timeline));
       this.sound?.timelineChanged();
       this.wallClock.timelineChanged();
       this.emitTimeline();

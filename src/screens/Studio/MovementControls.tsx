@@ -77,6 +77,7 @@ export function MovementControls() {
         step={range.step}
         baseline={baselineOf(spec.key)}
         format={spec.format}
+        showValue
         onChange={(value, phase) => set(spec.key, value, phase)}
       />
     );

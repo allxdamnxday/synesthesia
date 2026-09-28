@@ -306,6 +306,21 @@ test('play, compare, draw by chance, save and reopen a composition', async ({ pa
   );
   await expect(page.getByRole('radio', { name: 'Kept' })).toHaveAttribute('aria-checked', 'true');
 
+  // R opens the Render dialog and pauses the preview; the Studio's keys rest meanwhile.
+  await page.getByRole('button', { name: 'Play' }).click();
+  await expect(page.getByRole('button', { name: 'Pause' })).toBeVisible();
+  await page.keyboard.press('r');
+  const render = page.getByRole('dialog', { name: 'Render MP4' });
+  await expect(render).toBeVisible();
+  const isPaused = () =>
+    page.evaluate(() => document.querySelector('[aria-label="Play"]') !== null);
+  await expect.poll(isPaused).toBe(true);
+  await page.keyboard.press('Space');
+  expect(await isPaused()).toBe(true);
+  await page.keyboard.press('Escape');
+  await expect(render).toBeHidden();
+  await expect(page.getByRole('button', { name: 'Play' })).toBeVisible();
+
   // Presentation mode: only the wake.
   await page.keyboard.press('f');
   await expect(page.getByRole('button', { name: 'Save', exact: true })).toBeHidden();

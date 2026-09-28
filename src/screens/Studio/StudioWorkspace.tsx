@@ -35,7 +35,7 @@ export function StudioWorkspace() {
         <RenderDialog
           composition={composition}
           signature={signature}
-          onClose={() => useStudioStore.getState().setRenderOpen(false)}
+          onClose={(fileName) => useStudioStore.getState().renderClosed(fileName)}
         />
       ) : null}
     </div>
