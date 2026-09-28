@@ -1,0 +1,97 @@
+.notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-5);
+  background: var(--color-basin);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-honey) 55%, transparent);
+}
+
+.notice p {
+  margin: 0;
+  font-size: var(--font-size-sm);
+}
+
+.blocked {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: var(--space-6) var(--space-5);
+  background: var(--color-deep);
+}
+
+.panel {
+  width: 100%;
+  max-width: 640px;
+  padding: var(--space-6);
+  border-radius: var(--radius-lg);
+  background: var(--color-basin);
+}
+
+.panel h1 {
+  font-size: var(--font-size-xl);
+}
+
+/* Focused only so screen readers announce it; it isn't interactive, so no focus ring. */
+.panel h1:focus,
+.panel h1:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.panel h2 {
+  margin-top: var(--space-5);
+  font-size: var(--font-size-md);
+}
+
+.wordmark {
+  color: var(--color-mist);
+  font-weight: var(--font-weight-light);
+  font-size: var(--font-size-lg);
+  letter-spacing: 0.02em;
+  margin-bottom: var(--space-5);
+}
+
+.missing,
+.steps {
+  margin: 0 0 var(--space-3);
+  padding-left: var(--space-5);
+}
+
+.missing li,
+.steps li {
+  margin: var(--space-2) 0;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+}
+
+.linkButton {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--hit-min);
+  padding: var(--space-1) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid color-mix(in srgb, var(--color-pearl) 18%, transparent);
+  background: var(--color-basin-raised);
+  color: var(--color-pearl);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-strong);
+  text-decoration: none;
+}
+
+.linkButton:hover {
+  border-color: color-mix(in srgb, var(--color-pearl) 40%, transparent);
+}
+
+.copyStatus {
+  margin: 0;
+  color: var(--color-water);
+  font-size: var(--font-size-sm);
+}
