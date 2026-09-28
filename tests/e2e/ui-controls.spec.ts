@@ -91,3 +91,23 @@ test.describe('transport', () => {
     await expect(loop).toHaveAttribute('aria-pressed', 'true');
   });
 });
+
+test.describe('material picker and property panel', () => {
+  test('choose a material by keyboard; More reveals extra properties', async ({ page }) => {
+    await page.goto('./dev/ui/');
+    await page.getByRole('button', { name: /Visual\s*Water/ }).click();
+    const list = page.getByRole('listbox', { name: 'Visual material' });
+    await expect(list).toBeVisible();
+    await expect(list.getByText('The same movement through thick, slow amber.')).toBeVisible();
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('Enter');
+    await expect(page.getByTestId('material')).toHaveText('honey');
+    await expect(list).toBeHidden();
+
+    const panel = page.getByRole('group', { name: 'Water properties' });
+    await expect(panel.getByRole('slider', { name: 'Range' })).toHaveCount(0);
+    await panel.getByRole('button', { name: 'More (1)' }).click();
+    await expect(panel.getByRole('slider', { name: 'Range' })).toBeVisible();
+    await expect(panel.getByRole('radiogroup', { name: 'Palette' })).toBeVisible();
+  });
+});

@@ -1,0 +1,83 @@
+.picker {
+  position: relative;
+}
+
+.button {
+  width: 100%;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid color-mix(in srgb, var(--color-pearl) 18%, transparent);
+  background: var(--color-basin-raised);
+  text-align: left;
+}
+
+.button:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--color-pearl) 40%, transparent);
+}
+
+.kind {
+  color: var(--color-mist);
+  font-size: var(--font-size-sm);
+}
+
+.name {
+  flex: 1;
+  font-weight: var(--font-weight-strong);
+}
+
+.caret {
+  color: var(--color-mist);
+}
+
+.list {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: var(--space-1);
+  list-style: none;
+  background: var(--color-basin-raised);
+  border: 1px solid color-mix(in srgb, var(--color-pearl) 22%, transparent);
+  border-radius: var(--radius-md);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+.list:focus-visible {
+  outline: none;
+}
+
+.option {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-2) var(--space-3);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.highlight {
+  background: color-mix(in srgb, var(--color-pearl) 8%, transparent);
+}
+
+.selected .optionName {
+  color: var(--color-honey);
+}
+
+.optionName {
+  font-weight: var(--font-weight-strong);
+  font-size: var(--font-size-sm);
+}
+
+.optionDescription {
+  color: var(--color-mist);
+  font-size: var(--font-size-sm);
+  line-height: 1.35;
+}

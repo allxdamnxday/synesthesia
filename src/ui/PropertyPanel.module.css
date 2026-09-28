@@ -1,0 +1,35 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.more {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: var(--hit-min);
+  padding: 0 var(--space-2);
+  margin-left: calc(-1 * var(--space-2));
+  border: 0;
+  background: transparent;
+  color: var(--color-mist);
+  font-size: var(--font-size-sm);
+  border-radius: var(--radius-sm);
+}
+
+.more:hover {
+  color: var(--color-pearl);
+}
+
+.chevron {
+  width: 12px;
+  display: inline-block;
+}
+
+.moreList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}

@@ -2,7 +2,11 @@ import { StrictMode, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import '../../src/app/tokens.css';
 import '../../src/app/global.css';
+import { sharedProperty } from '../../src/materials/properties';
+import type { PropertyDef } from '../../src/materials/types';
 import { Button } from '../../src/ui/Button';
+import { MaterialPicker } from '../../src/ui/MaterialPicker';
+import { PropertyPanel } from '../../src/ui/PropertyPanel';
 import { SegmentedControl } from '../../src/ui/SegmentedControl';
 import { SnapshotBar, type Slot } from '../../src/ui/SnapshotBar';
 import { Slider, type SliderPhase } from '../../src/ui/Slider';
@@ -16,7 +20,32 @@ declare global {
 }
 window.spUi = { log: [] };
 
+const DEFS: PropertyDef[] = [
+  sharedProperty('dispersion', 'visual'),
+  sharedProperty('persistence', 'visual'),
+  sharedProperty('intensity', 'visual'),
+  sharedProperty('range', 'visual'),
+  {
+    id: 'palette',
+    label: 'Palette',
+    description: 'The colors of the dye.',
+    kind: 'choice',
+    shared: false,
+    default: 0,
+    choices: ['Deep water', 'Ink', 'Prism'],
+    primary: true,
+  },
+];
+
+const MATERIALS = [
+  { id: 'water', name: 'Water', description: 'Colored dye in clear water, seen from below.' },
+  { id: 'honey', name: 'Honey', description: 'The same movement through thick, slow amber.' },
+  { id: 'smoke', name: 'Smoke', description: 'Pale smoke rising and curling on dark.' },
+];
+
 function Gallery() {
+  const [props, setProps] = useState<Record<string, number>>({});
+  const [material, setMaterial] = useState('water');
   const [viscosity, setViscosity] = useState(0.5);
   const [speed, setSpeed] = useState(1);
   const [locked, setLocked] = useState(true);
@@ -96,6 +125,17 @@ function Gallery() {
           />
         </Transport>
       </div>
+      <MaterialPicker kind="Visual" options={MATERIALS} value={material} onChange={setMaterial} />
+      <output data-testid="material">{material}</output>
+      <PropertyPanel
+        label="Water properties"
+        defs={DEFS}
+        values={props}
+        linkedIds={new Set(['dispersion'])}
+        lockedIds={new Set(['intensity'])}
+        onUnlock={() => undefined}
+        onChange={(id, v) => setProps({ ...props, [id]: v })}
+      />
       <output data-testid="position">{position.toFixed(1)}</output>
     </main>
   );
