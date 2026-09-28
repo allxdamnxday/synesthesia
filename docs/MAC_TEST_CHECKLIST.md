@@ -89,6 +89,53 @@ into a chat with Claude. Each page below has a **Copy report** or **Copy results
    eye. Do the same with an HEVC ("High Efficiency") clip: it should either extract or show
    the format message.
 
+## 8. The Studio
+
+1. Open a signature and **Start a composition**. The first time, "Getting to know this
+   computer…" shows for about 3 s; afterwards Settings names the preview quality it chose.
+2. Play the wink with each visual material (Water, Honey, Smoke, Descending bubbles,
+   Filaments) and each sound (Water, Honey, Breath, Resonance, Pulse). It should look smooth
+   on the Retina screen, and the sound should stay with the picture: Water's rising whistle
+   with the wake, droplets and strikes on the onset ticks in the scrub bar.
+3. Switch materials while playing: playback doesn't restart and there are no clicks.
+4. Drag sliders while playing (Persistence, Viscosity, Speed); listen for clicks or dropouts
+   and watch Activity Monitor with Pulse (Density, Range and Persistence at 1) and Resonance
+   (Density 1).
+5. Keys: Space, L, 1–4, Shift+1–4, C, S, R, F, Esc, Cmd+Z, Shift+Cmd+Z. Cmd+S saves without
+   the browser's "Save page" dialog.
+6. **Present** (or F): macOS full screen with only the wake; Esc returns. On a two-GPU
+   MacBook Pro, unplug the charger while presenting: "The graphics card was reset" may show,
+   then the wake comes back.
+7. Close the tab mid-edit and reopen the composition: "Restored changes you hadn't saved",
+   and Discard asks first.
+8. Try Bluetooth headphones: does the playhead match what you hear?
+
+## 9. Rendering
+
+1. In the Studio, **Render MP4** at 1080p: note the time per frame shown, and how long a 10 s
+   composition takes.
+2. Open the MP4 in **QuickTime Player**: it plays, has sound, scrubs, and the colors match
+   the preview. Onsets (strikes, droplets) land with the picture. If sound seems to trail
+   by about 1/20 s, run `dev/render/` › **Check alignment** and send the numbers (the Mac's
+   AAC encoder may add a delay the render needs to compensate for).
+3. Render into a folder you made inside Movies; render again and check the " (2)" file.
+4. Start a render and hide Chrome for a minute: it keeps going.
+
+## 10. Albums
+
+1. Make an album from a signature with the same master seed and settings as on Windows (the
+   same materials installed): the track list (materials, open properties, seeds) must match
+   exactly.
+2. Mark some tracks Kept and some Set aside, add notes, then **Batch render** the kept ones
+   into a folder, unattended. Note the total time for 25 tracks of about 10 s.
+3. **Export album log**: allow Chrome's "multiple downloads" prompt; both files arrive and
+   ALBUM_LOG.md reads well (set-aside tracks included).
+
+## 11. Offline
+
+1. Visit the app once online, then turn Wi-Fi off and reload: the Library, Help, the Studio
+   and extraction still work (the offline cache includes everything, OpenCV included).
+
 ## Windows (Braden's machine)
 
 - Play `spikes/03-encode/` MP4s in **Windows Media Player** (the "Media Player" app) and

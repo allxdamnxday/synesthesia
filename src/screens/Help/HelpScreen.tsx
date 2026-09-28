@@ -100,7 +100,7 @@ export function HelpScreen() {
     ['C', 'Draw by chance'],
     ['S', 'Save'],
     ['R', 'Render MP4'],
-    ['F', 'Presentation mode (only the wake)'],
+    ['F', 'Present: only the wake, full screen (the Present button does the same)'],
     ['Esc', 'Leave presentation mode'],
     [`${mod} + Z`, 'Undo'],
     [`Shift + ${mod} + Z`, 'Redo'],
@@ -172,7 +172,8 @@ export function HelpScreen() {
             </li>
             <li>
               <strong>Compare.</strong> Store versions in snapshots A to D and switch between them
-              while it plays. Try another material with the same movement.
+              while it plays. Try another material with the same movement. To watch with nothing
+              else on screen, choose <em>Present</em> (or press F); Esc comes back.
             </li>
             <li>
               <strong>Keep what you find.</strong> Save the composition with notes, and render it as
