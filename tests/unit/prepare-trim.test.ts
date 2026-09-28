@@ -82,6 +82,18 @@ describe('playhead', () => {
     expect(frameIndexAt(1, FPS)).toBe(30);
     // A time just inside frame 30 (float noise) still counts as frame 30.
     expect(frameIndexAt(30 / FPS - 1e-9, FPS)).toBe(30);
+    // Chrome reports frame times rounded to the microsecond: 0.033333 is frame 1, not 0.
+    expect(frameIndexAt(0.033333, FPS)).toBe(1);
+    expect(frameIndexAt(0.333333, FPS)).toBe(10);
+    expect(frameIndexAt(0.066667, FPS)).toBe(2);
+    for (const fps of [23.976, 25, 29.97, 30, 59.94, 60, 120, 240]) {
+      for (let k = 0; k < 2000; k += 7) {
+        const reported = Math.round((k / fps) * 1e6) / 1e6;
+        expect(frameIndexAt(reported, fps)).toBe(k);
+        // …and the middle of a frame is always that frame.
+        expect(frameIndexAt((k + 0.5) / fps, fps)).toBe(k);
+      }
+    }
     expect(frameStartAt(1.02, FPS)).toBeCloseTo(1, 12);
     expect(stepFrame(1, 1, trim, FPS)).toBeCloseTo(31 / FPS, 12);
     expect(stepFrame(1, -1, trim, FPS)).toBeCloseTo(29 / FPS, 12);

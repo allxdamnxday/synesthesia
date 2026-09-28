@@ -137,7 +137,9 @@ export function useClipPlayer(
       const shown = frameStartAt(meta.mediaTime, fps);
       if (!video.paused) {
         const [, last] = playheadRange(trim, fps);
-        if (shown >= last - 1e-6 || shown < trim.startSec - 1e-6) {
+        if (video.seeking) {
+          // Going round: wait for the start of the trim to arrive.
+        } else if (shown >= last - 1e-6 || shown < trim.startSec - 1e-6) {
           // The last frame of the trim is showing (or the clip ran past it): loop.
           time.set(trim.startSec);
           video.currentTime = seekTimeFor(trim.startSec, fps);
@@ -186,8 +188,9 @@ export function useClipPlayer(
   const pause = useCallback(() => {
     if (!video) return;
     video.pause();
-    time.set(clampPlayhead(frameStartAt(video.currentTime, fps), getTrimRef.current(), fps));
-  }, [video, time, fps]);
+    // Settle exactly on a frame, so the time shown is the frame shown (for trimming).
+    showFrame(clampPlayhead(frameStartAt(video.currentTime, fps), getTrimRef.current(), fps));
+  }, [video, fps, showFrame]);
 
   const play = useCallback(() => {
     if (!video || !enabledRef.current) return;

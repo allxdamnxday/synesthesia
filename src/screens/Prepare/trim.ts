@@ -20,6 +20,12 @@ export const MIN_TRIM_FRAMES = 4;
 export const FALLBACK_FPS = 30;
 
 const EPSILON = 1e-6;
+/**
+ * Tolerance, in frames, when turning a time into a frame index. Chrome reports frame times
+ * rounded to the microsecond (frame 1 of a 30 fps clip comes back as 0.033333 s, which is
+ * 0.99999 frames), so a time a hair before a boundary still belongs to the next frame.
+ */
+const FRAME_TOLERANCE = 1e-3;
 
 function clampTo(value: number, lo: number, hi: number): number {
   return value < lo ? lo : value > hi ? hi : value;
@@ -102,9 +108,9 @@ export function clampPlayhead(t: number, trim: Trim, fps: number): number {
   return clampTo(Number.isFinite(t) ? t : lo, lo, hi);
 }
 
-/** Index of the frame showing at time t. */
+/** Index of the frame showing at time t (see FRAME_TOLERANCE). */
 export function frameIndexAt(t: number, fps: number): number {
-  return Math.floor(t * safeFps(fps) + EPSILON);
+  return Math.floor(t * safeFps(fps) + FRAME_TOLERANCE);
 }
 
 /** Start time of the frame showing at time t. */
