@@ -744,18 +744,27 @@ function drawPlot(buffer: AudioBuffer, stats: RenderStats): void {
     else g.lineTo(x, y);
   });
   g.stroke();
-  // Pitch (log scale, 100 Hz – 3.2 kHz) in the lower band.
+  // Pitch in the lower band, log scale fitted to the detected range (at least an octave).
   const top = h * 0.7;
-  const band = h * 0.28;
+  const band = h * 0.26;
+  const voiced = (stats.pitchTrack ?? []).filter((f) => f > 0);
+  if (voiced.length === 0) return;
+  let lo = Math.min(...voiced);
+  let hi = Math.max(...voiced);
+  if (hi / lo < 2) {
+    const mid = Math.sqrt(lo * hi);
+    lo = mid / Math.SQRT2;
+    hi = mid * Math.SQRT2;
+  }
+  const yOf = (f: number): number => top + band - (Math.log2(f / lo) / Math.log2(hi / lo)) * band;
   g.fillStyle = '#d9a441';
   (stats.pitchTrack ?? []).forEach((f, i) => {
-    if (!(f > 0)) return;
-    const y = top + band - (Math.log2(f / 100) / 5) * band;
-    g.fillRect((i / n) * w, y, 3, 3);
+    if (f > 0) g.fillRect((i / n) * w, yOf(f), 3, 3);
   });
   g.fillStyle = '#9aabb5';
   g.font = '22px system-ui';
-  g.fillText('pitch, 100 Hz – 3.2 kHz', 12, top + 22);
+  g.fillText(`pitch ${Math.round(hi)} Hz`, 12, yOf(hi) + 8);
+  g.fillText(`${Math.round(lo)} Hz`, 12, yOf(lo) + 8);
 }
 
 async function doRender(): Promise<void> {
