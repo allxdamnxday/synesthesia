@@ -1,0 +1,44 @@
+.dialog {
+  width: min(460px, calc(100vw - 2 * var(--space-5)));
+  padding: var(--space-5);
+  border: 1px solid color-mix(in srgb, var(--color-pearl) 14%, transparent);
+  border-radius: var(--radius-lg);
+  background: var(--color-basin);
+  color: var(--color-pearl);
+  box-shadow: 0 24px 64px rgb(0 0 0 / 0.5);
+}
+
+.dialog::backdrop {
+  background: rgb(4 10 15 / 0.66);
+}
+
+.title {
+  font-size: var(--font-size-lg);
+  margin-bottom: var(--space-3);
+}
+
+.body {
+  color: var(--color-mist);
+  font-size: var(--font-size-md);
+}
+
+.body p:last-child {
+  margin-bottom: 0;
+}
+
+.buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+}
+
+.danger {
+  border-color: color-mix(in srgb, var(--color-alert) 70%, transparent);
+  color: var(--color-alert);
+}
+
+.danger:hover:not(:disabled) {
+  border-color: var(--color-alert);
+  background: color-mix(in srgb, var(--color-alert) 14%, var(--color-basin-raised));
+}

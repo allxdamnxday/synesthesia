@@ -1,0 +1,16 @@
+.input {
+  width: 100%;
+  min-height: var(--hit-min);
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid color-mix(in srgb, var(--color-honey) 70%, transparent);
+  border-radius: var(--radius-sm);
+  background: var(--color-basin-raised);
+  color: var(--color-pearl);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-strong);
+}
+
+.input:focus-visible {
+  box-shadow: none;
+  border-color: var(--color-honey);
+}

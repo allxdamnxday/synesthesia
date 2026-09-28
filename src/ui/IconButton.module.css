@@ -1,0 +1,26 @@
+.iconButton {
+  min-width: var(--hit-min);
+  min-height: var(--hit-min);
+  padding: var(--space-1);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-mist);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.iconButton:hover:not(:disabled),
+.iconButton[aria-expanded='true'] {
+  color: var(--color-pearl);
+  background: var(--color-basin-raised);
+}
+
+.iconButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
