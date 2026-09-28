@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Spike 3: encode MP4 (Synesthesia)</title>
+    <link rel="icon" type="image/svg+xml" href="../../favicon.svg" />
+    <style>
+      body {
+        background: #0e1a24;
+        color: #e8e4da;
+        font:
+          16px/1.5 system-ui,
+          sans-serif;
+        padding: 32px;
+        max-width: 1100px;
+        margin: auto;
+      }
+      a {
+        color: #7fb7c9;
+      }
+      p,
+      .muted {
+        color: #9aabb5;
+      }
+      button {
+        font: inherit;
+        font-size: 14px;
+        font-weight: 600;
+        min-height: 32px;
+        padding: 4px 16px;
+        border-radius: 8px;
+        border: 1px solid #e8e4da33;
+        background: #1f3342;
+        color: #e8e4da;
+        cursor: pointer;
+      }
+      button.primary {
+        background: #d9a441;
+        color: #0e1a24;
+        border-color: transparent;
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      button:focus-visible,
+      a:focus-visible {
+        outline: 2px solid #d9a441;
+        outline-offset: 2px;
+      }
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+        margin: 16px 0;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        font-size: 14px;
+        margin-top: 16px;
+      }
+      th,
+      td {
+        text-align: left;
+        vertical-align: top;
+        padding: 6px 8px;
+        border-bottom: 1px solid #5e6f7a66;
+      }
+      th {
+        color: #9aabb5;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+      .pass {
+        color: #7fb7c9;
+        font-weight: 600;
+      }
+      .fail {
+        color: #e8806a;
+        font-weight: 600;
+      }
+      #stage canvas {
+        width: 480px;
+        max-width: 100%;
+        border: 1px solid #5e6f7a66;
+        background: #000;
+      }
+      pre {
+        background: #172733;
+        padding: 12px;
+        border-radius: 8px;
+        white-space: pre-wrap;
+        font-size: 13px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Spike 3: encode a canvas animation and a tone to MP4</h1>
+    <p>
+      A 3 second animation drawn frame by frame (frame index only, never the clock) with a white
+      flash at frame 30 (1.000 s), plus a soft 440 Hz tone with a sharp click at exactly 1.000 s,
+      rendered in an OfflineAudioContext. Mediabunny encodes H.264 video and AAC audio into an MP4
+      with the index at the front. The page then reads each file back and measures when the flash
+      and the click land, so you can see audio and video alignment without other tools.
+    </p>
+    <div class="row">
+      <button id="encode-720p" type="button">Encode 720p</button>
+      <button id="encode-1080p" type="button">Encode 1080p</button>
+      <button id="encode-both" type="button" class="primary">Encode both</button>
+      <button id="copy" type="button">Copy results</button>
+      <span id="status" class="muted" role="status"></span>
+    </div>
+    <div id="stage"></div>
+    <table>
+      <thead>
+        <tr>
+          <th>Size</th>
+          <th>File</th>
+          <th>Codecs</th>
+          <th>Encode</th>
+          <th>Read back in the page</th>
+        </tr>
+      </thead>
+      <tbody id="results"></tbody>
+    </table>
+    <h2>Play the files</h2>
+    <p>
+      Download each file and play it in QuickTime Player (Mac), Windows Media Player and VLC. The
+      click should land with the white flash, and the tone should fade in and out smoothly.
+    </p>
+    <pre id="report" hidden></pre>
+    <p><a href="../">All spikes</a> · <a href="../../#/diagnostics">Diagnostics</a></p>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
