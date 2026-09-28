@@ -101,7 +101,8 @@ async function extract(request: ExtractRequestMessage): Promise<void> {
     const body = await finishSignature({
       raw: { field: raw, frameCount, cols: grid.cols, rows: grid.rows, fps },
       options,
-      analysisWidth: width,
+      // The option names the longer side of the analysis frame (see analysisSize()).
+      analysisWidth: Math.max(width, height),
       source: {
         fileName: file.name,
         nativeFps: info.nativeFps,

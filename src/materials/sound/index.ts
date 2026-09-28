@@ -1,4 +1,5 @@
 import type { SoundMaterialEntry } from '../types';
+import { WATER_SOUND } from './water';
 
 /** Every sound material, in picker order. */
-export const SOUND_MATERIALS: SoundMaterialEntry[] = [];
+export const SOUND_MATERIALS: SoundMaterialEntry[] = [WATER_SOUND];

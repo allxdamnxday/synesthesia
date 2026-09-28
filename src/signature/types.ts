@@ -122,6 +122,10 @@ export interface KineticSignature {
   extraction: {
     method: 'farneback';
     params: FarnebackParams;
+    /**
+     * Longer side of the analysis frame in pixels (the name predates the rule: for a
+     * portrait clip it is the analysis frame's height).
+     */
     analysisWidth: number;
     noiseFloor: number;
     noiseFloorMode: 'auto' | 'manual';
@@ -210,7 +214,10 @@ export interface ExtractionOptions {
   rotate: Rotation;
   mirror: boolean;
   focusArea: FocusArea | null;
-  /** Analysis frame width in pixels (default 320; Advanced). */
+  /**
+   * Analysis frame size in pixels, applied to the **longer side** of the oriented,
+   * cropped frame (default 320; Advanced). Portrait 1080×1920 → 180×320.
+   */
   analysisWidth: number;
   /** Grid columns (default 32; Advanced). Rows follow the aspect ratio, clamped 8–48. */
   gridCols: number;

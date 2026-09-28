@@ -1,13 +1,16 @@
 /**
  * Extraction integration tests (SPEC 8.5, 15.1): run the real pipeline (Mediabunny decode
  * → OpenCV Farneback in the worker → features) on the synthetic fixture clips in
- * tests/fixtures/ (made by scripts/make-fixtures.mjs) and check the expected feature signs.
+ * tests/fixtures/ (made by scripts/make-fixtures.mjs) and check the expected features.
  *
  * Features are averaged over "active" frames, where energy is well above the noise floor.
+ * Divergence and curl are compared through a unitless "shape" value, value × spread /
+ * peak: about 2 for a pure expansion or rotation, 0 for a translation.
  */
 import { basename, join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import type { ClipInfo, SignatureBody } from '../../src/signature/extractClient';
+import { noiseFloorLooksHigh } from '../../src/signature/noiseFloor';
 import type { ExtractionOptions } from '../../src/signature/types';
 
 const FIXTURES = join(import.meta.dirname, '..', 'fixtures');
@@ -62,6 +65,15 @@ function meanDirection(body: SignatureBody, frames: number[]): number {
   return Math.atan2(s, c);
 }
 
+/** Mean of feature × spread / peak over the active frames (unitless; ≈ 2 when pure). */
+function shape(body: SignatureBody, feature: 'divergence' | 'curl'): number {
+  const { spread, peak } = body.features;
+  const values = body.features[feature].map((x, i) =>
+    (peak[i] ?? 0) > 0 ? (x * (spread[i] ?? 0)) / (peak[i] ?? 1) : 0,
+  );
+  return meanOver(values, activeFrames(body));
+}
+
 function summary(name: string, body: SignatureBody): string {
   const active = activeFrames(body);
   const m = (feature: keyof SignatureBody['features']) =>
@@ -69,7 +81,8 @@ function summary(name: string, body: SignatureBody): string {
   return (
     `${name}: ${body.frameCount} frames, floor ${body.extraction.noiseFloor.toPrecision(3)}, ` +
     `${active.length} active; energy ${m('energy')}, direction ${meanDirection(body, active).toFixed(3)}, ` +
-    `coherence ${m('coherence')}, divergence ${m('divergence')}, curl ${m('curl')}, ` +
+    `coherence ${m('coherence')}, divergence ${m('divergence')} (shape ${shape(body, 'divergence').toFixed(3)}), ` +
+    `curl ${m('curl')} (shape ${shape(body, 'curl').toFixed(3)}), ` +
     `density mean ${body.stats.density?.mean.toPrecision(3)}, onsets [${body.features.onsets.join(', ')}]`
   );
 }
@@ -116,25 +129,27 @@ test('probes a clip', async () => {
   expect(info.durationSec).toBeCloseTo(2.5, 2);
 });
 
-test('dot moving right: direction ≈ 0, coherence high, divergence ≈ 0, energy > 0', async () => {
+test('dot moving right: direction ≈ 0, coherence high, divergence and curl ≈ 0', async () => {
   const body = await extract(page, 'dot-right.mp4');
   const timing = await page.evaluate(() => (window as unknown as Harness).spLastRun);
   console.log(summary('dot-right', body));
   if (timing) {
     console.log(
       `dot-right timing: ${timing.totalMs.toFixed(0)} ms total, ${timing.msPerFrame.toFixed(1)} ms per ` +
-        `320-wide analysis frame over ${timing.analysisFrames} frames; ` +
+        `320×180 analysis frame over ${timing.analysisFrames} frames; ` +
         `10 s at 30 fps ≈ ${((timing.msPerFrame * 300) / 1000).toFixed(1)} s`,
     );
   }
   const active = activeFrames(body);
   expect(active.length).toBeGreaterThan(0.8 * body.frameCount);
-  const energy = meanOver(body.features.energy, active);
-  expect(energy).toBeGreaterThan(3 * body.extraction.noiseFloor);
+  expect(meanOver(body.features.energy, active)).toBeGreaterThan(3 * body.extraction.noiseFloor);
   expect(Math.abs(meanDirection(body, active))).toBeLessThan(0.15);
   expect(meanOver(body.features.coherence, active)).toBeGreaterThan(0.9);
-  // Divergence (units of energy per field length) is negligible next to the movement.
-  expect(Math.abs(meanOver(body.features.divergence, active))).toBeLessThan(0.05 * energy);
+  expect(Math.abs(shape(body, 'divergence'))).toBeLessThan(0.1);
+  expect(Math.abs(shape(body, 'curl'))).toBeLessThan(0.1);
+  // Steady movement from the first frame: no onsets.
+  expect(body.features.onsets).toEqual([]);
+  expect(noiseFloorLooksHigh(body)).toBe(false);
 });
 
 test('dot moving up: direction ≈ π/2', async () => {
@@ -145,43 +160,57 @@ test('dot moving up: direction ≈ π/2', async () => {
   expect(meanDirection(body, active)).toBeGreaterThan(Math.PI / 2 - 0.15);
   expect(meanDirection(body, active)).toBeLessThan(Math.PI / 2 + 0.15);
   expect(meanOver(body.features.coherence, active)).toBeGreaterThan(0.9);
+  expect(Math.abs(shape(body, 'curl'))).toBeLessThan(0.1);
+  expect(body.features.onsets).toEqual([]);
 });
 
-test('expanding ring: divergence > 0', async () => {
-  const body = await extract(page, 'ring-expand.mp4');
-  console.log(summary('ring-expand', body));
-  const active = activeFrames(body);
-  expect(active.length).toBeGreaterThan(40);
-  const energy = meanOver(body.features.energy, active);
-  const divergence = meanOver(body.features.divergence, active);
-  expect(divergence).toBeGreaterThan(0.3 * energy);
-  expect(divergence).toBeGreaterThan(3 * Math.abs(meanOver(body.features.curl, active)));
-});
+for (const [fixture, where] of [
+  ['ring-expand.mp4', 'rings that reach past the frame'],
+  ['ring-expand-inside.mp4', 'a ring that stays inside the frame'],
+] as const) {
+  test(`expanding: divergence > 0 (${where})`, async () => {
+    const body = await extract(page, fixture);
+    console.log(summary(fixture, body));
+    expect(activeFrames(body).length).toBeGreaterThan(30);
+    const divergence = shape(body, 'divergence');
+    expect(divergence).toBeGreaterThan(0.5);
+    expect(divergence).toBeGreaterThan(5 * Math.abs(shape(body, 'curl')));
+    expect(noiseFloorLooksHigh(body)).toBe(false);
+  });
+}
 
-test('contracting ring: divergence < 0', async () => {
-  const body = await extract(page, 'ring-contract.mp4');
-  console.log(summary('ring-contract', body));
-  const active = activeFrames(body);
-  expect(active.length).toBeGreaterThan(40);
-  const energy = meanOver(body.features.energy, active);
-  const divergence = meanOver(body.features.divergence, active);
-  expect(divergence).toBeLessThan(-0.3 * energy);
-  expect(-divergence).toBeGreaterThan(3 * Math.abs(meanOver(body.features.curl, active)));
-});
+for (const [fixture, where] of [
+  ['ring-contract.mp4', 'rings that reach past the frame'],
+  ['ring-contract-inside.mp4', 'a ring that stays inside the frame'],
+] as const) {
+  test(`contracting: divergence < 0 (${where})`, async () => {
+    const body = await extract(page, fixture);
+    console.log(summary(fixture, body));
+    expect(activeFrames(body).length).toBeGreaterThan(30);
+    const divergence = shape(body, 'divergence');
+    expect(divergence).toBeLessThan(-0.5);
+    expect(-divergence).toBeGreaterThan(5 * Math.abs(shape(body, 'curl')));
+  });
+}
 
-test('rotating bar (clockwise on screen): curl high and positive', async () => {
-  const body = await extract(page, 'bar-rotate-cw.mp4');
-  console.log(summary('bar-rotate-cw', body));
-  const active = activeFrames(body);
-  expect(active.length).toBeGreaterThan(0.8 * body.frameCount);
-  const energy = meanOver(body.features.energy, active);
-  const curl = meanOver(body.features.curl, active);
-  // Documented convention (src/signature/features.ts): y down, so curl > 0 = clockwise.
-  expect(curl).toBeGreaterThan(0.5 * energy);
-  expect(curl).toBeGreaterThan(3 * Math.abs(meanOver(body.features.divergence, active)));
-  // Rotation has no single direction.
-  expect(meanOver(body.features.coherence, active)).toBeLessThan(0.2);
-});
+for (const [fixture, where] of [
+  ['bar-rotate-cw.mp4', 'a bar longer than the frame'],
+  ['bar-rotate-cw-inside.mp4', 'a bar that stays inside the frame'],
+] as const) {
+  test(`turning clockwise on screen: curl high and positive (${where})`, async () => {
+    const body = await extract(page, fixture);
+    console.log(summary(fixture, body));
+    const active = activeFrames(body);
+    expect(active.length).toBeGreaterThan(0.8 * body.frameCount);
+    // Documented convention (src/signature/features.ts): y down, so curl > 0 = clockwise.
+    const curl = shape(body, 'curl');
+    expect(curl).toBeGreaterThan(0.5);
+    expect(curl).toBeGreaterThan(5 * Math.abs(shape(body, 'divergence')));
+    // Rotation has no single direction, and steady turning has no onsets.
+    expect(meanOver(body.features.coherence, active)).toBeLessThan(0.2);
+    expect(body.features.onsets).toEqual([]);
+  });
+}
 
 test('still frame: energy ≈ 0, density ≈ 0', async () => {
   const body = await extract(page, 'still.mp4');
@@ -189,16 +218,20 @@ test('still frame: energy ≈ 0, density ≈ 0', async () => {
   expect(Math.max(...body.features.energy)).toBeLessThan(MIN_NOISE_FLOOR);
   expect(body.stats.density?.mean).toBeLessThan(0.01);
   expect(body.features.onsets).toEqual([]);
+  expect(noiseFloorLooksHigh(body)).toBe(false);
 });
 
-test('still frame with sensor noise: density ≈ 0 after the auto noise floor', async () => {
+test('still frame with sensor noise: density ≈ 0 after the auto noise floor, no onsets', async () => {
   const body = await extract(page, 'still-noise.mp4');
   console.log(summary('still-noise', body));
   expect(body.extraction.noiseFloorMode).toBe('auto');
   // The floor rose above its minimum to meet the noise…
   expect(body.extraction.noiseFloor).toBeGreaterThan(2 * MIN_NOISE_FLOOR);
   expect(body.stats.density?.mean).toBeLessThan(0.05);
-  // …and without it, the same noise would light up much of the frame.
+  expect(body.features.onsets).toEqual([]);
+  // …which is right for noise, so Prepare shows no hint.
+  expect(noiseFloorLooksHigh(body)).toBe(false);
+  // Without it, the same noise would light up much of the frame.
   const raw = await extract(page, 'still-noise.mp4', {
     noiseFloorMode: 'manual',
     manualNoiseFloor: MIN_NOISE_FLOOR,
@@ -211,8 +244,8 @@ test('dot that stops abruptly: onset near the start, low continuity at the stop'
   const body = await extract(page, 'dot-stop.mp4');
   console.log(summary('dot-stop', body));
   const fps = body.frameRate;
-  // The dot starts moving 0.3 s in.
-  expect(body.features.onsets.length).toBeGreaterThan(0);
+  // The dot starts moving 0.3 s in: one onset there, none when it stops.
+  expect(body.features.onsets.length).toBe(1);
   expect(body.features.onsets[0]).toBeLessThanOrEqual(Math.round(0.5 * fps));
   const active = activeFrames(body);
   const stop = active[active.length - 1] ?? 0;
@@ -224,6 +257,41 @@ test('dot that stops abruptly: onset near the start, low continuity at the stop'
   const glide = body.features.continuity.slice(Math.round(0.6 * fps), Math.round(1.6 * fps));
   const sorted = [...glide].sort((a, b) => a - b);
   expect(sorted[Math.floor(sorted.length / 2)]).toBeGreaterThan(0.9);
+});
+
+test('movement that never stops: the auto floor mutes it and Prepare would say so', async () => {
+  const body = await extract(page, 'pan-right.mp4');
+  console.log(summary('pan-right', body));
+  // The whole picture moves in every frame, so the automatic floor rises to meet it…
+  expect(body.extraction.noiseFloor).toBeGreaterThan(0.1);
+  expect(body.stats.density?.mean).toBeLessThan(0.05);
+  expect(noiseFloorLooksHigh(body)).toBe(true);
+  // …and a manual floor (higher Sensitivity) brings it back: a clean pan to the right.
+  const manual = await extract(page, 'pan-right.mp4', {
+    noiseFloorMode: 'manual',
+    manualNoiseFloor: MIN_NOISE_FLOOR,
+  });
+  console.log(summary('pan-right (manual minimum floor)', manual));
+  const active = activeFrames(manual);
+  expect(active.length).toBeGreaterThan(0.9 * manual.frameCount);
+  expect(Math.abs(meanDirection(manual, active))).toBeLessThan(0.1);
+  expect(meanOver(manual.features.coherence, active)).toBeGreaterThan(0.95);
+  expect(manual.stats.density?.mean).toBeGreaterThan(0.9);
+  // Pure translation: no divergence or curl, and no onsets.
+  expect(Math.abs(shape(manual, 'divergence'))).toBeLessThan(0.1);
+  expect(Math.abs(shape(manual, 'curl'))).toBeLessThan(0.1);
+  expect(manual.features.onsets).toEqual([]);
+  expect(noiseFloorLooksHigh(manual)).toBe(false);
+});
+
+test('analysis size applies to the longer side: a clip turned portrait costs no more', async () => {
+  // Rotate the 320×180 dot clip a quarter turn clockwise: it becomes 180×320, and the dot
+  // that moved right now moves down.
+  const body = await extract(page, 'dot-right.mp4', { rotate: 90 });
+  console.log(summary('dot-right rotated 90°', body));
+  expect(body.extraction.analysisWidth).toBe(320);
+  expect(body.grid).toEqual({ cols: 32, rows: 48 });
+  expect(meanDirection(body, activeFrames(body))).toBeCloseTo(-Math.PI / 2, 1);
 });
 
 test('extracting the same clip twice gives the identical content hash', async () => {
