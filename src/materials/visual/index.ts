@@ -1,5 +1,6 @@
 import type { VisualMaterialEntry } from '../types';
 import { bubblesEntry } from './bubbles';
+import { filamentsEntry } from './filaments';
 import { signatureViewEntry } from './signature-view';
 import { waterEntry } from './water';
 
@@ -10,5 +11,6 @@ import { waterEntry } from './water';
 export const VISUAL_MATERIALS: VisualMaterialEntry[] = [
   waterEntry,
   bubblesEntry,
+  filamentsEntry,
   signatureViewEntry,
 ];
