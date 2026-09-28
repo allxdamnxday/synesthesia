@@ -1,0 +1,173 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  border-radius: var(--radius-lg);
+  background: var(--color-basin);
+  border: 1px solid color-mix(in srgb, var(--color-pearl) 10%, transparent);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-regular);
+}
+
+.hint {
+  margin: 0;
+  color: var(--color-mist);
+  font-size: var(--font-size-sm);
+  max-width: 68ch;
+}
+
+.group {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.legend {
+  padding: 0;
+  margin-bottom: var(--space-1);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-strong);
+  color: var(--color-pearl);
+}
+
+.selectRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+}
+
+.count {
+  color: var(--color-mist);
+  font-size: var(--font-size-sm);
+  margin-left: var(--space-2);
+}
+
+.checklist {
+  list-style: none;
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0 var(--space-4);
+  max-height: 320px;
+  overflow-y: auto;
+  border-radius: var(--radius-md);
+  background: var(--color-deep);
+}
+
+.folderRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.folder {
+  font-size: var(--font-size-sm);
+}
+
+.options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-6);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.status {
+  margin: 0;
+  font-size: var(--font-size-md);
+}
+
+.problem {
+  margin: 0;
+  color: var(--color-alert);
+  font-size: var(--font-size-sm);
+}
+
+.progressList {
+  list-style: none;
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  max-height: 360px;
+  overflow-y: auto;
+  border-radius: var(--radius-md);
+  background: var(--color-deep);
+}
+
+.progressItem {
+  display: grid;
+  grid-template-columns: 3ch minmax(0, 1fr) 120px;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 28px;
+  font-size: var(--font-size-sm);
+  color: var(--color-mist);
+}
+
+.progressItem[data-status='rendering'],
+.progressItem[data-status='rendered'] {
+  color: var(--color-pearl);
+}
+
+.progressItem[data-status='failed'] .state {
+  color: var(--color-alert);
+}
+
+.number {
+  font-variant-numeric: tabular-nums;
+}
+
+.state {
+  overflow-wrap: anywhere;
+}
+
+.bar {
+  position: relative;
+  height: 4px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--color-silt) 45%, transparent);
+  overflow: hidden;
+}
+
+.fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--color-honey);
+  transition: width var(--transition-fast);
+}
+
+.progressItem[data-status='rendered'] .fill {
+  background: var(--color-water);
+}
+
+.progressItem[data-status='failed'] .fill {
+  background: var(--color-alert);
+}
+
+.progressItem[data-status='skipped'] .fill {
+  background: var(--color-silt);
+}
+
+.cancel {
+  border-color: color-mix(in srgb, var(--color-alert) 70%, transparent);
+  color: var(--color-alert);
+}

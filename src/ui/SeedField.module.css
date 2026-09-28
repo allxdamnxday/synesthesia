@@ -1,0 +1,60 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.label {
+  font-size: var(--font-size-sm);
+  color: var(--color-pearl);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.input {
+  width: 9ch;
+  min-height: var(--hit-min);
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid color-mix(in srgb, var(--color-pearl) 22%, transparent);
+  border-radius: var(--radius-md);
+  background: var(--color-basin-raised);
+  color: var(--color-pearl);
+  font-size: var(--font-size-md);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.06em;
+}
+
+.input:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--color-pearl) 40%, transparent);
+}
+
+.input:focus-visible {
+  box-shadow: none;
+  border-color: var(--color-honey);
+}
+
+.input[aria-invalid='true'] {
+  border-color: var(--color-alert);
+}
+
+.input:disabled {
+  opacity: 0.5;
+}
+
+.description,
+.error {
+  margin: 0;
+  font-size: var(--font-size-sm);
+}
+
+.description {
+  color: var(--color-mist);
+}
+
+.error {
+  color: var(--color-alert);
+}

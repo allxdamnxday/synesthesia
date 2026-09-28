@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { AlbumScreen } from '../screens/Album/AlbumScreen';
+import { NewAlbumScreen } from '../screens/Album/NewAlbumScreen';
 import { DiagnosticsScreen } from '../screens/Diagnostics/DiagnosticsScreen';
 import { HelpScreen } from '../screens/Help/HelpScreen';
 import { LibraryScreen } from '../screens/Library/LibraryScreen';
@@ -20,7 +21,8 @@ interface RouteDef {
 
 /**
  * Screens by hash path. Studio opens an existing composition (`/studio/:compositionId`)
- * or starts a new one from a signature (`/studio/new/:signatureId`).
+ * or starts a new one from a signature (`/studio/new/:signatureId`); albums likewise
+ * (`/album/:albumId`, `/album/new/:signatureId`).
  */
 const ROUTES: RouteDef[] = [
   { pattern: '/', render: () => <LibraryScreen /> },
@@ -28,6 +30,7 @@ const ROUTES: RouteDef[] = [
   { pattern: '/signature/:signatureId', render: (params) => <SignatureScreen params={params} /> },
   { pattern: '/studio/new/:signatureId', render: (params) => <StudioScreen params={params} /> },
   { pattern: '/studio/:compositionId', render: (params) => <StudioScreen params={params} /> },
+  { pattern: '/album/new/:signatureId', render: (params) => <NewAlbumScreen params={params} /> },
   { pattern: '/album/:albumId', render: (params) => <AlbumScreen params={params} /> },
   { pattern: '/settings', render: () => <SettingsScreen /> },
   { pattern: '/help', render: () => <HelpScreen /> },
