@@ -51,15 +51,43 @@ into a chat with Claude. Each page below has a **Copy report** or **Copy results
 
 ## 4. Spike 1: OpenCV in a worker
 
-_(filled in when the extraction work lands)_
+1. Open `spikes/01-opencv/`. Every row should say PASS. **Copy results**.
+2. Note *time to ready* (here: about 0.5 s warm, 0.9 s cold), the *longest main-thread
+   gap* (should stay under 50 ms), *ms per frame* for Farneback at 320×180 (here: about
+   19 ms), the projected time for a 10 s clip, and that the *heap* line is flat.
+3. A 2017 MacBook Pro may be 2–4× slower per frame; the budget is a 10 s clip extracted
+   within 60 s.
 
 ## 5. Spike 2: frame-accurate decode
 
-_(filled in when the extraction work lands)_
+1. Open `spikes/02-decode/`. **Copy results**.
+2. Each clip should read 90/90 frames, in order, with exact seeks. The portrait clip should
+   come out portrait (320 wide after the analysis resize). The HEVC clip should either
+   decode or say it can't, cleanly (both are acceptable).
 
 ## 6. Spike 5: fluid simulation
 
-_(filled in when the fluid work lands)_
+1. Open `spikes/05-fluid/`, press **Run checks**, then **Copy results**.
+2. (a) mount/unmount cycles: 0 live contexts, 0 lost, and no "Too many active WebGL
+   contexts" warning in the console (View › Developer › JavaScript Console).
+3. (b) determinism: the three hashes match.
+4. (c) frame rate for each quality at 1× and 2×: Standard should hold 30 fps or more. If
+   even Draft misses 30 fps at 2×, tell Claude (the preview can render at a lower pixel
+   ratio).
+5. Open `dev/materials/`, choose Water and the wink, and press **Benchmark** with the window
+   at the size Freeman would use. Note the chosen quality and the fps per level.
+6. On a 15-inch MacBook Pro with two graphics chips, unplug the charger while the water is
+   moving: note whether the picture survives the switch between chips.
+
+## 7. Extraction with real clips (Milestone 1)
+
+1. Open `dev/extraction/`, pick a few files from `tests/fixtures/` (for example
+   `dot-right.mp4`, `rotating-bar.mp4`) and compare the summaries with Windows (dot right:
+   direction ≈ 0; rotating bar: rotation > 0; still: movement 0). Note "took X s".
+2. Record a 10 s wink on an iPhone (portrait, Settings › Camera › Formats › Most Compatible),
+   AirDrop it to the Mac, and time its extraction, with and without a focus box around the
+   eye. Do the same with an HEVC ("High Efficiency") clip: it should either extract or show
+   the format message.
 
 ## Windows (Braden's machine)
 
