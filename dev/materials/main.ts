@@ -15,8 +15,13 @@ import {
   type Quality,
   type VisualMaterial,
 } from '../../src/materials/types';
-import { getVisualContext, type RenderTargetOverrides } from '../../src/materials/visual/shared/gl';
+import {
+  getVisualContext,
+  releaseVisualContext,
+  type RenderTargetOverrides,
+} from '../../src/materials/visual/shared/gl';
 import { WaterMaterial } from '../../src/materials/visual/water';
+import { runQualityBenchmark, type QualityBenchmarkResult } from '../../src/perf/benchmark';
 import { planSteps, stepsToReach } from '../../src/perf/fixedStep';
 import { FpsMeter } from '../../src/perf/fpsMeter';
 import { litFraction, meanLuma, renderOffscreen, sha256Hex } from '../../src/perf/offscreenRender';
@@ -61,6 +66,12 @@ export interface SpVisualApi {
   renderStats(opts: RenderOpts): Promise<RenderStats>;
   renderImage(opts: RenderOpts): Promise<string>;
   renderFilmstrip(opts: RenderOpts & { checkpoints: number[] }): Promise<string[]>;
+  /** Run the preview quality benchmark on a fresh canvas of this backing size. */
+  benchmark(opts?: {
+    width?: number;
+    height?: number;
+    durationMs?: number;
+  }): Promise<QualityBenchmarkResult & { ms: number }>;
 }
 
 declare global {
@@ -100,8 +111,35 @@ async function render(
   });
 }
 
+/** True while the quality benchmark owns the GPU: the stage stops stepping and drawing. */
+let benchmarking = false;
+
+async function benchmarkOnFreshCanvas(
+  opts: { width?: number; height?: number; durationMs?: number } = {},
+): Promise<QualityBenchmarkResult & { ms: number }> {
+  const stage = document.querySelector('.stage');
+  const bench = document.createElement('canvas');
+  bench.width = Math.round(opts.width ?? 1920);
+  bench.height = Math.round(opts.height ?? 1080);
+  // Visible over the stage, so the measured frames include compositing.
+  Object.assign(bench.style, { position: 'absolute', inset: '0', width: '100%', height: '100%' });
+  (stage as HTMLElement | null)?.append(bench);
+  benchmarking = true;
+  const start = performance.now();
+  try {
+    const result = await runQualityBenchmark(bench, { durationMs: opts.durationMs });
+    return { ...result, ms: performance.now() - start };
+  } finally {
+    const gl = bench.getContext('webgl2');
+    if (gl) releaseVisualContext(gl);
+    bench.remove();
+    benchmarking = false;
+  }
+}
+
 const api: SpVisualApi = {
   ready: false,
+  benchmark: benchmarkOnFreshCanvas,
   listMaterials: () =>
     listVisualMaterials().map((entry) => ({
       id: entry.meta.id,
@@ -172,6 +210,7 @@ const timeLabel = $<HTMLSpanElement>('time');
 const fpsLabel = $<HTMLSpanElement>('fps');
 const statusLine = $<HTMLDivElement>('status');
 const baselineButton = $<HTMLButtonElement>('baseline');
+const benchmarkButton = $<HTMLButtonElement>('benchmark');
 
 for (const entry of listVisualMaterials()) {
   const option = document.createElement('option');
@@ -356,6 +395,11 @@ function seekTo(t: number): void {
 function frame(now: number): void {
   const elapsed = lastFrame > 0 ? (now - lastFrame) / 1000 : 0;
   lastFrame = now;
+  if (benchmarking) {
+    dirty = true;
+    requestAnimationFrame(frame);
+    return;
+  }
   if (sizeCanvas()) {
     material?.resize(canvas.width, canvas.height);
     dirty = true;
@@ -404,6 +448,22 @@ baselineButton.addEventListener('click', () => {
 canvas.addEventListener('webglcontextlost', (event) => {
   event.preventDefault();
   statusLine.textContent = 'The graphics context was lost. Reload the page.';
+});
+benchmarkButton.addEventListener('click', () => {
+  benchmarkButton.disabled = true;
+  setStatus('Measuring each quality tier for about a second…');
+  api
+    .benchmark({ width: canvas.width, height: canvas.height })
+    .then((r) => {
+      const rows = (['draft', 'standard', 'high'] as const)
+        .map((tier) => `${tier} ${r.fpsByTier[tier].toFixed(1)} fps`)
+        .join(', ');
+      setStatus(`Benchmark at ${r.width}×${r.height}: ${rows}. Picks ${r.tier}.`);
+    })
+    .catch((error: unknown) => setStatus(`Benchmark stopped: ${String(error)}`))
+    .finally(() => {
+      benchmarkButton.disabled = false;
+    });
 });
 
 void mountMaterial().then(() => {

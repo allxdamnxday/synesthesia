@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Visual materials harness</title>
+    <link rel="icon" type="image/svg+xml" href="../../favicon.svg" />
     <style>
       :root {
         color-scheme: dark;
@@ -36,6 +37,7 @@
         flex-wrap: wrap;
       }
       .stage {
+        position: relative;
         background: #000;
         width: 960px;
         max-width: 100%;
@@ -136,6 +138,7 @@
           <input id="seek" type="range" min="0" max="1000" step="1" value="0" aria-label="Seek" />
           <span class="readout" id="time">0.00 s</span>
           <span class="readout" id="fps">– fps</span>
+          <button id="benchmark" type="button">Benchmark</button>
         </div>
         <div id="status" role="status"></div>
       </div>
