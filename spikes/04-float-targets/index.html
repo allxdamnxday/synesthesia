@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Spike 4: float render targets (Synesthesia)</title>
+    <link rel="icon" type="image/svg+xml" href="../../favicon.svg" />
+    <style>
+      body {
+        background: #0e1a24;
+        color: #e8e4da;
+        font:
+          16px/1.5 system-ui,
+          sans-serif;
+        padding: 32px;
+        max-width: 1100px;
+        margin: auto;
+      }
+      a {
+        color: #7fb7c9;
+      }
+      p,
+      .muted {
+        color: #9aabb5;
+      }
+      button {
+        font: inherit;
+        font-size: 14px;
+        font-weight: 600;
+        min-height: 32px;
+        padding: 4px 16px;
+        border-radius: 8px;
+        border: 1px solid #e8e4da33;
+        background: #1f3342;
+        color: #e8e4da;
+        cursor: pointer;
+      }
+      button.primary {
+        background: #d9a441;
+        color: #0e1a24;
+        border-color: transparent;
+      }
+      button:focus-visible,
+      a:focus-visible,
+      input:focus-visible {
+        outline: 2px solid #d9a441;
+        outline-offset: 2px;
+      }
+      fieldset {
+        border: 1px solid #5e6f7a66;
+        border-radius: 8px;
+        padding: 8px 16px;
+      }
+      label {
+        margin-right: 16px;
+        white-space: nowrap;
+      }
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+        margin: 16px 0;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        font-size: 14px;
+        margin-top: 8px;
+      }
+      th,
+      td {
+        text-align: left;
+        vertical-align: top;
+        padding: 6px 8px;
+        border-bottom: 1px solid #5e6f7a66;
+      }
+      th {
+        color: #9aabb5;
+        font-weight: 600;
+      }
+      .pass {
+        color: #7fb7c9;
+        font-weight: 600;
+      }
+      .fail {
+        color: #e8806a;
+        font-weight: 600;
+      }
+      .verdict {
+        font-size: 18px;
+        margin: 16px 0;
+      }
+      pre {
+        background: #172733;
+        padding: 12px;
+        border-radius: 8px;
+        white-space: pre-wrap;
+        font-size: 13px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Spike 4: WebGL2 float render targets and linear filtering</h1>
+    <p>
+      The fluid materials render into half-float (or float) textures and sample them smoothly, and
+      the signature is uploaded every step into a two-channel half-float texture. This page tests
+      exactly those paths on this computer's GPU, using the same code as Diagnostics.
+    </p>
+    <fieldset>
+      <legend>GPU to use</legend>
+      <label><input type="radio" name="power" value="default" checked /> Browser default</label>
+      <label
+        ><input type="radio" name="power" value="high-performance" /> High-performance (discrete GPU
+        on a two-GPU Mac)</label
+      >
+      <label><input type="radio" name="power" value="low-power" /> Low-power (integrated)</label>
+    </fieldset>
+    <div class="row">
+      <button id="run" type="button" class="primary">Run again</button>
+      <button id="copy" type="button">Copy results</button>
+      <span id="status" class="muted" role="status"></span>
+    </div>
+    <p id="verdict" class="verdict"></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Format</th>
+          <th>Needed for</th>
+          <th>Renderable</th>
+          <th>Readback of -1.5, 2.25, 1000</th>
+          <th>Linear filter (expect 0.5)</th>
+          <th>Result</th>
+        </tr>
+      </thead>
+      <tbody id="matrix"></tbody>
+    </table>
+    <h2>Details</h2>
+    <pre id="details">Running…</pre>
+    <p><a href="../">All spikes</a> · <a href="../../#/diagnostics">Diagnostics</a></p>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
