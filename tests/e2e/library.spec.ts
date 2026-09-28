@@ -228,7 +228,7 @@ test('a file that is not a signature or composition is refused plainly', async (
   });
   await expect(
     page.getByText(
-      "“notes.json” wasn't imported. This file isn't a Synesthesia signature or composition.",
+      "“notes.json” wasn't imported. This file isn't a Synesthesia signature, composition or album.",
     ),
   ).toBeVisible();
   await expect(page.getByText(EMPTY_TEXT)).toBeVisible();

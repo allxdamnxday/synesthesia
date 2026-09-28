@@ -323,8 +323,8 @@ export function LibraryScreen() {
             New from clip
           </Button>
           <p className={styles.hint}>
-            You can also import a signature or composition file, or restore a backup, with the
-            buttons above.
+            You can also import a signature, composition or album file, or restore a backup, with
+            the buttons above.
           </p>
         </div>
       ) : null}
