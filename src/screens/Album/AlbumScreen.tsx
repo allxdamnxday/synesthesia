@@ -47,6 +47,11 @@ interface NoticeItem {
  */
 export function AlbumScreen({ params }: { params?: Record<string, string> }) {
   const albumId = params?.albumId ?? '';
+  // A fresh screen per album, so nothing from the previous one lingers.
+  return <AlbumView key={albumId} albumId={albumId} />;
+}
+
+function AlbumView({ albumId }: { albumId: string }) {
   const [loaded, setLoaded] = useState<Loaded>({ status: 'loading' });
   const [notices, setNotices] = useState<NoticeItem[]>([]);
   const [renaming, setRenaming] = useState(false);

@@ -142,7 +142,9 @@ export function BatchRenderPanel({
       }
     } catch (err) {
       console.error(errorDetail(err));
-      setMessage("That folder can't be used. Choose another one, such as a folder in Movies.");
+      setMessage(
+        "That folder can't be used. Choose another, such as a new folder inside Movies or Documents.",
+      );
     }
   };
 

@@ -28,7 +28,12 @@ export function DeleteAlbumDialog({
     also: false,
   });
   const also = album !== null && choice.albumId === album.id && choice.also;
-  const tracks = album ? countOf(album.trackCount, 'composition', 'compositions') : '';
+  const count = album?.trackCount ?? 0;
+  const tracks = countOf(count, 'composition', 'compositions');
+  const kept =
+    count === 0
+      ? ''
+      : ` Its ${tracks} ${count === 1 ? 'stays' : 'stay'} in your library as separate compositions.`;
 
   return (
     <ConfirmDialog
@@ -40,11 +45,8 @@ export function DeleteAlbumDialog({
       onConfirm={() => onConfirm(also)}
       onCancel={onCancel}
     >
-      <p>
-        This removes the album and its record from this browser. Its {tracks} stay in your library
-        as separate compositions.
-      </p>
-      {album && album.trackCount > 0 ? (
+      <p>This removes the album and its record from this browser.{kept}</p>
+      {album && count > 0 ? (
         <Checkbox
           label={`Also delete its ${tracks} and their notes`}
           checked={also}

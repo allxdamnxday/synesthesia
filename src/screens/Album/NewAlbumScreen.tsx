@@ -49,6 +49,11 @@ const SIGNATURE_VIEW_NOTE =
  */
 export function NewAlbumScreen({ params }: { params?: Record<string, string> }) {
   const signatureId = params?.signatureId ?? '';
+  // A fresh form per signature.
+  return <NewAlbumPage key={signatureId} signatureId={signatureId} />;
+}
+
+function NewAlbumPage({ signatureId }: { signatureId: string }) {
   const materials = useMemo(() => installedMaterials(), []);
   const [loaded, setLoaded] = useState<Loaded>({ status: 'loading' });
   const [form, setForm] = useState<NewAlbumForm | null>(null);
