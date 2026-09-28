@@ -1,5 +1,5 @@
 import { existsSync, readdirSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { relative, resolve } from 'node:path';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vitest/config';
 
@@ -40,8 +40,9 @@ export default defineConfig({
   },
   server: {
     port: 5173,
-    // Agent worktrees live under .claude/; never watch or scan them.
-    watch: { ignored: ['**/.claude/**'] },
+    // Agent worktrees live under <root>/.claude/; never watch them. Match relative to this
+    // checkout's root, because a worktree's own files also sit under a .claude/ path.
+    watch: { ignored: (path: string) => relative(root, path).startsWith('.claude') },
   },
   optimizeDeps: {
     entries: ['index.html', 'src/**/*.{ts,tsx}', 'spikes/**/*.html', 'dev/**/*.html'],
