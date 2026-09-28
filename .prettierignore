@@ -8,3 +8,4 @@ package-lock.json
 *.md
 spikes/fixtures
 tests/fixtures
+.claude

@@ -24,3 +24,6 @@ Thumbs.db
 # local env
 .env
 .env.*
+
+# agent worktrees (never commit)
+.claude/worktrees/

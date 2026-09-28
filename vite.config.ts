@@ -36,7 +36,14 @@ export default defineConfig({
     target: 'es2022',
     rolldownOptions: { input: htmlEntries() },
   },
-  server: { port: 5173 },
+  server: {
+    port: 5173,
+    // Agent worktrees live under .claude/; never watch or scan them.
+    watch: { ignored: ['**/.claude/**'] },
+  },
+  optimizeDeps: {
+    entries: ['index.html', 'src/**/*.{ts,tsx}', 'spikes/**/*.html', 'dev/**/*.html'],
+  },
   preview: { port: 4173 },
   test: {
     include: ['tests/unit/**/*.test.ts', 'src/**/*.test.ts'],

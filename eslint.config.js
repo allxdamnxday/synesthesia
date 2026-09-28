@@ -16,6 +16,7 @@ export default defineConfig(
       'public/vendor/**',
       '**/fixtures/**',
       'node_modules/**',
+      '.claude/**',
     ],
   },
   js.configs.recommended,
