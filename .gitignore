@@ -1,0 +1,26 @@
+# dependencies and build output
+node_modules/
+dist/
+dist-ssr/
+*.local
+.vite/
+coverage/
+
+# test output
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
+# real clips never get committed (people's faces, large files)
+**/fixtures/private/
+
+# editor / OS
+.DS_Store
+Thumbs.db
+.idea/
+*.swp
+
+# local env
+.env
+.env.*

@@ -1,0 +1,13 @@
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff2 binary
+*.mp4 binary
+*.mov binary
+*.webm binary
+*.zip binary
+*.wav binary
+
+public/vendor/** -diff linguist-vendored
