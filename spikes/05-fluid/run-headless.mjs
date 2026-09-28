@@ -26,7 +26,16 @@ if (!url) {
     server: { port, strictPort: true },
     logLevel: 'warn',
   });
-  await server.listen();
+  try {
+    await server.listen();
+  } catch (error) {
+    await server.close();
+    console.error(
+      `Could not start a dev server on port ${port} (${error.message}). ` +
+        'Pass --port <free port>, or --url to use a server that is already running.',
+    );
+    process.exit(2);
+  }
   url = `http://localhost:${port}/spikes/05-fluid/`;
 }
 
