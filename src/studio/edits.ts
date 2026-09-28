@@ -27,6 +27,7 @@ import {
   valuesAfterMaterialSwitch,
   type Field,
 } from '../engine/propertyModel';
+import { defaultCompositionName } from '../engine/compositionFactory';
 import type { SnapshotState } from '../engine/snapshots';
 import { isSharedPropertyId, readProperty, SHARED_PROPERTY_IDS } from '../materials/properties';
 import type { MaterialMeta, PropertyDef, PropertyValues } from '../materials/types';
@@ -350,6 +351,30 @@ export function wakeOf(composition: Composition): WakeState {
     mute: composition.mute,
     chance: composition.chance,
   };
+}
+
+/**
+ * The name a composition should have once its wake becomes `next`: one still called by its
+ * default name ("Wink · Water and Water") follows its materials; a name the person chose
+ * (or an album track's number) is kept.
+ */
+export function followDefaultName(
+  composition: Composition,
+  next: Pick<WakeState, 'visual' | 'sound'>,
+  catalog: MaterialCatalog,
+): string {
+  const nameFor = (visualId: string, soundId: string): string | null => {
+    const visual = catalog.visual(visualId);
+    const sound = catalog.sound(soundId);
+    return visual && sound
+      ? defaultCompositionName(composition.signature.name, visual.name, sound.name)
+      : null;
+  };
+  const before = nameFor(composition.visual.materialId, composition.sound.materialId);
+  const after = nameFor(next.visual.materialId, next.sound.materialId);
+  return before !== null && after !== null && composition.name === before
+    ? after
+    : composition.name;
 }
 
 /** Record the installed version of each material (on save, after the notice was shown). */

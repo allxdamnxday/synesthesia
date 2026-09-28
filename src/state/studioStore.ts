@@ -51,6 +51,7 @@ import {
   editProperty,
   editSeed,
   editTimeline,
+  followDefaultName,
   switchMaterial,
   toggleMute,
   toggleSolo,
@@ -269,11 +270,17 @@ function nowIso(): string {
 
 export const useStudioStore = create<StudioState>()((set, get) => {
   /** Record a new wake as one undo step (or part of the current gesture's step). */
+  /** The composition with a new wake (a default name follows its materials). */
+  const rewoken = (composition: Composition, next: WakeState): Composition => ({
+    ...withWake(composition, next),
+    name: followDefaultName(composition, next, registryCatalog),
+  });
+
   const commit = (next: WakeState, gesture?: Gesture): void => {
     const { composition } = get();
     const h = history;
     if (!composition || !h || !recordEdit(h, next, gesture)) return;
-    set({ composition: withWake(composition, next), canUndo: h.canUndo, canRedo: h.canRedo });
+    set({ composition: rewoken(composition, next), canUndo: h.canUndo, canRedo: h.canRedo });
   };
 
   const present = (): WakeState | null => history?.present ?? null;
@@ -612,14 +619,14 @@ export const useStudioStore = create<StudioState>()((set, get) => {
       const h = history;
       if (!composition || !h?.canUndo) return;
       const state = h.undo();
-      set({ composition: withWake(composition, state), canUndo: h.canUndo, canRedo: h.canRedo });
+      set({ composition: rewoken(composition, state), canUndo: h.canUndo, canRedo: h.canRedo });
     },
     redo: () => {
       const { composition } = get();
       const h = history;
       if (!composition || !h?.canRedo) return;
       const state = h.redo();
-      set({ composition: withWake(composition, state), canUndo: h.canUndo, canRedo: h.canRedo });
+      set({ composition: rewoken(composition, state), canUndo: h.canUndo, canRedo: h.canRedo });
     },
     storeSnapshot: (slot) => {
       const state = present();

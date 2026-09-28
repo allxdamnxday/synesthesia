@@ -16,6 +16,7 @@ import {
   editSeed,
   editTimeline,
   enforceLocks,
+  followDefaultName,
   isLocked,
   isSoloed,
   lockedIds,
@@ -279,6 +280,17 @@ describe('compositions', () => {
     // Key order doesn't matter.
     const reordered = JSON.parse(JSON.stringify({ ...c, name: c.name })) as Composition;
     expect(compositionsDiffer(c, reordered)).toBe(false);
+  });
+
+  it('a default name follows the materials; a chosen name stays', () => {
+    const c = { ...composition(), name: 'Wink · Water and Water' };
+    const honey = switchMaterial(wakeOf(c), 'visual', HONEY, catalog);
+    expect(followDefaultName(c, honey, catalog)).toBe('Wink · Honey and Water');
+    expect(followDefaultName({ ...c, name: 'The fall' }, honey, catalog)).toBe('The fall');
+    expect(followDefaultName({ ...c, name: '07' }, honey, catalog)).toBe('07');
+    // An unknown material leaves the name alone.
+    const unknown = { ...honey, visual: { ...honey.visual, materialId: 'nothing' } };
+    expect(followDefaultName(c, unknown, catalog)).toBe('Wink · Water and Water');
   });
 
   it('records the installed material versions', () => {
