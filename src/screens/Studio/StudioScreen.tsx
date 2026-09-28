@@ -4,6 +4,7 @@ import { flushStudioAutosave, useStudioStore } from '../../state/studioStore';
 import { targetKey, type StudioTarget } from '../../studio/working';
 import { Button } from '../../ui/Button';
 import styles from './Studio.module.css';
+import { StudioErrorBoundary } from './StudioErrorBoundary';
 import { StudioWorkspace } from './StudioWorkspace';
 
 function targetOf(params: Record<string, string> | undefined): StudioTarget | null {
@@ -60,7 +61,11 @@ export function StudioScreen({ params }: { params?: Record<string, string> }) {
 
   switch (status) {
     case 'ready':
-      return <StudioWorkspace />;
+      return (
+        <StudioErrorBoundary>
+          <StudioWorkspace />
+        </StudioErrorBoundary>
+      );
     case 'missing-composition':
       return (
         <Message title="This composition isn’t here">
