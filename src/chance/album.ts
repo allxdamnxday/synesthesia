@@ -102,10 +102,11 @@ export function planAlbum(
     order.push(...shuffleInPlace(rng, pairs.slice()));
     cycle++;
   }
+  const pairWord = pairs.length === 1 ? 'pairing' : 'pairings';
   if (count < pairs.length) {
-    note = `The grid has ${pairs.length} pairs; the album keeps the first ${count} in its chance order.`;
+    note = `There are ${pairs.length} ${pairWord}; the album keeps the first ${count} in their chance order.`;
   } else if (count > pairs.length) {
-    note = `The grid has ${pairs.length} pairs; after every pair has appeared once, pairs repeat in a new chance order to reach ${count} tracks.`;
+    note = `There ${pairs.length === 1 ? 'is' : 'are'} ${pairs.length} ${pairWord}; after each has appeared once, they repeat in a new chance order to reach ${count} tracks.`;
   }
   for (let index = 1; index <= count; index++) {
     const pair = order[index - 1];

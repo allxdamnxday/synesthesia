@@ -3,6 +3,54 @@
  * stores import from here.
  */
 export {
+  ALBUM_FILE_EXTENSION,
+  ALBUM_LOG_FILE_NAME,
+  ALBUM_MESSAGES,
+  PAIRING_LABELS,
+  TRACK_STATUSES,
+  UNTITLED_ALBUM,
+  albumFileName,
+  albumFromJson,
+  albumLogText,
+  buildAlbumDrafts,
+  countTracks,
+  createAlbumFromPlan,
+  defaultPools,
+  deleteAlbum,
+  exportAlbumFiles,
+  getAlbum,
+  getAlbumWithTracks,
+  importAlbumFile,
+  importParsedAlbum,
+  installedMaterials,
+  isTrackStatus,
+  listAlbums,
+  materialChoiceInfo,
+  materialName,
+  normalizeAlbumSettings,
+  pairingCount,
+  parseAlbum,
+  propertyLabel,
+  renameAlbum,
+  serializeAlbum,
+  setAlbumRender,
+  setTrackNotes,
+  setTrackStatus,
+  summarizeAlbum,
+  validateAlbum,
+  type Album,
+  type AlbumDraftInput,
+  type AlbumDrafts,
+  type AlbumImportResult,
+  type AlbumMaterials,
+  type AlbumSettings,
+  type AlbumSource,
+  type AlbumSummary,
+  type AlbumWithTracks,
+  type PairingStrategy,
+  type TrackCounts,
+} from './albums';
+export {
   BACKUP_FILE_EXTENSION,
   backupFileName,
   createBackup,
@@ -75,5 +123,5 @@ export {
   type StorageUsage,
 } from './storage';
 export { signatureThumbnail } from './thumbnails';
-export type { SignatureMeta, StoredAlbum } from './types';
+export type { LegacyAlbumRecord, SignatureMeta, StoredAlbum } from './types';
 export { clearWorkingState, loadWorkingState, saveWorkingState } from './workingState';

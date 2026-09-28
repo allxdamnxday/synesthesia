@@ -16,11 +16,26 @@ export interface ScrubBarProps {
   label?: string;
 }
 
-export function formatTime(seconds: number): string {
+/**
+ * m:ss, or m:ss.t (tenths) when `tenths` is set: short movements like a wink last a
+ * second or two, so whole seconds say too little.
+ */
+export function formatTime(seconds: number, tenths = false): string {
   const s = Math.max(0, seconds);
+  if (tenths) {
+    const totalTenths = Math.floor(s * 10 + 1e-6);
+    const minutes = Math.floor(totalTenths / 600);
+    const secs = Math.floor((totalTenths % 600) / 10);
+    return `${minutes}:${String(secs).padStart(2, '0')}.${totalTenths % 10}`;
+  }
   const minutes = Math.floor(s / 60);
   const secs = Math.floor(s % 60);
   return `${minutes}:${String(secs).padStart(2, '0')}`;
+}
+
+/** Tenths are shown for timelines under a minute. */
+export function wantsTenths(duration: number): boolean {
+  return duration < 60;
 }
 
 /** The transport's timeline: scrub to any point; onsets and the tail are marked. */
@@ -83,7 +98,7 @@ export function ScrubBar({
       aria-valuemin={0}
       aria-valuemax={Number(duration.toFixed(2))}
       aria-valuenow={Number(position.toFixed(2))}
-      aria-valuetext={`${formatTime(position)} of ${formatTime(duration)}`}
+      aria-valuetext={`${formatTime(position, wantsTenths(duration))} of ${formatTime(duration, wantsTenths(duration))}`}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}

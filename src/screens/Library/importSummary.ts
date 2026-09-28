@@ -21,6 +21,7 @@ export const compositionName = (name: string) => name || 'Untitled composition';
 export function describeImport(outcomes: readonly ImportOutcome[]): ImportNotice[] {
   const addedSignatures: string[] = [];
   const addedCompositions: string[] = [];
+  const addedAlbums: string[] = [];
   const present: string[] = [];
   const importedHashes = new Set<string>();
   const waiting: ImportNotice[] = [];
@@ -35,6 +36,18 @@ export function describeImport(outcomes: readonly ImportOutcome[]): ImportNotice
       continue;
     }
     const r = outcome.result;
+    if (r.kind === 'album') {
+      const title = r.album.title || 'Untitled album';
+      if (r.status === 'already-present') present.push(title);
+      else addedAlbums.push(title);
+      if (r.missingTracks > 0) {
+        waiting.push({
+          tone: 'warning',
+          text: `The album “${title}” has ${countOf(r.missingTracks, 'track', 'tracks')} whose compositions aren't in your library. Import those compositions, or restore a backup, to play them.`,
+        });
+      }
+      continue;
+    }
     if (r.kind === 'signature') {
       importedHashes.add(r.meta.contentHash);
       if (r.status === 'already-present') {
@@ -59,12 +72,14 @@ export function describeImport(outcomes: readonly ImportOutcome[]): ImportNotice
   }
 
   const parts: string[] = [];
-  const added = addedSignatures.length + addedCompositions.length;
+  const added = addedSignatures.length + addedCompositions.length + addedAlbums.length;
   if (added === 1) {
     parts.push(
       addedSignatures.length === 1
         ? `Added the signature “${addedSignatures[0]}”.`
-        : `Added the composition “${addedCompositions[0]}”.`,
+        : addedCompositions.length === 1
+          ? `Added the composition “${addedCompositions[0]}”.`
+          : `Added the album “${addedAlbums[0]}”.`,
     );
   } else if (added > 1) {
     const kinds = [
@@ -72,6 +87,7 @@ export function describeImport(outcomes: readonly ImportOutcome[]): ImportNotice
       addedCompositions.length > 0
         ? countOf(addedCompositions.length, 'composition', 'compositions')
         : '',
+      addedAlbums.length > 0 ? countOf(addedAlbums.length, 'album', 'albums') : '',
     ].filter(Boolean);
     parts.push(`Added ${kinds.join(' and ')}.`);
   }

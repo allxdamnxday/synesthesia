@@ -270,7 +270,7 @@ test('signature export and import keep the content hash; a tampered file is refu
   // Not a signature at all.
   const junk = await page.evaluate(() => window.lib.importLibraryText('{"format":"other"}'));
   expect(junk.ok).toBe(false);
-  if (!junk.ok) expect(junk.message).toMatch(/isn't a Synesthesia signature or composition/);
+  if (!junk.ok) expect(junk.message).toMatch(/isn't a Synesthesia signature, composition or album/);
 });
 
 test('backup, clear and restore bring everything back', async ({ page }) => {

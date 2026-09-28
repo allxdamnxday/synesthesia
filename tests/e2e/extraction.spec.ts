@@ -284,14 +284,15 @@ test('movement that never stops: the auto floor mutes it and Prepare would say s
   expect(noiseFloorLooksHigh(manual)).toBe(false);
 });
 
-test('analysis size applies to the longer side: a clip turned portrait costs no more', async () => {
+test('analysis size and grid apply to the longer side: a clip turned portrait costs no more', async () => {
   // Rotate the 320×180 dot clip a quarter turn clockwise: it becomes 180×320, and the dot
   // that moved right now moves down.
   const body = await extract(page, 'dot-right.mp4', { rotate: 90 });
   console.log(summary('dot-right rotated 90°', body));
   expect(body.extraction.analysisWidth).toBe(320);
-  expect(body.grid).toEqual({ cols: 32, rows: 48 });
+  expect(body.grid).toEqual({ cols: 18, rows: 32 });
   expect(meanDirection(body, activeFrames(body))).toBeCloseTo(-Math.PI / 2, 1);
+  expect(meanOver(body.features.coherence, activeFrames(body))).toBeGreaterThan(0.9);
 });
 
 test('extracting the same clip twice gives the identical content hash', async () => {

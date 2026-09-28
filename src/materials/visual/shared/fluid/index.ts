@@ -12,7 +12,15 @@ export {
   type FluidSolverOptions,
   type FluidStepParams,
   type SignatureField,
+  type TexelSized,
 } from './FluidSolver';
+/** GLSL chunks for material passes run through the solver's hooks. */
+export {
+  COPY_FRAGMENT,
+  PRECISION as FLUID_PRECISION_GLSL,
+  SAMPLING as FLUID_SAMPLING_GLSL,
+  SIGNATURE_FORCE as SIGNATURE_FORCE_GLSL,
+} from './shaders';
 export {
   FLUID_TIERS,
   MAX_VISCOSITY_ITERATIONS,

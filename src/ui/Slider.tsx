@@ -31,6 +31,8 @@ export interface SliderProps {
   onUnlock?: () => void;
   /** Accent for linked shared properties. */
   accent?: 'honey' | 'water';
+  /** Always show the value (e.g. Speed), not only on hover and focus. */
+  showValue?: boolean;
 }
 
 const defaultFormat = (v: number) => v.toFixed(2);
@@ -54,6 +56,7 @@ export function Slider({
   locked = false,
   onUnlock,
   accent = 'honey',
+  showValue = false,
 }: SliderProps) {
   const id = useId();
   const trackRef = useRef<HTMLDivElement>(null);
@@ -133,6 +136,7 @@ export function Slider({
     active ? styles.active : '',
     inert ? styles.inert : '',
     accent === 'water' ? styles.water : '',
+    showValue ? styles.showValue : '',
   ]
     .filter(Boolean)
     .join(' ');
