@@ -236,6 +236,12 @@ const autosave = new Debouncer<{ key: string; composition: Composition | null }>
   onError: (error) => console.warn('Autosave failed:', errorDetail(error)),
 });
 
+/** Drop a waiting autosave and let any write already under way finish (before clearing). */
+async function settleAutosave(): Promise<void> {
+  autosave.cancel();
+  await autosave.flush();
+}
+
 function notice(tone: StudioNotice['tone'], text: string, action?: StudioNoticeAction) {
   return { id: ++noticeCount, tone, text, action };
 }
@@ -414,7 +420,9 @@ export const useStudioStore = create<StudioState>()((set, get) => {
             sound: sound?.meta,
             render: { width: res.width, height: res.height, fps: settings.renderFps },
           });
-          const restored = restorableComposition(await loadWorkingState(key), target);
+          let restored = restorableComposition(await loadWorkingState(key), target);
+          // Work that has since been saved is in the library, not "new" any more.
+          if (restored && (await getComposition(restored.id))) restored = null;
           if (token !== loadToken) return;
           const notices = restored
             ? [
@@ -604,8 +612,9 @@ export const useStudioStore = create<StudioState>()((set, get) => {
     },
     recallSnapshot: (slot) => {
       const snap = get().snapshots[slot];
-      if (!snap) return;
-      commit(structuredClone(snap));
+      const state = present();
+      if (!snap || !state) return;
+      if (JSON.stringify(snap) !== JSON.stringify(state)) commit(structuredClone(snap));
       set({ activeSlot: slot });
     },
 
@@ -622,7 +631,7 @@ export const useStudioStore = create<StudioState>()((set, get) => {
       set({ saving: true });
       try {
         const saved = await store(composition);
-        autosave.cancel();
+        await settleAutosave();
         await clearWorkingState(workingKey(target));
         const nextTarget: StudioTarget = { kind: 'composition', compositionId: saved.id };
         if (targetKey(nextTarget) !== targetKey(target)) {
@@ -667,7 +676,7 @@ export const useStudioStore = create<StudioState>()((set, get) => {
           updatedAt: now,
         };
         const saved = await store(copy);
-        autosave.cancel();
+        await settleAutosave();
         // The unsaved changes now live in the copy; the original stays as it was saved.
         await clearWorkingState(workingKey(target));
         const nextTarget: StudioTarget = { kind: 'composition', compositionId: saved.id };
@@ -698,7 +707,6 @@ export const useStudioStore = create<StudioState>()((set, get) => {
     async discardChanges() {
       const { baseline, target } = get();
       if (!baseline || !target) return;
-      autosave.cancel();
       history = new UndoHistory<WakeState>(wakeOf(baseline));
       set((s) => ({
         composition: baseline,
@@ -708,6 +716,7 @@ export const useStudioStore = create<StudioState>()((set, get) => {
         notices: s.notices.filter((n) => n.action !== 'discard'),
       }));
       try {
+        await settleAutosave();
         await clearWorkingState(workingKey(target));
       } catch (error) {
         console.warn('Could not clear the autosave:', errorDetail(error));
@@ -740,15 +749,6 @@ useStudioStore.subscribe((state, prev) => {
     composition: changed ? state.composition : null,
   });
 });
-
-/** Is the working composition different from what's saved? */
-export function hasUnsavedChanges(state: Pick<StudioState, 'composition' | 'baseline'>): boolean {
-  return (
-    state.composition !== null &&
-    state.baseline !== null &&
-    compositionsDiffer(state.composition, state.baseline)
-  );
-}
 
 /** Write any pending autosave now (the page is hiding or closing). */
 export function flushStudioAutosave(): Promise<void> {
