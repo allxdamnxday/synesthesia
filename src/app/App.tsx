@@ -8,6 +8,7 @@ import { PrepareScreen } from '../screens/Prepare/PrepareScreen';
 import { SettingsScreen } from '../screens/Settings/SettingsScreen';
 import { SignatureScreen } from '../screens/Signature/SignatureScreen';
 import { StudioScreen } from '../screens/Studio/StudioScreen';
+import { usePresentationStore } from '../state/presentationStore';
 import styles from './App.module.css';
 import { DedicationSplash } from './DedicationSplash';
 import { FileDropGuard } from './FileDropGuard';
@@ -66,25 +67,29 @@ const NAV = [
 
 export function App() {
   const path = useHashPath();
+  // Presentation mode shows only the wake (Studio, SPEC 6.3).
+  const presenting = usePresentationStore((s) => s.active);
   return (
     <StartupGate>
       <div className={styles.app}>
-        <header className={styles.header}>
-          <a className={styles.wordmark} href={href('/')}>
-            Synesthesia
-          </a>
-          <nav className={styles.nav} aria-label="Main">
-            {NAV.map((item) => (
-              <a
-                key={item.path}
-                href={href(item.path)}
-                aria-current={path === item.path ? 'page' : undefined}
-              >
-                {item.label}
-              </a>
-            ))}
-          </nav>
-        </header>
+        {presenting ? null : (
+          <header className={styles.header}>
+            <a className={styles.wordmark} href={href('/')}>
+              Synesthesia
+            </a>
+            <nav className={styles.nav} aria-label="Main">
+              {NAV.map((item) => (
+                <a
+                  key={item.path}
+                  href={href(item.path)}
+                  aria-current={path === item.path ? 'page' : undefined}
+                >
+                  {item.label}
+                </a>
+              ))}
+            </nav>
+          </header>
+        )}
         <main className={styles.main}>{resolve(path)}</main>
       </div>
       <FileDropGuard />

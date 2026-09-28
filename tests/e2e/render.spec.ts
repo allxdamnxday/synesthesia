@@ -617,12 +617,12 @@ test.describe('offline render to MP4', () => {
       seconds: 1,
       destination: 'opfs',
       opfsDir: dir,
-      missingVisualMaterial: 'honey',
+      missingVisualMaterial: 'not-installed',
     });
     expect(out.ok).toBe(false);
     expect(out.cancelled).toBe(false);
     expect(out.error?.code).toBe('material-missing');
-    expect(out.error?.message).toContain('“honey”');
+    expect(out.error?.message).toContain('“not-installed”');
     expect(out.folderListing).toEqual([]);
 
     // A failure halfway through the frames, with the file already streaming: removed too.
@@ -870,7 +870,7 @@ test.describe('render dialog', () => {
         (window as unknown as Win).spRender.openDialog({
           signatureUrl: url,
           seconds: 1,
-          missingVisualMaterial: 'honey',
+          missingVisualMaterial: 'not-installed',
         }),
       SIGNATURE_URL,
     );
@@ -879,7 +879,7 @@ test.describe('render dialog', () => {
     await dialog.getByRole('button', { name: 'Render', exact: true }).click();
     await expect(
       dialog.getByText(
-        'This composition uses a material this version of the instrument doesn’t have (“honey”).',
+        'This composition uses a material this version of the instrument doesn’t have (“not-installed”).',
       ),
     ).toBeVisible();
     await expect(dialog.getByText('Details for Braden')).toBeVisible();

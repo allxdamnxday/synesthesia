@@ -13,8 +13,15 @@
   --accent: var(--color-water);
 }
 
+.switch {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+}
+
 .input {
-  /* Invisible but covering the whole control, so clicks land on the real checkbox. */
+  /* Invisible but covering the switch, so clicks on it land on the real checkbox; the label
+     text stays uncovered and toggles it through the label. */
   position: absolute;
   inset: 0;
   width: 100%;
@@ -60,7 +67,7 @@
 }
 
 .input:disabled + .track,
-.input:disabled ~ .label {
+.toggle:has(.input:disabled) .label {
   opacity: 0.5;
 }
 
