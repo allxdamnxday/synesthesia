@@ -72,6 +72,10 @@ export interface RenderBytesOptions {
   /** Return the MP4 as base64 (default true). */
   returnBytes?: boolean;
   encoding?: RenderEncoding;
+  /** Pretend the composition names a material this version lacks (error-path tests). */
+  missingVisualMaterial?: string;
+  /** Make the visual material fail after this many steps (error-path tests). */
+  failAtStep?: number;
 }
 
 export interface ProgressLog {
@@ -178,17 +182,39 @@ export function buildComposition(
     visual: opts.mute?.visual ?? false,
     sound: opts.mute?.sound ?? false,
   };
+  if (opts.missingVisualMaterial) composition.visual.materialId = opts.missingVisualMaterial;
   return composition;
+}
+
+/** A registry material whose `step` throws after `steps` steps (error-path tests). */
+function failingVisual(entry: VisualMaterialEntry, steps: number): VisualMaterialEntry {
+  return {
+    ...entry,
+    create: () => {
+      const material = entry.create();
+      const step = material.step.bind(material);
+      let taken = 0;
+      material.step = (frame, props, dt) => {
+        if (++taken > steps) throw new Error(`Test failure after ${steps} steps`);
+        step(frame, props, dt);
+      };
+      return material;
+    },
+  };
 }
 
 /** The dev-only test materials a composition asks for (undefined: use the registry). */
 export function harnessMaterials(
   signature: KineticSignature,
   composition: Composition,
+  failAtStep?: number,
 ): { visual?: VisualMaterialEntry; sound?: SoundMaterialEntry } {
   const materials: { visual?: VisualMaterialEntry; sound?: SoundMaterialEntry } = {};
   if (composition.visual.materialId === FLASH_META.id) {
     materials.visual = onsetFlashEntry(createTimelineSampler(signature, composition.timeline));
+  } else if (failAtStep !== undefined) {
+    const entry = getVisualMaterial(composition.visual.materialId);
+    if (entry) materials.visual = failingVisual(entry, failAtStep);
   }
   if (composition.sound.materialId === CLICK_META.id) materials.sound = onsetClickEntry;
   return materials;
@@ -276,7 +302,7 @@ export async function renderToBytes(opts: RenderBytesOptions): Promise<RenderByt
       signal: controller.signal,
       pause,
       encoding: opts.encoding,
-      materials: harnessMaterials(signature, composition),
+      materials: harnessMaterials(signature, composition, opts.failAtStep),
       onProgress: (p) => {
         progress.calls++;
         if (!progress.phases.includes(p.phase)) {

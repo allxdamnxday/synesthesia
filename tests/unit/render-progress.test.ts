@@ -159,6 +159,8 @@ describe('render errors', () => {
     );
     expect(code(new Error('odd'), 'saving', 'Renders')).toBe('write-failed');
     expect(code(new DOMException('enc', 'EncodingError'), 'frames')).toBe('encoder-failed');
+    expect(code(new DOMException('cfg', 'NotSupportedError'), 'frames')).toBe('encoder-failed');
+    expect(code(new Error('odd'), 'frames')).toBe('unknown');
     expect(code(new Error('odd'), 'sound')).toBe('sound-failed');
     expect(code(new Error('odd'), 'setup')).toBe('unknown');
     const passthrough = new RenderError('gpu-lost', 'x');

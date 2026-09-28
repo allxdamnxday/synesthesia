@@ -128,10 +128,15 @@ export function toRenderError(
     }
   }
   if (stage === 'sound') return make('sound-failed');
-  if (name === 'EncodingError' || name === 'OperationError' || name === 'NotSupportedError') {
+  // What WebCodecs encoders throw (Mediabunny passes their errors through unchanged).
+  if (
+    name === 'EncodingError' ||
+    name === 'OperationError' ||
+    name === 'NotSupportedError' ||
+    name === 'InvalidStateError'
+  ) {
     return make('encoder-failed');
   }
-  if (stage === 'frames' || stage === 'finishing') return make('encoder-failed');
   return make('unknown');
 }
 

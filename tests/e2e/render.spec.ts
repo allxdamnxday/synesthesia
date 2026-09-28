@@ -46,6 +46,8 @@ interface RenderBytesOptions {
   pauseAtFrame?: number;
   pauseMs?: number;
   returnBytes?: boolean;
+  missingVisualMaterial?: string;
+  failAtStep?: number;
 }
 interface RenderResultSummary {
   fileName: string;
@@ -604,6 +606,37 @@ test.describe('offline render to MP4', () => {
     );
   });
 
+  test('a failing render explains itself and leaves nothing in the folder', async ({ page }) => {
+    const dir = 'fail-test';
+    await page.evaluate((d) => (window as unknown as Win).spRender.clearOpfs(d), dir);
+    const out = await render(page, {
+      seconds: 1,
+      destination: 'opfs',
+      opfsDir: dir,
+      missingVisualMaterial: 'honey',
+    });
+    expect(out.ok).toBe(false);
+    expect(out.cancelled).toBe(false);
+    expect(out.error?.code).toBe('material-missing');
+    expect(out.error?.message).toContain('“honey”');
+    expect(out.folderListing).toEqual([]);
+
+    // A failure halfway through the frames, with the file already streaming: removed too.
+    const midway = await render(page, {
+      seconds: 2,
+      destination: 'opfs',
+      opfsDir: dir,
+      sidecar: true,
+      failAtStep: 60,
+    });
+    expect(midway.ok).toBe(false);
+    expect(midway.error?.code).toBe('unknown');
+    expect(midway.error?.detail).toContain('Test failure after 60 steps');
+    // Frames 0–30 need 60 steps; frame 31 needs step 61, which fails.
+    expect(midway.progress.lastFramesDone).toBe(31);
+    expect(midway.folderListing).toEqual([]);
+  });
+
   test('saving into a folder never overwrites and keeps the composition file alongside', async ({
     page,
   }, testInfo) => {
@@ -731,6 +764,7 @@ test.describe('render dialog', () => {
     );
     const dialog = page.getByRole('dialog', { name: 'Render MP4' });
     await expect(dialog).toBeVisible();
+    await expect(dialog).toBeFocused();
     await expect(dialog.getByText('“Sample wink · Water and Water” · 1 second')).toBeVisible();
     // Defaults: High quality, loudness on, composition file off.
     await expect(dialog.getByRole('radio', { name: 'High' })).toBeChecked();
@@ -791,11 +825,40 @@ test.describe('render dialog', () => {
 
     const back = page.getByRole('dialog', { name: 'Render MP4' });
     await expect(back.getByText('The render was cancelled. Nothing was saved.')).toBeVisible();
+    // Focus stays in the dialog, ready to render again.
+    await expect(back.getByRole('button', { name: 'Render', exact: true })).toBeFocused();
     expect(
       await page.evaluate((d) => (window as unknown as Win).spRender.listOpfs(d), dir),
     ).toEqual([]);
 
     await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    expect(await page.evaluate(() => (window as unknown as Win).spRender.dialogClosedWith)).toBe(
+      null,
+    );
+  });
+
+  test('a render that fails says why in plain words and can be tried again', async ({ page }) => {
+    await page.evaluate(
+      (url) =>
+        (window as unknown as Win).spRender.openDialog({
+          signatureUrl: url,
+          seconds: 1,
+          missingVisualMaterial: 'honey',
+        }),
+      SIGNATURE_URL,
+    );
+    const dialog = page.getByRole('dialog', { name: 'Render MP4' });
+    await dialog.getByRole('radio', { name: 'Downloads' }).check();
+    await dialog.getByRole('button', { name: 'Render', exact: true }).click();
+    await expect(
+      dialog.getByText(
+        'This composition uses a material this version of the instrument doesn’t have (“honey”).',
+      ),
+    ).toBeVisible();
+    await expect(dialog.getByText('Details for Braden')).toBeVisible();
+    await expect(dialog.getByRole('button', { name: 'Render', exact: true })).toBeFocused();
+    await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
     await expect(page.getByRole('dialog')).toHaveCount(0);
     expect(await page.evaluate(() => (window as unknown as Win).spRender.dialogClosedWith)).toBe(
       null,

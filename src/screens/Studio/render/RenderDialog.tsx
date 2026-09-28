@@ -161,10 +161,12 @@ export function RenderDialog({ composition, signature, onClose }: RenderDialogPr
 
   const length = compositionDuration(signature, composition.timeline);
 
-  // Open as a modal, and load settings and what this computer can make.
+  // Open as a modal, and load settings and what this computer can make. Focus starts on
+  // the dialog itself (announced by its title); the choices are enabled once loaded.
   useEffect(() => {
     const dialog = dialogRef.current;
     if (dialog && !dialog.open) dialog.showModal();
+    dialog?.focus();
     let live = true;
     void loadRenderFolderHint();
     void (async () => {
@@ -186,10 +188,17 @@ export function RenderDialog({ composition, signature, onClose }: RenderDialogPr
     };
   }, []);
 
-  // Keep focus on the one button that matters in each stage.
+  // Keep focus inside the dialog on the button that matters in each stage: Cancel render
+  // while rendering, Close when done, and Render again after a cancel or a failure.
+  const previousMode = useRef<Mode>('setup');
   useEffect(() => {
-    if (mode === 'setup') return;
-    dialogRef.current?.querySelector<HTMLButtonElement>('[data-focus-first]')?.focus();
+    const previous = previousMode.current;
+    previousMode.current = mode;
+    const dialog = dialogRef.current;
+    if (!dialog || (mode === 'setup' && previous === 'setup')) return;
+    const target = dialog.querySelector<HTMLButtonElement>('[data-focus-first]');
+    if (target && !target.disabled) target.focus();
+    else dialog.focus();
   }, [mode]);
 
   const close = useCallback(() => {
@@ -419,6 +428,7 @@ export function RenderDialog({ composition, signature, onClose }: RenderDialogPr
       ref={dialogRef}
       className={styles.dialog}
       aria-labelledby={titleId}
+      tabIndex={-1}
       onCancel={(event) => {
         // Esc: close when idle; never in the middle of a render (use Cancel render).
         event.preventDefault();
@@ -463,7 +473,13 @@ export function RenderDialog({ composition, signature, onClose }: RenderDialogPr
         {mode === 'setup' ? (
           <>
             <Button onClick={close}>{COPY.cancel}</Button>
-            <Button variant="primary" type="submit" form={`${titleId}-form`} disabled={!canRender}>
+            <Button
+              data-focus-first
+              variant="primary"
+              type="submit"
+              form={`${titleId}-form`}
+              disabled={!canRender}
+            >
               {COPY.render}
             </Button>
           </>
