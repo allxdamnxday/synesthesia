@@ -285,19 +285,31 @@ test.describe('sound materials', () => {
 
   test('preview playback matches the offline render and keeps time', async ({ page }) => {
     for (const m of await materials(page)) {
-      const p = await sp(page, 'previewProbe', {
-        materialId: m.id,
-        kind: 'wink',
-        seconds: 2,
-        tailSec: 0.5,
-      });
-      expect(p.contextState).toBe('running');
-      expect(p.ended, `${m.id}: reaches the end`).toBe(true);
-      expect(p.correlation, `${m.id}: loudness contour`).toBeGreaterThan(0.95);
-      expect(Math.abs(p.levelDiffDb), `${m.id}: level`).toBeLessThan(1.5);
-      expect(p.clockRate, `${m.id}: clock`).toBeGreaterThan(0.9);
-      expect(p.clockRate, `${m.id}: clock`).toBeLessThan(1.1);
-      expect(p.maxJump, `${m.id}: no clicks`).toBeLessThanOrEqual(p.offlineMaxJump * 1.5 + 0.02);
+      // With a single voice (Density 0), preview and offline differ only in oscillator
+      // start phase, so the loudness contours must match closely: same automation, same
+      // timing. At baseline, detuned voices beat against each other, and where the beat
+      // falls depends on when the voices started, so the contour match is looser there
+      // (inaudible as a difference, but it moves an RMS comparison).
+      for (const [label, props, minCorrelation] of [
+        ['one voice', { density: 0 }, 0.97],
+        ['baseline', {}, 0.85],
+      ] as const) {
+        const p = await sp(page, 'previewProbe', {
+          materialId: m.id,
+          kind: 'wink',
+          seconds: 2,
+          tailSec: 0.5,
+          props,
+        });
+        const name = `${m.id} (${label})`;
+        expect(p.contextState).toBe('running');
+        expect(p.ended, `${name}: reaches the end`).toBe(true);
+        expect(p.correlation, `${name}: loudness contour`).toBeGreaterThan(minCorrelation);
+        expect(Math.abs(p.levelDiffDb), `${name}: level`).toBeLessThan(1.5);
+        expect(p.clockRate, `${name}: clock`).toBeGreaterThan(0.9);
+        expect(p.clockRate, `${name}: clock`).toBeLessThan(1.1);
+        expect(p.maxJump, `${name}: no clicks`).toBeLessThanOrEqual(p.offlineMaxJump * 1.5 + 0.02);
+      }
     }
   });
 
