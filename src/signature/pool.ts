@@ -7,24 +7,38 @@
  * small wink boxed by a focus area therefore reads like a large gesture filling a frame.
  */
 
-export const MIN_GRID_COLS = 4;
-export const MAX_GRID_COLS = 64;
-export const MIN_GRID_ROWS = 8;
-export const MAX_GRID_ROWS = 48;
+/** Fewest cells along either side of the grid. */
+export const MIN_GRID_CELLS = 8;
+/** Most cells along the longer side (the `gridCols` option). */
+export const MAX_GRID_LONG = 64;
+/** Most cells along the shorter side. */
+export const MAX_GRID_SHORT = 48;
 
-/** Grid for an analysis frame: `cols` (default 32), rows = round(cols × h / w), 8–48. */
+/**
+ * Grid for an analysis frame (SPEC 8.1 step 7, adjusted like the analysis size; see
+ * DECISIONS): the `gridCols` option (default 32, 8–64) sets the cells along the **longer**
+ * side, and the shorter side gets round(gridCols × short / long), clamped 8–48. Landscape
+ * is unchanged (320×180 → 32×18); portrait mirrors it (180×320 → 18×32), so a portrait
+ * signature is the same size and shape of work as a landscape one. `cols` always count
+ * across (x) and `rows` down (y).
+ */
 export function gridSize(
   colsOption: number,
   width: number,
   height: number,
 ): { cols: number; rows: number } {
-  const cols = Math.round(
-    Math.min(MAX_GRID_COLS, Math.max(MIN_GRID_COLS, Number.isFinite(colsOption) ? colsOption : 32)),
+  const long = Math.round(
+    Math.min(
+      MAX_GRID_LONG,
+      Math.max(MIN_GRID_CELLS, Number.isFinite(colsOption) ? colsOption : 32),
+    ),
   );
-  const rows = Math.round(
-    Math.min(MAX_GRID_ROWS, Math.max(MIN_GRID_ROWS, Math.round((cols * height) / width))),
+  const landscape = !(height > width);
+  const ratio = width > 0 && height > 0 ? Math.min(width, height) / Math.max(width, height) : 1;
+  const short = Math.round(
+    Math.min(MAX_GRID_SHORT, Math.max(MIN_GRID_CELLS, Math.round(long * ratio))),
   );
-  return { cols, rows };
+  return landscape ? { cols: long, rows: short } : { cols: short, rows: long };
 }
 
 /** Pixel range [start, end) of cell `index` of `count` cells over `size` pixels (≥ 1 px). */
