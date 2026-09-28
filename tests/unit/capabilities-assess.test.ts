@@ -442,7 +442,11 @@ describe('storage rows', () => {
   it('passes when everything is available', () => {
     const rows = assessStorage(base);
     expect(rows.map((r) => r.status)).toEqual(['pass', 'pass', 'pass']);
-    expect(byId(rows, 'storage-space').summary).toBe('12 MB used of 60 GB the browser allows.');
+    expect(byId(rows, 'storage-space').summary).toBe('12 MB used of the 60 GB the browser allows.');
+    const empty = assessStorage({ ...base, usageBytes: 0 });
+    expect(byId(empty, 'storage-space').summary).toBe(
+      'Nothing stored yet; the browser allows up to 60 GB.',
+    );
   });
 
   it('warns about downloads, clearing and low space, never failing', () => {

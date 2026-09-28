@@ -120,7 +120,10 @@ export function assessStorage(probe: StorageProbe): CapabilityCheck[] {
         : {
             ...checkBase('storage-space'),
             status: 'pass',
-            summary: `${used} used of ${quota} the browser allows.`,
+            summary:
+              (probe.usageBytes ?? 0) === 0
+                ? `Nothing stored yet; the browser allows up to ${quota}.`
+                : `${used} used of the ${quota} the browser allows.`,
             detail,
           };
   }
