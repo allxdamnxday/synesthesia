@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Spike 2: frame-accurate decode</title>
+    <link rel="icon" href="../../favicon.svg" type="image/svg+xml" />
+    <style>
+      body {
+        background: #0e1a24;
+        color: #e8e4da;
+        font:
+          16px/1.5 system-ui,
+          sans-serif;
+        padding: 32px;
+        max-width: 1100px;
+        margin: auto;
+      }
+      p {
+        color: #9aabb5;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        margin: 16px 0;
+      }
+      th,
+      td {
+        text-align: left;
+        padding: 6px 10px;
+        border-bottom: 1px solid #2a3a46;
+        vertical-align: top;
+      }
+      .pass {
+        color: #8fd18f;
+        font-weight: 600;
+      }
+      .fail {
+        color: #e8806a;
+        font-weight: 600;
+      }
+      .info {
+        color: #7fb7c9;
+        font-weight: 600;
+      }
+      button {
+        font: inherit;
+        padding: 8px 16px;
+        min-height: 32px;
+        border-radius: 6px;
+        border: 1px solid #7fb7c9;
+        background: #16293a;
+        color: #e8e4da;
+        cursor: pointer;
+      }
+      button:focus-visible {
+        outline: 2px solid #7fb7c9;
+        outline-offset: 2px;
+      }
+      pre {
+        background: #16293a;
+        padding: 12px;
+        overflow: auto;
+        font-size: 14px;
+      }
+      a {
+        color: #7fb7c9;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Spike 2: frame-accurate decode</h1>
+    <p>
+      Decodes clips whose frames carry their own index as a barcode (H.264 MP4 and MOV, a 29.97 fps
+      portrait MOV with iPhone-style rotation metadata, and HEVC) with Mediabunny in a worker, then
+      on the main thread, and checks every frame, seek and rotation.
+    </p>
+    <p id="status">Running…</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Check</th>
+          <th>Result</th>
+          <th>Detail</th>
+        </tr>
+      </thead>
+      <tbody id="checks"></tbody>
+    </table>
+    <button id="copy" type="button" disabled>Copy results</button>
+    <pre id="text"></pre>
+    <p><a href="../">All spikes</a></p>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
