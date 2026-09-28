@@ -10,7 +10,7 @@ import { baselineValues } from '../../properties';
 import type { PropertyValues, Quality, VisualContext, VisualMaterial } from '../../types';
 import { FluidSolver, type FluidDisplayParams } from '../shared/fluid';
 import type { RenderTargetOverrides } from '../shared/gl';
-import { burstRadius, smokeParams, type SmokeParams } from './mapping';
+import { SMOKE_SIM_CELLS, burstRadius, smokeParams, type SmokeParams } from './mapping';
 import { SMOKE_PROPERTIES } from './properties';
 import { SmokePlume } from './plume';
 
@@ -31,6 +31,8 @@ const NOISE_DRIFT = 0.08;
 export interface SmokeOptions {
   /** Force the capability fallbacks (tests and Diagnostics only). */
   overrides?: RenderTargetOverrides;
+  /** Simulation grid short side instead of Smoke's own choice (tuning pages only). */
+  simCells?: number;
 }
 
 export class SmokeMaterial implements VisualMaterial {
@@ -49,9 +51,11 @@ export class SmokeMaterial implements VisualMaterial {
   private phaseY = 0;
   private display: FluidDisplayParams = smokeParams(baselineValues(SMOKE_PROPERTIES)).display;
   private readonly overrides: RenderTargetOverrides | undefined;
+  private readonly simCells: number | undefined;
 
   constructor(options: SmokeOptions = {}) {
     this.overrides = options.overrides;
+    this.simCells = options.simCells;
   }
 
   /** Builds everything synchronously; the promise only reports the outcome. */
@@ -64,6 +68,7 @@ export class SmokeMaterial implements VisualMaterial {
         width: ctx.width,
         height: ctx.height,
         overrides: this.overrides,
+        simCells: this.simCells ?? SMOKE_SIM_CELLS,
       });
       this.solver = solver;
       this.plume = new SmokePlume(solver, smokeParams(baselineValues(SMOKE_PROPERTIES)).emit);

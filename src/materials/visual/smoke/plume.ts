@@ -25,10 +25,16 @@ import { BUOYANCY_FRAGMENT, EMISSION_FRAGMENT, HEAT_FRAGMENT, SMOKE_FRAGMENT } f
 
 /** Heat never builds up beyond this (keeps a long, slow movement from boiling over). */
 const MAX_HEAT = 4;
-/** Vent pattern: texture size, vents per short side, and vent radius (Gaussian σ, cells). */
+/** Vent pattern texture size (it tiles once per short side). */
 export const VENT_TEXTURE_SIZE = 256;
-export const VENT_CELLS = 30;
-export const VENT_SIGMA = 0.24;
+
+/** How the vents are laid out: vents per short side, and vent radius (Gaussian σ, cells). */
+export interface VentLayout {
+  cells: number;
+  sigma: number;
+}
+
+export const VENT_LAYOUT: Readonly<VentLayout> = { cells: 30, sigma: 0.24 };
 
 export interface PlumeNoise {
   phaseX: number;
@@ -49,7 +55,7 @@ export class SmokePlume {
   private emitted: DoubleRenderTarget;
   private heat: DoubleRenderTarget;
   private readonly vents: WebGLTexture;
-  private ventSeed: number | null = null;
+  private ventKey = '';
   /** Mean vent profile with every vent open (normalizes the release). */
   private ventMean = 0.3;
 
@@ -78,10 +84,11 @@ export class SmokePlume {
   }
 
   /** Lay out the seeded vents (only when the seed changes: it takes a few milliseconds). */
-  setVentSeed(seed: number): void {
+  setVentSeed(seed: number, layout: Readonly<VentLayout> = VENT_LAYOUT): void {
     const s = seed >>> 0;
-    if (this.ventSeed === s) return;
-    const bytes = generateSpotTexture(s, VENT_TEXTURE_SIZE, VENT_CELLS, VENT_SIGMA);
+    const key = `${s}:${layout.cells}:${layout.sigma}`;
+    if (this.ventKey === key) return;
+    const bytes = generateSpotTexture(s, VENT_TEXTURE_SIZE, layout.cells, layout.sigma);
     let sum = 0;
     for (let i = 0; i < bytes.length; i += 2) sum += bytes[i] ?? 0;
     this.ventMean = Math.max(1e-3, sum / (bytes.length / 2) / 255);
@@ -92,7 +99,7 @@ export class SmokePlume {
     const size = VENT_TEXTURE_SIZE;
     gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, size, size, gl.RG, gl.UNSIGNED_BYTE, bytes);
     gl.bindTexture(gl.TEXTURE_2D, null);
-    this.ventSeed = s;
+    this.ventKey = key;
   }
 
   /** No heat anywhere: the state at t = 0. */

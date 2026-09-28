@@ -5,13 +5,15 @@
  */
 import { FLUID_PRECISION_GLSL, FLUID_SAMPLING_GLSL, SIGNATURE_FORCE_GLSL } from '../shared/fluid';
 
-/** Taps of the emission disk, besides the centre (a Vogel spiral). */
-export const EMISSION_TAPS = 12;
+/** Taps of the emission disk, besides the centre (a Vogel spiral covers it evenly). */
+export const EMISSION_TAPS = 24;
 
 /**
- * Emission, at simulation resolution: the signature's push averaged over a disk whose
- * radius is the burst radius (so an expanding movement gives off a wider puff).
- * RG: mean push (its direction tints the smoke), B: mean |push| (how much is released).
+ * Emission, at simulation resolution: the strongest push within the burst radius
+ * (gently weighted by distance), so the smoke is given off over the movement grown by
+ * that radius: an expanding movement gives off a wider puff, a contracting one a tighter
+ * one. RG: the push averaged over the disk (its direction tints the smoke), B: how much
+ * is released.
  */
 export const EMISSION_FRAGMENT = /* glsl */ `
 ${FLUID_PRECISION_GLSL}
@@ -22,19 +24,19 @@ out vec4 fragColor;
 void main () {
   vec2 f = signatureForce(vUv);
   vec2 sum = f;
-  float magnitude = length(f);
+  float release = length(f);
   float weight = 1.0;
   for (int k = 0; k < ${EMISSION_TAPS}; k++) {
     float r = sqrt((float(k) + 0.5) / ${EMISSION_TAPS}.0);
     float a = float(k) * 2.39996323;
     vec2 o = vec2(cos(a), sin(a)) * (r * uRadius) / uShortScale;
     vec2 g = signatureForce(vUv + o);
-    float w = exp(-1.5 * r * r);
+    float w = 1.0 - 0.4 * r * r;
     sum += g * w;
-    magnitude += length(g) * w;
     weight += w;
+    release = max(release, length(g) * w);
   }
-  fragColor = vec4(sum / weight, magnitude / weight, 1.0);
+  fragColor = vec4(sum / weight, release, 1.0);
 }
 `;
 

@@ -60,6 +60,17 @@ const RISE = smokeProperty('rise');
 const DENSITY = smokeProperty('density');
 const RANGE = smokeProperty('range');
 
+/**
+ * Smoke's flow is solved on this grid (short side, cells) at every quality tier; only
+ * the smoke's own detail (the dye grid) follows the tier. Buoyant plumes need a
+ * well-converged pressure solve, which Jacobi only reaches affordably on a coarse grid;
+ * on the tiers' finer grids the plume rose more slowly and looked combed, differently
+ * at each tier. The same flow at every tier also means a preview and a render match.
+ */
+export const SMOKE_SIM_CELLS = 64;
+/** Pressure iterations per step on that grid (about converged, with the warm start). */
+export const SMOKE_PRESSURE_ITERATIONS = 64;
+
 /** ν at Viscosity 1, (short side)²/s: air made syrupy, but far thinner than Honey. */
 export const SMOKE_MAX_VISCOSITY = 4e-3;
 /** Buoyancy at Rise 1 (and minus this at Rise 0), short sides/s² per unit of heat. */
@@ -99,7 +110,7 @@ export function smokeAmount(d: number): number {
  */
 export function burstRadius(base: number, divergence: number): number {
   const d = Number.isFinite(divergence) ? Math.min(1, Math.max(-1, divergence)) : 0;
-  return Math.max(0, base) * 2 ** (1.3 * d);
+  return Math.max(0, base) * 2 ** (1.6 * d);
 }
 
 export function smokeParams(props: PropertyValues): SmokeParams {
@@ -133,6 +144,7 @@ export function smokeParams(props: PropertyValues): SmokeParams {
       viscosityIterations: nu > 0 ? Math.round(4 + 8 * viscosity) : 0,
       // Swirl keeps smoke curling; thick air can't hold fine curls.
       vorticity: (0.12 + 0.36 * dispersion) * (1 - 0.7 * viscosity),
+      pressureIterations: SMOKE_PRESSURE_ITERATIONS,
     },
     emit: {
       smokeAmount: smokeAmount(density),
@@ -140,7 +152,7 @@ export function smokeParams(props: PropertyValues): SmokeParams {
       ventCoverage: 0.3 + 0.5 * density,
       wispLength: 0.05,
       heatAmount: 2,
-      burstRadius: 0.035 * rangeScale(range),
+      burstRadius: 0.05 * rangeScale(range),
       lift: smokeLift(rise),
       cooling: 0.5,
       turbulence: 2.4 * dispersion * (1 - 0.6 * viscosity),
