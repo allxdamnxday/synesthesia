@@ -181,11 +181,18 @@ export function PrepareScreen(_props: { params?: Record<string, string> }) {
     [openFile],
   );
 
-  // A clip dropped on another screen arrives here once.
+  // A clip dropped on another screen arrives here once. The ref keeps it across React's
+  // development double-mount, which cancels the first open.
+  const onFilesRef = useRef(onFiles);
   useEffect(() => {
-    const pending = takePendingClip();
-    if (pending) onFiles([pending]);
+    onFilesRef.current = onFiles;
   }, [onFiles]);
+  const pendingRef = useRef<File | null | undefined>(undefined);
+  useEffect(() => {
+    if (pendingRef.current === undefined) pendingRef.current = takePendingClip();
+    const pending = pendingRef.current;
+    if (pending) onFilesRef.current([pending]);
+  }, []);
 
   // Drop a clip anywhere on the screen (and never let the browser open the file itself).
   useEffect(() => {
