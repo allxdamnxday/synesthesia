@@ -1,0 +1,20 @@
+.host {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: var(--color-surround);
+  overflow: hidden;
+}
+
+.frame {
+  position: absolute;
+}
+
+.video {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  object-fit: fill;
+  background: var(--color-surround);
+  pointer-events: none;
+}
