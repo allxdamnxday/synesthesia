@@ -8,12 +8,12 @@ const root = import.meta.dirname;
 /**
  * Every HTML page Vite should build. The app itself is `index.html`. Spike pages
  * (`spikes/<name>/index.html`) and developer harness pages (`dev/<name>/index.html`)
- * are included so they can be opened on a test Mac from a static host, unless
- * SP_RELEASE=1 (the build Freeman receives).
+ * are included so they can be opened on a test Mac from a static host, except in the
+ * release build Freeman receives (`npm run build:release`, i.e. `--mode release`).
  */
-function htmlEntries(): Record<string, string> {
+function htmlEntries(release: boolean): Record<string, string> {
   const entries: Record<string, string> = { main: resolve(root, 'index.html') };
-  if (process.env.SP_RELEASE === '1') return entries;
+  if (release) return entries;
   for (const dir of ['spikes', 'dev']) {
     const base = resolve(root, dir);
     if (!existsSync(base)) continue;
@@ -26,7 +26,7 @@ function htmlEntries(): Record<string, string> {
   return entries;
 }
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   // Relative base so the build works from any static host path (GitHub Pages
   // project path, Vercel root, or a local folder served over localhost).
   base: './',
@@ -36,7 +36,7 @@ export default defineConfig({
     target: 'es2022',
     // Mediabunny loads lazily in its own ~0.5 MB chunk; that's expected.
     chunkSizeWarningLimit: 1024,
-    rolldownOptions: { input: htmlEntries() },
+    rolldownOptions: { input: htmlEntries(mode === 'release' || process.env.SP_RELEASE === '1') },
   },
   server: {
     port: 5173,
@@ -52,4 +52,4 @@ export default defineConfig({
     include: ['tests/unit/**/*.test.ts', 'src/**/*.test.ts'],
     environment: 'node',
   },
-});
+}));

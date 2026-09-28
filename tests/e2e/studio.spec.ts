@@ -278,6 +278,9 @@ test('play, compare, draw by chance, save and reopen a composition', async ({ pa
   await expect(page.getByTestId('save-state')).toHaveText('Saved');
   await expect(page).toHaveURL(/#\/studio\/[0-9a-f-]{36}$/);
   const savedUrl = page.url();
+  // A default name follows the materials chance picked, e.g. "Sample wink · Honey and Water".
+  const savedName = (await page.getByRole('button', { name: /\. Rename$/ }).textContent())?.trim();
+  expect(savedName).toMatch(/^Sample wink · \w+ and Water$/);
 
   // The Library lists it with a still of its wake.
   await page
@@ -285,9 +288,7 @@ test('play, compare, draw by chance, save and reopen a composition', async ({ pa
     .getByRole('link', { name: 'Library' })
     .click();
   const compositions = page.getByRole('list', { name: 'Compositions' });
-  const card = compositions
-    .getByRole('listitem')
-    .filter({ hasText: 'Sample wink · Water and Water' });
+  const card = compositions.getByRole('listitem').filter({ hasText: savedName ?? '' });
   await expect(card).toHaveCount(1);
   await expect(card.locator('img')).toHaveAttribute('src', /^data:image\/jpeg;base64,/);
   await expect(card).toContainText('kept');

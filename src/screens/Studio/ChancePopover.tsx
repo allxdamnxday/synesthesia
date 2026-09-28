@@ -6,7 +6,7 @@ import { Checkbox } from '../../ui/Checkbox';
 import { SegmentedControl } from '../../ui/SegmentedControl';
 import { Toggle } from '../../ui/Toggle';
 import styles from './ChancePopover.module.css';
-import { SeedField } from './SeedField';
+import { CompositionSeed } from './CompositionSeed';
 
 const supportsAnchors =
   typeof CSS !== 'undefined' &&
@@ -120,17 +120,13 @@ export function ChanceButton() {
           others stay at their baseline, locked; you can still unlock one, and that is noted. The
           same seed always draws the same way.
         </p>
-        <div className={styles.group}>
-          <span className={styles.label}>Seed</span>
-          <SeedField />
-        </div>
+        <CompositionSeed />
         <fieldset className={styles.pool}>
           <legend className={styles.label}>Visual materials</legend>
           {visual.map((m) => (
             <Checkbox
               key={m.id}
               label={m.name}
-              description={m.description}
               checked={options.visualPool.includes(m.id)}
               onChange={(on) => togglePool('visualPool', m.id, on)}
             />
@@ -143,7 +139,6 @@ export function ChanceButton() {
               <Checkbox
                 key={m.id}
                 label={m.name}
-                description={m.description}
                 checked={options.soundPool.includes(m.id)}
                 onChange={(on) => togglePool('soundPool', m.id, on)}
               />

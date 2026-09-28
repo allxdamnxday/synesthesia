@@ -1,0 +1,180 @@
+/*
+ * The screen fills the space under the app header: `.screen` takes the remaining height
+ * and `.layout` is pinned inside it, so the wake gets whatever room is left.
+ */
+.screen {
+  flex: 1;
+  position: relative;
+  min-height: 600px;
+}
+
+.layout {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  padding: var(--space-3) var(--space-5);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-silt) 45%, transparent);
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  flex: 1 1 320px;
+}
+
+.crumb {
+  color: var(--color-mist);
+  text-decoration: none;
+  font-size: var(--font-size-md);
+  padding: var(--space-1) 0;
+}
+
+.crumb:hover {
+  color: var(--color-pearl);
+  text-decoration: underline;
+}
+
+.slash {
+  color: var(--color-silt);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-regular);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.renameField {
+  flex: 0 1 360px;
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  min-height: 0;
+}
+
+.work {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: var(--color-deep);
+}
+
+.stage {
+  flex: 1;
+  min-height: 200px;
+  background: var(--color-surround);
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  background: var(--color-basin);
+  border-left: 1px solid color-mix(in srgb, var(--color-silt) 45%, transparent);
+  overflow-y: auto;
+}
+
+.panelTitle {
+  margin: 0;
+  font-size: var(--font-size-md);
+}
+
+.facts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.facts dt {
+  font-size: var(--font-size-sm);
+  color: var(--color-mist);
+}
+
+.facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.note {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-mist);
+}
+
+.notices:empty {
+  display: none;
+}
+
+.back {
+  margin-top: auto;
+  font-size: var(--font-size-sm);
+  align-self: flex-start;
+  padding: var(--space-1) 0;
+}
+
+.message {
+  padding: var(--space-7) var(--space-5);
+  max-width: 720px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.messageTitle {
+  font-weight: var(--font-weight-light);
+}
+
+.messageBack {
+  margin-top: var(--space-4);
+}
+
+/* Only appears if opening takes a moment, so quick loads don't flash. */
+.loading {
+  color: var(--color-mist);
+  animation: appear 0s linear 400ms both;
+}
+
+@keyframes appear {
+  from {
+    visibility: hidden;
+  }
+  to {
+    visibility: visible;
+  }
+}
+
+@media (max-width: 900px) {
+  .body {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+  }
+  .panel {
+    border-left: 0;
+    border-top: 1px solid color-mix(in srgb, var(--color-silt) 45%, transparent);
+  }
+}

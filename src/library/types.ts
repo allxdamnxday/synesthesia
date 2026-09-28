@@ -1,4 +1,5 @@
 /** Records the library keeps besides signatures and compositions themselves. */
+import type { Album } from '../chance/albumModel';
 
 /**
  * A lightweight list entry for a stored signature. The Library lists these so it never
@@ -22,13 +23,21 @@ export interface SignatureMeta {
 }
 
 /**
- * Album records arrive with Milestone 7. Until then the library stores, backs up and
- * restores them as opaque objects keyed by `id`.
+ * A placeholder album record from before albums had a file format (builds before
+ * Milestone 7 stored albums as opaque objects keyed by `id`, and a backup made then can
+ * still carry one). It is kept exactly as it is, never shown, and never thrown away.
  */
-export interface StoredAlbum {
+export interface LegacyAlbumRecord {
   id: string;
   [key: string]: unknown;
 }
+
+/**
+ * What the `albums` store holds: `Album` records (SPEC 11.3, 12.3; `src/chance/albumModel.ts`),
+ * checked on the way in. Readers still validate each record (see `src/library/albums.ts`),
+ * because a legacy placeholder may sit beside them.
+ */
+export type StoredAlbum = Album | LegacyAlbumRecord;
 
 /** Optional source clips (off by default; unused in v0). */
 export interface StoredClip {

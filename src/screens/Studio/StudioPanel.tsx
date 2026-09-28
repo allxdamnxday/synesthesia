@@ -11,7 +11,7 @@ import { PropertyPanel } from '../../ui/PropertyPanel';
 import { SegmentedControl } from '../../ui/SegmentedControl';
 import { Toggle } from '../../ui/Toggle';
 import { MovementControls } from './MovementControls';
-import { SeedField } from './SeedField';
+import { CompositionSeed } from './CompositionSeed';
 import styles from './Studio.module.css';
 
 const STATUS_OPTIONS: Array<{ value: CompositionStatus; label: string }> = [
@@ -136,14 +136,8 @@ export function StudioPanel() {
         <MovementControls />
       </section>
 
-      <section className={styles.section} aria-labelledby="studio-seed">
-        <h2 id="studio-seed" className={styles.sectionTitle}>
-          Seed
-        </h2>
-        <SeedField />
-        <p className={styles.hint}>
-          The seed fixes every chance choice, so the composition always plays the same way.
-        </p>
+      <section className={styles.section} aria-label="Seed">
+        <CompositionSeed description="The seed fixes every chance choice, so the composition always plays the same way." />
       </section>
 
       <NotesSection />

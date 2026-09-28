@@ -1,0 +1,100 @@
+.layer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  cursor: crosshair;
+  touch-action: none;
+  user-select: none;
+}
+
+.readOnly,
+.disabled {
+  cursor: default;
+}
+
+.box {
+  position: absolute;
+  border: 2px solid var(--color-honey);
+  border-radius: 0;
+  cursor: move;
+  /* Dim everything outside the box. */
+  box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.45);
+}
+
+.box:focus-visible {
+  border-radius: 0;
+  box-shadow:
+    0 0 0 2px var(--color-deep),
+    0 0 0 4px var(--color-pearl),
+    0 0 0 100vmax rgba(0, 0, 0, 0.45);
+}
+
+.readOnly .box {
+  cursor: default;
+  border-style: dashed;
+  box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.3);
+}
+
+.handle {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: var(--color-pearl);
+  border: 2px solid var(--color-honey);
+  border-radius: 2px;
+}
+
+/* 24 px hit area around each small handle. */
+.handle::before {
+  content: '';
+  position: absolute;
+  inset: -8px;
+}
+
+.nw,
+.n,
+.ne {
+  top: -6px;
+}
+.sw,
+.s,
+.se {
+  bottom: -6px;
+}
+.nw,
+.w,
+.sw {
+  left: -6px;
+}
+.ne,
+.e,
+.se {
+  right: -6px;
+}
+.n,
+.s {
+  left: 50%;
+  margin-left: -5px;
+}
+.e,
+.w {
+  top: 50%;
+  margin-top: -5px;
+}
+
+.nw,
+.se {
+  cursor: nwse-resize;
+}
+.ne,
+.sw {
+  cursor: nesw-resize;
+}
+.n,
+.s {
+  cursor: ns-resize;
+}
+.e,
+.w {
+  cursor: ew-resize;
+}

@@ -1,0 +1,84 @@
+.sparklines {
+  --row: 30px;
+  --gap: 6px;
+  display: grid;
+  grid-template-columns: 11.5rem minmax(0, 1fr);
+  column-gap: var(--space-3);
+  row-gap: var(--space-1);
+  padding: var(--space-3) var(--space-4) var(--space-2);
+}
+
+.labels,
+.plots {
+  display: grid;
+  grid-template-rows: repeat(5, var(--row));
+  row-gap: var(--gap);
+}
+
+.label {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  text-align: right;
+  font-size: var(--font-size-sm);
+  line-height: 1.15;
+  color: var(--color-mist);
+  cursor: help;
+}
+
+.plots {
+  position: relative;
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
+}
+
+.row {
+  position: relative;
+  min-width: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-silt) 35%, transparent);
+}
+
+.onset,
+.playhead {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  pointer-events: none;
+}
+
+.onset {
+  width: 2px;
+  margin-left: -1px;
+  background: color-mix(in srgb, var(--color-honey) 70%, transparent);
+}
+
+.playhead {
+  left: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--color-pearl);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-deep) 60%, transparent);
+}
+
+.legend {
+  grid-column: 2;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-1) 0 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-mist);
+}
+
+.swatch {
+  width: 2px;
+  height: 14px;
+  background: color-mix(in srgb, var(--color-honey) 70%, transparent);
+}
+
+@media (max-width: 720px) {
+  .sparklines {
+    grid-template-columns: 7.5rem minmax(0, 1fr);
+  }
+}

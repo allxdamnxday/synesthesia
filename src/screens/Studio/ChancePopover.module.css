@@ -44,12 +44,6 @@
   color: var(--color-mist);
 }
 
-.group {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
 .label {
   font-size: var(--font-size-sm);
   color: var(--color-pearl);

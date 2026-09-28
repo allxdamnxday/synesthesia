@@ -305,29 +305,6 @@
   gap: var(--space-2);
 }
 
-.seedRow {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.seedInput {
-  width: 8ch;
-  min-height: var(--hit-min);
-  padding: 0 var(--space-2);
-  border-radius: var(--radius-md);
-  border: 1px solid color-mix(in srgb, var(--color-pearl) 18%, transparent);
-  background: var(--color-deep);
-  color: var(--color-pearl);
-  font-size: var(--font-size-md);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.06em;
-}
-
-.seedInput:focus-visible {
-  border-color: var(--color-honey);
-}
-
 .notes {
   width: 100%;
   min-height: 96px;
