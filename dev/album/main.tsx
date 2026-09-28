@@ -19,6 +19,7 @@ import { STORE_NAMES } from '../../src/library/db';
 import { useBatchStore } from '../../src/screens/Album/batch/batchStore';
 import { BatchRenderPanel } from '../../src/screens/Album/batch/BatchRenderPanel';
 import { writeToFolder } from '../../src/screens/Album/batch/folder';
+import { renderOneTrack } from '../../src/screens/Album/batch/renderOne';
 import {
   TrackRenderError,
   type RenderDestination,
@@ -43,6 +44,8 @@ interface FakeRenderOptions {
   frameMs: number;
   /** Track names ("03") whose render fails halfway. */
   fail: string[];
+  /** Use the real MP4 render pipeline instead of the stand-in. */
+  real?: boolean;
 }
 
 const FOLDER = 'album-renders';
@@ -167,6 +170,15 @@ const albumLib = {
     for await (const name of handle.keys()) names.push(name);
     return names.sort();
   },
+  /** Size in bytes and the first 8 bytes (hex) of a file in the stand-in folder. */
+  async folderFile(name: string): Promise<{ bytes: number; head: string }> {
+    const file = await (await (await folderHandle()).getFileHandle(name)).getFile();
+    const head = new Uint8Array(await file.slice(0, 8).arrayBuffer());
+    return {
+      bytes: file.size,
+      head: Array.from(head, (b) => b.toString(16).padStart(2, '0')).join(''),
+    };
+  },
 };
 
 declare global {
@@ -209,7 +221,7 @@ function Harness() {
     <BatchRenderPanel
       album={data.album}
       tracks={tracks}
-      renderOne={fakeRenderer(view.options)}
+      renderOne={view.options.real ? renderOneTrack : fakeRenderer(view.options)}
       onClose={() => setView(null)}
       chooseFolder={fakeFolder}
       folderAvailable
