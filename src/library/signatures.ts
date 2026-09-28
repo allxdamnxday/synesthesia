@@ -17,9 +17,8 @@ import {
   verifySignatureHash,
 } from '../signature/serialize';
 import type { KineticSignature } from '../signature/types';
-import type { IDBPTransaction } from 'idb';
 import { downloadText } from './download';
-import { openLibraryDb, type LibraryDatabase, type LibrarySchema } from './db';
+import { openLibraryDb, type LibraryDatabase } from './db';
 import { LibraryError, MESSAGES, errorDetail } from './errors';
 import { requestPersistenceOnce } from './storage';
 import { tryThumbnail } from './thumbnails';
@@ -29,7 +28,6 @@ import { byUpdatedDesc, cleanName, copyName, fileNameFor, newId, nowIso } from '
 export const UNTITLED_SIGNATURE = 'Untitled signature';
 
 const SIGNATURE_STORES = ['signatures', 'signatureMeta', 'compositions'] as const;
-type SignatureTx = IDBPTransaction<LibrarySchema, typeof SIGNATURE_STORES, 'readwrite'>;
 
 /**
  * Give a freshly extracted signature its identity: a new id, a name, and the creation
@@ -98,30 +96,38 @@ async function checkForSave(sig: KineticSignature): Promise<KineticSignature> {
   return clean;
 }
 
-/** Point compositions that wait for this movement (same hash, missing id) at `sig`. */
-async function reconnectWaiting(tx: SignatureTx, sig: KineticSignature): Promise<number> {
-  const compositions = tx.objectStore('compositions');
-  const waiting = await compositions.index('bySignatureHash').getAll(sig.contentHash);
-  let count = 0;
-  for (const c of waiting) {
-    if (c.signature.id === sig.id) continue;
-    if ((await tx.objectStore('signatures').getKey(c.signature.id)) !== undefined) continue;
-    await compositions.put({ ...c, signature: { ...c.signature, id: sig.id, name: sig.name } });
-    count++;
-  }
-  return count;
-}
-
-/** Write a signature and its meta; returns how many waiting compositions reconnected. */
+/**
+ * Write a signature and its meta, and point compositions that wait for this movement
+ * (same hash, missing signature id) at it. Returns how many compositions could not play
+ * before this write and can now.
+ */
 async function writeSignature(
   db: LibraryDatabase,
   sig: KineticSignature,
   meta: SignatureMeta,
 ): Promise<number> {
   const tx = db.transaction(SIGNATURE_STORES, 'readwrite');
-  await tx.objectStore('signatures').put(sig);
+  const signatures = tx.objectStore('signatures');
+  const compositions = tx.objectStore('compositions');
+  // Before this write, could compositions with this movement already play?
+  const existed = (await signatures.getKey(sig.id)) !== undefined;
+  const twins = await tx
+    .objectStore('signatureMeta')
+    .index('byContentHash')
+    .getAll(sig.contentHash);
+  const playable = existed || twins.some((m) => m.id !== sig.id);
+
+  await signatures.put(sig);
   await tx.objectStore('signatureMeta').put(meta);
-  const reconnected = await reconnectWaiting(tx, sig);
+
+  let reconnected = 0;
+  for (const c of await compositions.index('bySignatureHash').getAll(sig.contentHash)) {
+    if (c.signature.id !== sig.id) {
+      if ((await signatures.getKey(c.signature.id)) !== undefined) continue;
+      await compositions.put({ ...c, signature: { ...c.signature, id: sig.id, name: sig.name } });
+    }
+    if (!playable) reconnected++;
+  }
   await tx.done;
   return reconnected;
 }
