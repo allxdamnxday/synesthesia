@@ -511,6 +511,9 @@ test.describe('offline render to MP4', () => {
     }
     expect(maxDiff).toBeLessThan(1e-4);
 
+    // The files themselves may differ in a few places without changing any frame or sample:
+    // the header records when each was made, and the encoders finish packets in their own
+    // time, so audio and video chunks can interleave in a different order.
     const bytesA = readFileSync(a.file);
     const bytesB = readFileSync(b.file);
     let differing = 0;
@@ -520,7 +523,7 @@ test.describe('offline render to MP4', () => {
     note(
       testInfo,
       'determinism',
-      `${md5a.length} frames ${sameFrames ? 'identical (framemd5)' : `PSNR ${quality.toFixed(1)} dB`}; decoded sound max difference ${maxDiff}; files ${bytesA.length} and ${bytesB.length} bytes, ${differing} bytes differ (the header's creation time)`,
+      `${md5a.length} frames ${sameFrames ? 'identical (framemd5)' : `PSNR ${quality.toFixed(1)} dB`}; decoded sound max difference ${maxDiff}; files ${bytesA.length} and ${bytesB.length} bytes, ${differing} bytes differ (creation time and chunk order)`,
     );
   });
 
