@@ -193,6 +193,46 @@ implementation follows the intent. To revisit with Freeman only if a material fe
 - **Alternatives:** stretch or cover projection; time-cycling colors (the original);
   uniform dye release; bloom.
 
+## 2026-09-28: Sound engine
+- **Control programs on a 200 Hz grid.** Each sound material's control logic is a pure state
+  machine run by a shared `ControlTimeline`; preview (50 ms scheduler, 200 ms lookahead) and
+  offline render (one call up to 60 s, 5 s windows beyond, because Chrome renders one long
+  automation list in quadratic time) produce identical automation. A seek resets and
+  fast-forwards the state; loop wraps and live edits carry it on. Offline renders are
+  bit-identical across runs and window sizes; preview differs only in oscillator phase.
+- **Limiter:** a WaveShaper soft clip (linear below 0.8, tanh above) instead of
+  `DynamicsCompressorNode`, which pumps and colours quiet material.
+- **Clock:** the AudioContext asks for 48 kHz with the 'interactive' latency hint; the visual
+  preview follows `compositionTimeAt(rAF timestamp)` (output-latency compensated).
+- **Transport:** loop wraps carry the sound's state on; a seek dips the output 8 + 8 ms;
+  pause and play fade over 12 ms (no clicks).
+- **Intensity:** −15 / 0 / +9 dB around each material's calibrated level, plus drive.
+- **Water (A1):** pitch follows vertical travel (a running total of upward flow that leaks
+  home only when vertical movement stops), so rising movement keeps rising and ends high
+  ("-weet!"); onsets add short rising "droplets"; Rigidity (baseline 0 for water) snaps
+  pitch to a pentatonic scale and sharpens attacks.
+- **Render normalization** (SPEC 9.1): renders peak-normalize to −1 dBFS by default. The
+  render dialog's "Even out loudness" toggle explains that turning it off keeps quiet
+  compositions quiet, because normalization otherwise cancels Intensity's loudness in
+  exports.
+- **Alternatives:** `setTargetAtTime` smoothing alone (can't express asymmetric envelopes or
+  springs); the whole synth in an AudioWorklet; Tone.js (not approved); velocity-based
+  pitch (arches back down as a movement slows).
+
+## 2026-09-28: Onset and hint thresholds (refinements)
+- Onsets also require the frame's peak to exceed **2 ×** the noise floor (not 1 ×): the
+  automatic floor sits right at camera noise's strongest cells, so 1 × fired on noise. 2 × is
+  where the soft threshold starts passing cells untouched.
+- The Prepare hint (automatic sensitivity may be hiding movement) appears only when the
+  floor is automatic, above 0.02 field diagonals per second, and high relative to the clip's
+  movement, so still or lightly noisy clips don't trigger it.
+- Synthetic test signatures skip extraction smoothing (their analytic fields are already
+  smooth; smoothing merged the wink's two onsets).
+- A small movement covering under ~5% of the frame can't produce onsets under the peak rule;
+  a focus area around it fixes that (and is the recommended way to capture a wink).
+- Grid columns (default 32) apply to the longer side of the frame, like the analysis size,
+  so portrait signatures are 18×32 rather than 32×48 (about 2.6× smaller files).
+
 ## Pending
 - Freeman's MacBook Pro model, year, chip, macOS version (Diagnostics' Copy report now
   records macOS version, CPU architecture and GPU whenever it runs on his Mac).
