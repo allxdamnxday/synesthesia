@@ -69,6 +69,19 @@ export default defineConfig(
     files: ['**/*.{js,mjs,cjs}'],
     extends: [tseslint.configs.disableTypeChecked],
   },
+  {
+    // AudioWorklet processors run in AudioWorkletGlobalScope (plain JS modules).
+    files: ['**/*.worklet.js', 'public/worklets/**/*.js'],
+    languageOptions: {
+      globals: {
+        AudioWorkletProcessor: 'readonly',
+        registerProcessor: 'readonly',
+        sampleRate: 'readonly',
+        currentTime: 'readonly',
+        currentFrame: 'readonly',
+      },
+    },
+  },
   determinismConfig,
   prettier,
 );
