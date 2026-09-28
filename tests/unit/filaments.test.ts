@@ -293,6 +293,19 @@ describe('Filaments simulation', () => {
     expect(maxStretch(sim)).toBeLessThan(0.05);
   });
 
+  it('moves strands with their roots when the canvas changes shape', () => {
+    const sim = run('still', 2);
+    const before = Array.from(sim.x.subarray(0, N));
+    const rootX = sim.rx[0] ?? 0;
+    sim.setCanvas(540, 540); // 16:9 → square
+    const scale = 1 / (960 / 540);
+    expect(sim.rx[0]).toBeCloseTo(rootX * scale, 12);
+    // The whole strand moved rigidly: its shape and segment lengths are unchanged.
+    const shift = (sim.x[0] ?? 0) - (before[0] ?? 0);
+    for (let j = 0; j < N; j++) expect(sim.x[j]).toBeCloseTo((before[j] ?? 0) + shift, 12);
+    expect(maxStretch(sim)).toBeLessThan(1e-9);
+  });
+
   it('stays finite at every extreme', () => {
     for (const value of [0, 1]) {
       const props: PropertyValues = {};

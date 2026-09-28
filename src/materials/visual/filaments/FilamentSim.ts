@@ -277,13 +277,34 @@ export class FilamentSim {
     return n;
   }
 
-  /** The canvas's pixel size (only its aspect ratio matters to the simulation). */
+  /**
+   * The canvas's pixel size (only its aspect ratio matters to the simulation). When the
+   * aspect changes, each strand moves with its root to the same place relative to the
+   * canvas (shapes and lengths unchanged), so strands still cover all of it.
+   */
   setCanvas(width: number, height: number): void {
     this.canvasWidth = Math.max(1, width);
     this.canvasHeight = Math.max(1, height);
     const world = worldSize(this.canvasWidth, this.canvasHeight);
+    const sx = world.width / this.worldWidth;
+    const sy = world.height / this.worldHeight;
     this.worldWidth = world.width;
     this.worldHeight = world.height;
+    if (sx === 1 && sy === 1) return;
+    const N = POINTS_PER_STRAND;
+    for (let f = 0; f < this.count; f++) {
+      const base = f * N;
+      const shiftX = this.rx[base] * (sx - 1);
+      const shiftY = this.ry[base] * (sy - 1);
+      for (let i = base; i < base + N; i++) {
+        this.rx[i] += shiftX;
+        this.ry[i] += shiftY;
+        this.x[i] += shiftX;
+        this.y[i] += shiftY;
+        this.ox[i] += shiftX;
+        this.oy[i] += shiftY;
+      }
+    }
   }
 
   /** The initial state for this seed. The first step lays the strands out (`populate`). */

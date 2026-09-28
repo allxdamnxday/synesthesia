@@ -153,14 +153,28 @@ export class BubbleSim {
     this.setCanvas(width, height);
   }
 
-  /** The canvas's pixel size (only its aspect ratio matters to the simulation). */
+  /**
+   * The canvas's pixel size (only its aspect ratio matters to the simulation). When the
+   * aspect changes, bubbles keep their places relative to the canvas, so the water stays
+   * evenly full instead of emptying on one side.
+   */
   setCanvas(width: number, height: number): void {
     this.canvasWidth = Math.max(1, width);
     this.canvasHeight = Math.max(1, height);
     const world = worldSize(this.canvasWidth, this.canvasHeight);
+    const sx = world.width / this.worldWidth;
+    const sy = world.height / this.worldHeight;
     this.worldWidth = world.width;
     this.worldHeight = world.height;
     this.streamCount = Math.max(3, Math.round(STREAMS_PER_UNIT * this.worldWidth));
+    if (sx !== 1 || sy !== 1) {
+      for (let i = 0; i < this.count; i++) {
+        this.px[i] *= sx;
+        this.dx[i] *= sx;
+        this.py[i] *= sy;
+        this.dy[i] *= sy;
+      }
+    }
   }
 
   /** The initial state for this seed. The first step fills the water (see `populate`). */

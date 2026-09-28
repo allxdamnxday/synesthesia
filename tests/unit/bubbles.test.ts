@@ -270,6 +270,20 @@ describe('Descending bubbles simulation', () => {
     expect(sim.count).toBe(few.count);
   });
 
+  it('keeps the water evenly full when the canvas changes shape', () => {
+    const sim = run('still', 30);
+    const wide = sim.worldWidth;
+    sim.setCanvas(1080, 1080);
+    expect(sim.worldWidth).toBe(1);
+    const xs = Array.from(sim.px.subarray(0, sim.count));
+    // Bubbles keep their places relative to the canvas: they span the new width.
+    expect(Math.max(...xs)).toBeGreaterThan(0.9);
+    expect(Math.max(...xs)).toBeLessThan(1.1);
+    sim.setCanvas(1920, 1080);
+    expect(sim.worldWidth).toBeCloseTo(wide, 12);
+    expect(Math.max(...Array.from(sim.px.subarray(0, sim.count)))).toBeGreaterThan(wide * 0.9);
+  });
+
   it('stays finite at every extreme', () => {
     for (const value of [0, 1]) {
       const props: PropertyValues = {};
