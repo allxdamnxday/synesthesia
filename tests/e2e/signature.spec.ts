@@ -167,6 +167,23 @@ test('visiting a signature again and again never piles up graphics contexts', as
   expect(errors).toEqual([]);
 });
 
+test('with reduced motion preferred, the wake waits to be played', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await importSample(page);
+  await page.goto(`./#/signature/${FIXTURE.id}`);
+  await expect(page.getByRole('heading', { name: FIXTURE.name, level: 1 })).toBeVisible();
+  const play = page.getByRole('button', { name: 'Play', exact: true });
+  await expect(play).toBeVisible();
+  const scrub = page.getByRole('slider', { name: 'Playhead' });
+  await page.waitForTimeout(500);
+  await expect(scrub).toHaveAttribute('aria-valuenow', '0');
+  await play.click();
+  await expect(page.getByRole('button', { name: 'Pause', exact: true })).toBeVisible();
+  await expect
+    .poll(async () => Number(await scrub.getAttribute('aria-valuenow')))
+    .toBeGreaterThan(0);
+});
+
 test('a signature that is not in the library says so calmly', async ({ page }) => {
   await page.goto('./#/signature/not-a-real-signature');
   await expect(
