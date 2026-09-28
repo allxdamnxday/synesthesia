@@ -81,6 +81,8 @@ test('the whole workflow: clip to signature to composition to MP4', async ({ pag
   const dialog = page.getByRole('dialog', { name: 'Render MP4' });
   await expect(dialog).toBeVisible();
   await dialog.getByRole('radio', { name: /^720p/ }).check();
+  // A folder needs the system folder picker, which a test can't answer: use downloads.
+  await dialog.getByRole('radio', { name: 'Downloads' }).check();
   const downloadPromise = page.waitForEvent('download', { timeout: 240_000 });
   await dialog.getByRole('button', { name: 'Render', exact: true }).click();
   const download = await downloadPromise;
