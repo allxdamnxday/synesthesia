@@ -1,0 +1,199 @@
+.panelBody {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-silt) 35%, transparent);
+}
+
+.section p {
+  margin: 0;
+}
+
+/* Buttons keep their natural width instead of stretching across the panel. */
+.section > button {
+  align-self: flex-start;
+}
+
+.heading {
+  margin: 0 0 var(--space-1);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-strong);
+}
+
+.help {
+  font-size: var(--font-size-sm);
+  color: var(--color-mist);
+}
+
+.value {
+  font-size: var(--font-size-sm);
+  color: var(--color-pearl);
+  font-variant-numeric: tabular-nums;
+}
+
+.muted {
+  color: var(--color-mist);
+}
+
+.warning {
+  font-size: var(--font-size-sm);
+  color: var(--color-alert);
+}
+
+.fileName {
+  font-weight: var(--font-weight-strong);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.buttonRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.steps {
+  margin: 0;
+  padding-left: 1.3em;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--font-size-sm);
+}
+
+.advanced {
+  border-bottom: 1px solid color-mix(in srgb, var(--color-silt) 35%, transparent);
+}
+
+.summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  padding: var(--space-2) var(--space-5);
+  cursor: pointer;
+  font-weight: var(--font-weight-strong);
+  list-style: none;
+}
+
+.summary::-webkit-details-marker {
+  display: none;
+}
+
+.summary::before {
+  content: '';
+  width: 0;
+  height: 0;
+  border-left: 5px solid var(--color-mist);
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  transition: transform var(--transition-fast);
+}
+
+.advanced[open] > .summary::before {
+  transform: rotate(90deg);
+}
+
+.summary:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--color-honey);
+}
+
+.advancedBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: 0 var(--space-5) var(--space-4);
+}
+
+.advancedBody p {
+  margin: 0;
+}
+
+/* The Extract area stays in view at the bottom of the panel. */
+.extract {
+  position: sticky;
+  bottom: 0;
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5) var(--space-5);
+  background: var(--color-basin);
+  border-top: 1px solid color-mix(in srgb, var(--color-silt) 45%, transparent);
+}
+
+.extractButton {
+  width: 100%;
+  min-height: 44px;
+  font-size: var(--font-size-md);
+}
+
+.notice:empty {
+  display: none;
+}
+
+.progress {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  align-items: stretch;
+}
+
+.progress > button {
+  align-self: flex-start;
+}
+
+.progress p {
+  margin: 0;
+}
+
+.phase {
+  font-weight: var(--font-weight-strong);
+}
+
+.fieldLabel {
+  font-size: var(--font-size-sm);
+  color: var(--color-mist);
+}
+
+.nameInput {
+  width: 100%;
+  min-height: 40px;
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid color-mix(in srgb, var(--color-pearl) 22%, transparent);
+  border-radius: var(--radius-sm);
+  background: var(--color-basin-raised);
+  color: var(--color-pearl);
+  font-size: var(--font-size-md);
+}
+
+.nameInput:focus-visible {
+  border-color: var(--color-honey);
+  box-shadow: none;
+}
+
+.nameInput[readonly] {
+  background: transparent;
+  border-color: transparent;
+  padding-inline: 0;
+  font-weight: var(--font-weight-strong);
+}
+
+.saved {
+  color: var(--color-water);
+  font-size: var(--font-size-sm);
+}
+
+.link {
+  font-size: var(--font-size-sm);
+  padding: var(--space-1) var(--space-2);
+}
