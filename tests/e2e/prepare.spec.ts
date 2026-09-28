@@ -2,8 +2,8 @@
  * The Prepare screen, driven like a person would: pick a clip, trim it, box the moving
  * part, turn it, extract, look at the wake, name it, save it and take it to the Studio.
  * Fixture clips (tests/fixtures/, made by scripts/make-fixtures.mjs) are 320×180, 30 fps:
- * dot-right.mp4 (2.5 s, a dot gliding right), ring-expand.mp4 (2 s), pan-right.mp4 (2 s, the
- * whole picture drifting, so the automatic noise floor comes out high).
+ * dot-right.mp4 (2.5 s, a dot gliding right), ring-expand.mp4 (2.5 s), pan-right.mp4 (2 s,
+ * the whole picture drifting, so the automatic noise floor comes out high).
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
