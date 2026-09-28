@@ -43,7 +43,8 @@ export function SeedField() {
           if (e.key === 'Enter') {
             e.preventDefault();
             commit();
-          } else if (e.key === 'Escape') {
+          } else if (e.key === 'Escape' && draft !== null) {
+            // Only while editing: otherwise Esc closes whatever holds the field.
             e.preventDefault();
             e.stopPropagation();
             setDraft(null);

@@ -237,8 +237,19 @@ test('play, compare, draw by chance, save and reopen a composition', async ({ pa
   await page.keyboard.press('c');
   await expect(page.getByRole('dialog', { name: 'Draw by chance' })).toBeHidden();
   await seed.blur();
-  await page.keyboard.press('c');
   const chance = page.getByRole('dialog', { name: 'Draw by chance' });
+  const chanceButton = page.getByRole('button', { name: 'Draw by chance' });
+  // The button opens and closes it; Esc closes it and returns to the button.
+  await chanceButton.click();
+  await expect(chance).toBeVisible();
+  await chanceButton.click();
+  await expect(chance).toBeHidden();
+  await page.keyboard.press('c');
+  await expect(chance).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(chance).toBeHidden();
+  await expect(chanceButton).toBeFocused();
+  await page.keyboard.press('c');
   await expect(chance).toBeVisible();
   await expect(chance.getByRole('checkbox', { name: 'Water' })).toHaveCount(2);
   await chance.getByRole('button', { name: 'Draw', exact: true }).click();
