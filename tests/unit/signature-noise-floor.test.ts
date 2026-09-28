@@ -4,10 +4,15 @@ import {
   applySoftThreshold,
   autoNoiseFloor,
   frameEnergies,
+  noiseFloorLooksHigh,
   quietestFrames,
   resolveNoiseFloor,
 } from '../../src/signature/noiseFloor';
-import { MIN_NOISE_FLOOR } from '../../src/signature/types';
+import {
+  MIN_NOISE_FLOOR,
+  type FeatureStats,
+  type KineticSignature,
+} from '../../src/signature/types';
 
 /** A field whose frame f has every cell moving right at speeds[f][c]. */
 function fieldFromSpeeds(speeds: number[][]): Float32Array {
@@ -78,5 +83,54 @@ describe('soft threshold', () => {
     const field = new Float32Array([0, 0, 1e-6, 0]);
     applySoftThreshold(field, 0);
     expect(Array.from(field)).toEqual([0, 0, Math.fround(1e-6), 0]);
+  });
+});
+
+describe('noiseFloorLooksHigh (the Prepare hint)', () => {
+  const stat = (p95: number): FeatureStats => ({ min: 0, max: p95, mean: p95 / 2, p05: 0, p95 });
+  const sig = (
+    noiseFloor: number,
+    peakP95: number,
+    energyP95: number,
+    noiseFloorMode: 'auto' | 'manual' = 'auto',
+  ): Pick<KineticSignature, 'extraction' | 'stats'> => ({
+    extraction: {
+      method: 'farneback',
+      params: { pyrScale: 0.5, levels: 3, winsize: 15, iterations: 3, polyN: 5, polySigma: 1.2 },
+      analysisWidth: 320,
+      noiseFloor,
+      noiseFloorMode,
+      temporalSmoothingFrames: 3,
+    },
+    stats: { peak: stat(peakP95), energy: stat(energyP95) },
+  });
+
+  it('is false for ordinary clips', () => {
+    // A still clip: the floor stays at its minimum and nothing moves.
+    expect(noiseFloorLooksHigh(sig(MIN_NOISE_FLOOR, 0, 0))).toBe(false);
+    // A dot crossing a clean frame (numbers from the dot fixture).
+    expect(noiseFloorLooksHigh(sig(MIN_NOISE_FLOOR, 0.25, 0.014))).toBe(false);
+    // A still clip with camera noise: the floor rose to meet the noise, and that's right.
+    expect(noiseFloorLooksHigh(sig(0.0071, 0, 0.0014))).toBe(false);
+    // Camera shake raised the floor, but the real movement is far above it.
+    expect(noiseFloorLooksHigh(sig(0.05, 0.5, 0.2))).toBe(false);
+  });
+
+  it('is true when the automatic floor rose to meet movement that never stops', () => {
+    // Movement filling the frame the whole time: the floor swallowed it.
+    expect(noiseFloorLooksHigh(sig(0.24, 0.001, 0.003))).toBe(true);
+    // Floor above half of the strong cell speeds.
+    expect(noiseFloorLooksHigh(sig(0.1, 0.15, 0.08))).toBe(true);
+    // Little got through, even though the strongest cells did.
+    expect(noiseFloorLooksHigh(sig(0.1, 0.5, 0.02))).toBe(true);
+  });
+
+  it('is false for a manual floor, whatever its value', () => {
+    expect(noiseFloorLooksHigh(sig(0.24, 0.001, 0.003, 'manual'))).toBe(false);
+  });
+
+  it('copes with missing stats', () => {
+    expect(noiseFloorLooksHigh({ ...sig(0.24, 0, 0), stats: {} })).toBe(true);
+    expect(noiseFloorLooksHigh({ ...sig(MIN_NOISE_FLOOR, 0, 0), stats: {} })).toBe(false);
   });
 });
