@@ -1,0 +1,63 @@
+.sparkline {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.line {
+  fill: none;
+  stroke: var(--color-water);
+  stroke-width: 1.5px;
+  stroke-linejoin: round;
+}
+
+.area {
+  fill: color-mix(in srgb, var(--color-water) 22%, transparent);
+  stroke: none;
+}
+
+/* Expanding (above the middle line) and contracting (below). */
+.areaUp {
+  fill: color-mix(in srgb, var(--color-water) 32%, transparent);
+}
+
+.areaDown {
+  fill: color-mix(in srgb, var(--color-mist) 28%, transparent);
+}
+
+.zero {
+  stroke: color-mix(in srgb, var(--color-mist) 45%, transparent);
+  stroke-width: 1px;
+}
+
+.arrows {
+  display: grid;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+}
+
+.slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+}
+
+.arrow {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: var(--color-pearl);
+  stroke-width: 1.6px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--color-mist) 55%, transparent);
+}

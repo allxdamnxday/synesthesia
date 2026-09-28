@@ -1,0 +1,153 @@
+/* Room on both sides for the handles, which sit just outside the selection. */
+.trim {
+  padding: 0 32px;
+  user-select: none;
+}
+
+.track {
+  position: relative;
+  height: 44px;
+  cursor: pointer;
+  touch-action: none;
+}
+
+.rail,
+.outside,
+.selection {
+  position: absolute;
+  top: 50%;
+  height: 24px;
+  transform: translateY(-50%);
+}
+
+.rail {
+  left: 0;
+  right: 0;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--color-mist) 22%, transparent);
+}
+
+.outside {
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.selection {
+  background: color-mix(in srgb, var(--color-pearl) 14%, transparent);
+  border-top: 2px solid var(--color-honey);
+  border-bottom: 2px solid var(--color-honey);
+}
+
+.tooLong {
+  background: color-mix(in srgb, var(--color-alert) 22%, transparent);
+  border-color: var(--color-alert);
+}
+
+.head {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--color-pearl);
+  border-radius: 1px;
+  z-index: 1;
+}
+
+/* Hit area around the thin line. */
+.head::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -9px;
+  right: -9px;
+}
+
+.head::after {
+  content: '';
+  position: absolute;
+  top: -3px;
+  left: 50%;
+  width: 12px;
+  height: 12px;
+  margin-left: -6px;
+  border-radius: 50%;
+  background: var(--color-pearl);
+  transition: transform var(--transition-fast);
+}
+
+.activeHead::after {
+  transform: scale(1.2);
+}
+
+.handle {
+  position: absolute;
+  top: 50%;
+  width: 14px;
+  height: 36px;
+  transform: translateY(-50%);
+  background: var(--color-honey);
+  cursor: ew-resize;
+  z-index: 2;
+}
+
+.startHandle {
+  margin-left: -14px;
+  border-radius: 7px 0 0 7px;
+}
+
+.endHandle {
+  border-radius: 0 7px 7px 0;
+}
+
+/* Grip line. */
+.handle::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 11px;
+  bottom: 11px;
+  width: 2px;
+  margin-left: -1px;
+  border-radius: 1px;
+  background: color-mix(in srgb, var(--color-deep) 75%, transparent);
+}
+
+/* Hit areas reach outward (away from the selection) to 32 px. */
+.startHandle::before,
+.endHandle::before {
+  content: '';
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+}
+
+.startHandle::before {
+  left: -18px;
+  right: 0;
+}
+
+.endHandle::before {
+  left: 0;
+  right: -18px;
+}
+
+.activeHandle {
+  background: color-mix(in srgb, var(--color-honey) 85%, white);
+}
+
+.head:focus-visible,
+.handle:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+
+.disabled .track {
+  cursor: default;
+}
+
+.disabled .handle,
+.disabled .head,
+.disabled .selection {
+  opacity: 0.45;
+  cursor: default;
+}

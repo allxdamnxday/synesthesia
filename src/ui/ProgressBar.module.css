@@ -1,0 +1,39 @@
+.bar {
+  position: relative;
+  height: 8px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--color-mist) 25%, transparent);
+  overflow: hidden;
+}
+
+.fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  border-radius: 4px;
+  background: var(--color-honey);
+  transition: width 200ms linear;
+}
+
+.indeterminate .fill {
+  animation: drift 1.6s ease-in-out infinite alternate;
+}
+
+@keyframes drift {
+  from {
+    left: 0;
+  }
+  to {
+    left: 70%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fill {
+    transition: none;
+  }
+  .indeterminate .fill {
+    animation: none;
+  }
+}
