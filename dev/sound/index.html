@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sound materials harness</title>
+    <link rel="icon" href="data:," />
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      body {
+        background: #0e1a24;
+        color: #e8e4da;
+        font:
+          15px/1.5 system-ui,
+          sans-serif;
+        margin: 0;
+        padding: 24px;
+      }
+      h1 {
+        font-size: 20px;
+        margin: 0 0 4px;
+      }
+      p.note {
+        color: #9aabb5;
+        margin: 0 0 16px;
+        max-width: 760px;
+      }
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px 20px;
+        align-items: center;
+        margin: 10px 0;
+      }
+      label {
+        display: inline-flex;
+        gap: 8px;
+        align-items: center;
+      }
+      fieldset {
+        border: 1px solid #2a3b48;
+        border-radius: 6px;
+        margin: 14px 0;
+        padding: 10px 14px;
+        max-width: 980px;
+      }
+      legend {
+        color: #9aabb5;
+        padding: 0 6px;
+      }
+      .prop {
+        display: grid;
+        grid-template-columns: 130px 220px 52px;
+        gap: 10px;
+        align-items: center;
+        margin: 4px 0;
+      }
+      .prop .more {
+        color: #9aabb5;
+      }
+      .prop output {
+        font-variant-numeric: tabular-nums;
+        color: #9aabb5;
+      }
+      button {
+        background: #172733;
+        color: #e8e4da;
+        border: 1px solid #3b5162;
+        border-radius: 6px;
+        padding: 6px 14px;
+        min-height: 32px;
+        font: inherit;
+        cursor: pointer;
+      }
+      button:focus-visible,
+      input:focus-visible,
+      select:focus-visible {
+        outline: 2px solid #d9a441;
+        outline-offset: 2px;
+      }
+      select,
+      input[type='number'] {
+        background: #172733;
+        color: #e8e4da;
+        border: 1px solid #3b5162;
+        border-radius: 4px;
+        padding: 4px 6px;
+        font: inherit;
+      }
+      input[type='number'] {
+        width: 90px;
+      }
+      #seek {
+        width: 360px;
+      }
+      #time {
+        font-variant-numeric: tabular-nums;
+        color: #9aabb5;
+        min-width: 120px;
+      }
+      canvas {
+        background: #000;
+        border-radius: 6px;
+        display: block;
+        margin-top: 8px;
+        width: 960px;
+        max-width: 100%;
+        height: 260px;
+      }
+      #status {
+        color: #9aabb5;
+        min-height: 1.5em;
+      }
+      a {
+        color: #7fb7c9;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Sound materials</h1>
+    <p class="note">
+      Audition sound materials with a synthetic signature. Preview plays live through the sound
+      engine; Render plays the offline render (the path the video export uses) and plots it:
+      waveform in grey, loudness in blue, pitch as amber dots.
+    </p>
+
+    <fieldset>
+      <legend>Signature and material</legend>
+      <div class="row">
+        <label
+          >Material
+          <select id="material"></select
+        ></label>
+        <label
+          >Movement
+          <select id="kind">
+            <option value="wink">Wink</option>
+            <option value="sweep">Sweep (across, then up)</option>
+            <option value="swirl">Swirl</option>
+            <option value="still">Still</option>
+          </select>
+        </label>
+        <label>Seed <input id="seed" type="number" min="0" max="999999" value="1" /></label>
+        <label>Loops <input id="loops" type="number" min="1" max="8" value="1" /></label>
+        <label
+          >Tail (s) <input id="tail" type="number" min="0" max="10" step="0.5" value="1.5"
+        /></label>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Properties</legend>
+      <div id="props"></div>
+      <div class="row"><button id="baseline" type="button">Back to baseline</button></div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Preview</legend>
+      <div class="row">
+        <button id="play" type="button">Play</button>
+        <label><input id="loop" type="checkbox" /> Loop</label>
+        <label><input id="mute" type="checkbox" /> Mute</label>
+        <input
+          id="seek"
+          type="range"
+          min="0"
+          max="1"
+          step="0.001"
+          value="0"
+          aria-label="Position"
+        />
+        <span id="time">0.00 / 0.00 s</span>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Offline render</legend>
+      <div class="row">
+        <button id="render" type="button">Render</button>
+        <audio id="player" controls></audio>
+        <a id="download" download="sound.wav" hidden>Download WAV</a>
+      </div>
+      <div id="status" role="status"></div>
+      <canvas id="plot" width="1920" height="520"></canvas>
+    </fieldset>
+
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
