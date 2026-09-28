@@ -1,0 +1,125 @@
+.slider {
+  --accent: var(--color-honey);
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  user-select: none;
+}
+
+.water {
+  --accent: var(--color-water);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 22px;
+}
+
+.label {
+  font-size: var(--font-size-sm);
+  color: var(--color-pearl);
+  flex: 1;
+}
+
+.readout {
+  font-size: var(--font-size-sm);
+  color: var(--color-mist);
+  font-variant-numeric: tabular-nums;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.slider:hover .readout,
+.slider:focus-within .readout,
+.active .readout {
+  opacity: 1;
+}
+
+.lock {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--hit-min);
+  height: 24px;
+  border: 0;
+  background: transparent;
+  color: var(--color-honey);
+  border-radius: var(--radius-sm);
+}
+
+.lock:hover {
+  background: var(--color-basin-raised);
+}
+
+.track {
+  position: relative;
+  height: var(--hit-min);
+  cursor: pointer;
+  touch-action: none;
+  border-radius: var(--radius-sm);
+}
+
+.rail {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 4px;
+  transform: translateY(-50%);
+  background: color-mix(in srgb, var(--color-mist) 35%, transparent);
+  border-radius: 2px;
+}
+
+.fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  background: var(--accent);
+  border-radius: 2px;
+}
+
+.baseline {
+  position: absolute;
+  top: -4px;
+  width: 2px;
+  height: 12px;
+  margin-left: -1px;
+  background: var(--color-pearl);
+  opacity: 0.55;
+  border-radius: 1px;
+}
+
+.thumb {
+  position: absolute;
+  top: 50%;
+  width: 16px;
+  height: 16px;
+  margin-left: -8px;
+  transform: translateY(-50%);
+  background: var(--color-pearl);
+  border: 2px solid var(--accent);
+  border-radius: 50%;
+  transition: transform var(--transition-fast);
+}
+
+.track:hover .thumb,
+.active .thumb {
+  transform: translateY(-50%) scale(1.15);
+}
+
+.track:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+
+.inert .track {
+  cursor: default;
+}
+
+.inert .fill,
+.inert .thumb,
+.inert .label {
+  opacity: 0.45;
+}
