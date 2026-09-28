@@ -328,19 +328,33 @@ describe('A2 Honey: control program', () => {
     expect(maxIn(t.cutoff, 2, 2.6)).toBeLessThan(maxIn(t.cutoff, 1.25, 1.5) - 600);
   });
 
-  it('fires the onset accent only on sudden gathering', () => {
-    // The sweep gathers slowly (normalized surge stays below the threshold until its rise).
-    const sampler = createSyntheticSampler('wink');
-    let fired = 0;
-    let armed = true;
-    for (let k = 0; k < 2.2 * RATE; k++) {
-      const surge = sampler.sample(k / RATE).normalized.surge;
-      if (armed && surge > FIRE_SURGE) {
-        fired++;
-        armed = false;
-      } else if (surge < 0.15) armed = true;
-    }
-    expect(fired).toBe(2); // the close and the open
+  it('starts a new "Broo" once per sudden gathering, not on slow ones', () => {
+    /** Times (s) where the program fires its onset accent. */
+    const fires = (kind: SyntheticKind, seconds: number): number[] => {
+      const sampler = createSyntheticSampler(kind);
+      const program = new HoneyProgram(honeyVariation(1));
+      const s = program.createState();
+      program.reset(s);
+      const out: number[] = [];
+      let last = 0;
+      for (let k = 0; k < seconds * RATE; k++) {
+        program.step(s, sampler.sample(k / RATE), BASE, 1 / RATE);
+        if (s.accent > last + 1e-9) out.push(k / RATE);
+        last = s.accent;
+      }
+      return out;
+    };
+    // The wink: the close and the open, each near its onset (0.70 s and 1.23 s).
+    const wink = fires('wink', 2.2);
+    expect(wink.length).toBe(2);
+    expect(Math.abs((wink[0] ?? 0) - 0.66)).toBeLessThan(0.08);
+    expect(Math.abs((wink[1] ?? 0) - 1.2)).toBeLessThan(0.08);
+    // The sweep gathers slowly as it crosses (normalized surge < FIRE_SURGE), then suddenly
+    // as it rises: one "Broo", at the rise.
+    const sweep = fires('sweep', 2.8);
+    expect(FIRE_SURGE).toBeGreaterThan(0.35);
+    expect(sweep.length).toBe(1);
+    expect(sweep[0]).toBeGreaterThan(1.8);
   });
 
   it('pans toward where the movement is and holds when it stops', () => {
