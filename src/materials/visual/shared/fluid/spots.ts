@@ -15,10 +15,11 @@ export const SPOT_CELLS = 22;
 /** Spot radius (Gaussian sigma), in cells. */
 export const SPOT_SIGMA = 0.3;
 /**
- * Mean of the R channel when every spot shows: a Gaussian's integral over its cell
- * (2πσ²; the tails into neighbours average out).
+ * Mean of the R channel when every spot shows. Measured (0.440–0.443 across seeds; see
+ * tests/unit/fluid-spots.test.ts): below a Gaussian's 2πσ² because the texture keeps
+ * the brightest of overlapping neighbours rather than their sum.
  */
-export const SPOT_MEAN = 2 * Math.PI * SPOT_SIGMA * SPOT_SIGMA;
+export const SPOT_MEAN = 0.44;
 
 /** RG8 bytes, SPOT_TEXTURE_SIZE² texels, row 0 at the bottom (GL order). */
 export function generateSpotTexture(
