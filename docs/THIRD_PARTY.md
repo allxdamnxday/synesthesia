@@ -1,0 +1,60 @@
+# Third-party software and assets
+
+Every dependency, vendored file, and bundled asset, with its license. Licenses must be
+permissive (SPEC C2): MIT, BSD, ISC, Apache-2.0; OFL for fonts; MPL-2.0 only for
+unmodified packages. Versions are pinned exactly in `package.json`.
+
+## Runtime (ships in the app)
+
+| Package | Version | License | Use |
+|---|---|---|---|
+| react, react-dom | 19.3.0 | MIT | UI |
+| mediabunny | 1.60.0 | MPL-2.0 (unmodified) | Video decode (clip import) and MP4 encode (render) via WebCodecs |
+| zustand | 5.0.15 | MIT | App state stores |
+| idb | 8.0.3 | ISC | IndexedDB wrapper for the library |
+| fflate | 0.8.3 | MIT | Zip backup and restore |
+
+Mediabunny is used as published on npm, without modification, so MPL-2.0's file-level
+copyleft places no obligations on this project's own code.
+
+## Vendored files
+
+| File | Source | Version | License | SHA-256 |
+|---|---|---|---|---|
+| `public/vendor/opencv/opencv.js` | https://docs.opencv.org/4.13.0/opencv.js (official build) | OpenCV 4.13.0 | Apache-2.0 (`public/vendor/opencv/LICENSE`) | `63366510248adf3a7eddf3e793dd825404efb7df3749f4d6f8557c7fa4ca8aa0` |
+| `public/fonts/AtkinsonHyperlegibleNext-{Light,Regular,SemiBold}.woff2` | https://github.com/googlefonts/atkinson-hyperlegible-next at commit `7925f50f649b3813257faf2f4c0b381011f434f1` | 2.x (2025) | SIL OFL 1.1 (`public/fonts/OFL.txt`) | Light `129a2785…d909`, Regular `378aea0f…9c54`, SemiBold `4ab00275…829a` |
+
+OpenCV.js is a single file with the WebAssembly embedded; it is loaded lazily, only when
+extraction starts. The official 4.13.0 build is single-threaded, so it needs no
+cross-origin-isolation headers.
+
+## Adapted source code
+
+| Code | Source | License | Where |
+|---|---|---|---|
+| Stable-fluids WebGL solver | Pavel Dobryakov, WebGL-Fluid-Simulation (https://github.com/PavelDoGreat/WebGL-Fluid-Simulation) | MIT, Copyright (c) 2017 Pavel Dobryakov | `src/materials/visual/shared/fluid/` (attribution kept in file headers) |
+
+## Development only (not shipped)
+
+| Package | Version | License | Use |
+|---|---|---|---|
+| vite | 8.3.1 | MIT | Dev server and build |
+| @vitejs/plugin-react | 6.1.1 | MIT | React fast refresh for Vite |
+| typescript | 6.0.3 | Apache-2.0 | Type checking (pinned below 7; see DECISIONS) |
+| @types/react, @types/react-dom | 19.3.0 | MIT | Types |
+| @types/node | 24.19.0 | MIT | Types for config files and scripts |
+| eslint | 10.11.0 | MIT | Linting, including the determinism rules |
+| @eslint/js | 10.0.1 | MIT | ESLint recommended rules |
+| typescript-eslint | 8.71.0 | MIT | TypeScript lint rules and parser |
+| eslint-plugin-react-hooks | 7.1.1 | MIT | Hook rules |
+| eslint-config-prettier | 10.1.8 | MIT | Turns off rules that conflict with Prettier |
+| globals | 17.12.0 | MIT | Global variable sets for ESLint |
+| prettier | 3.9.9 | MIT | Formatting |
+| vitest | 4.1.11 | MIT | Unit tests |
+| @playwright/test | 1.63.0 | Apache-2.0 | End-to-end tests (drives installed Google Chrome) |
+
+## Development tools on the builder's machine (not in the repo)
+
+| Tool | License | Use |
+|---|---|---|
+| FFmpeg / ffprobe 8.1 | LGPL/GPL (tool only; never shipped or linked) | Generating synthetic test clips and checking exported MP4s. Generated clips are committed, so nobody else needs FFmpeg. |

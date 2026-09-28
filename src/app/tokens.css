@@ -1,0 +1,51 @@
+/*
+ * Design tokens (SPEC 13.2, "the view from beneath the bowl").
+ * Mist is an addition: Silt (#5E6F7A) is only 3.4:1 on Deep, below WCAG AA for text,
+ * so secondary text uses Mist (7.4:1 on Deep, 6.5:1 on Basin) and Silt is kept for
+ * dividers and decoration. Alert is an addition for failed checks and errors
+ * (6.5:1 on Deep). See docs/DECISIONS.md.
+ */
+:root {
+  --color-deep: #0e1a24; /* app background: submerged blue */
+  --color-basin: #172733; /* panels */
+  --color-basin-raised: #1f3342; /* inputs, hover on panels */
+  --color-silt: #5e6f7a; /* dividers, decoration, inactive tracks */
+  --color-mist: #9aabb5; /* secondary text */
+  --color-pearl: #e8e4da; /* primary text */
+  --color-honey: #d9a441; /* the single accent: active, selected, rendering */
+  --color-water: #7fb7c9; /* linked state, sound-related highlights, passing checks */
+  --color-alert: #e8806a; /* failed checks and errors */
+  --color-surround: #000000; /* canvas letterbox only */
+
+  --font-family: 'Atkinson Hyperlegible Next', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-weight-light: 300;
+  --font-weight-regular: 400;
+  --font-weight-strong: 600;
+  --font-size-sm: 14px; /* minimum UI text */
+  --font-size-md: 16px;
+  --font-size-lg: 20px;
+  --font-size-xl: 28px;
+  --line-height: 1.45;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  --hit-min: 32px; /* minimum hit target */
+  --focus-ring: 0 0 0 2px var(--color-deep), 0 0 0 4px var(--color-honey);
+  --transition-fast: 120ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --transition-fast: 0ms;
+  }
+}

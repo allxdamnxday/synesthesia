@@ -1,0 +1,10 @@
+node_modules
+dist
+coverage
+test-results
+playwright-report
+public/vendor
+package-lock.json
+*.md
+spikes/fixtures
+tests/fixtures

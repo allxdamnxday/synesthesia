@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.worker.tsbuildinfo",
+    "lib": ["ES2024", "WebWorker"],
+    "types": ["vite/client"]
+  },
+  "include": [
+    "src/**/*.worker.ts",
+    "spikes/**/*.worker.ts",
+    "dev/**/*.worker.ts",
+    "src/types/worker-env.d.ts"
+  ]
+}
