@@ -59,6 +59,23 @@ const harness = {
     };
   },
   saveSignatureText: (text: string) => lib.saveSignature(parseSignature(text)),
+  /** Write a signature straight into its store, with no list entry (as other code might). */
+  async writeSignatureWithoutMeta(text: string): Promise<void> {
+    await (await lib.openLibraryDb()).put('signatures', parseSignature(text));
+  },
+  /** Blank a list entry's thumbnail (as if it had been saved where no canvas exists). */
+  async blankThumbnail(id: string): Promise<void> {
+    const db = await lib.openLibraryDb();
+    const meta = await db.get('signatureMeta', id);
+    if (meta) await db.put('signatureMeta', { ...meta, thumbnail: '' });
+  },
+  /** A list entry whose signature is gone. */
+  async writeStrayMeta(id: string): Promise<void> {
+    const db = await lib.openLibraryDb();
+    const [first] = await db.getAll('signatureMeta');
+    if (!first) throw new Error('No list entry to copy');
+    await db.put('signatureMeta', { ...first, id });
+  },
   getSignature: (id: string) => lib.getSignature(id),
   listSignatureMeta: () => lib.listSignatureMeta(),
   renameSignature: (id: string, name: string) => lib.renameSignature(id, name),

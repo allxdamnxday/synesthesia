@@ -53,6 +53,9 @@ interface Harness {
   reset(): Promise<void>;
   snapshot(): Promise<Snapshot>;
   saveSignatureText(text: string): Promise<Meta>;
+  writeSignatureWithoutMeta(text: string): Promise<void>;
+  blankThumbnail(id: string): Promise<void>;
+  writeStrayMeta(id: string): Promise<void>;
   getSignature(
     id: string,
   ): Promise<{ name: string; contentHash: string; frameCount: number } | undefined>;
@@ -349,4 +352,19 @@ test('settings persist and the first save asks to keep the library', async ({ pa
     .not.toBe('not-asked');
   const estimate = await page.evaluate(() => window.lib.storageEstimate());
   expect(estimate === null || estimate.usage >= 0).toBe(true);
+});
+
+test('list entries repair themselves', async ({ page }) => {
+  // A signature written without its list entry still appears, with a thumbnail.
+  await page.evaluate((t) => window.lib.writeSignatureWithoutMeta(t), FIXTURE);
+  let list = await page.evaluate(() => window.lib.listSignatureMeta());
+  expect(list.map((m) => m.id)).toEqual([FIXTURE_ID]);
+  expect(list[0]?.thumbnail).toMatch(/^data:image\/png;base64,/);
+
+  // A blank thumbnail is drawn again; an entry whose signature is gone disappears.
+  await page.evaluate((id) => window.lib.blankThumbnail(id), FIXTURE_ID);
+  await page.evaluate(() => window.lib.writeStrayMeta('gone'));
+  list = await page.evaluate(() => window.lib.listSignatureMeta());
+  expect(list.map((m) => m.id)).toEqual([FIXTURE_ID]);
+  expect(list[0]?.thumbnail).toMatch(/^data:image\/png;base64,/);
 });

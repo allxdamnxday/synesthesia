@@ -49,8 +49,12 @@ import {
 const MIN_SPEED = 0.25;
 /** Half of the longest smoothing window, in seconds (smoothing = 1). */
 export const SMOOTHING_HALF_WINDOW_SEC = 0.25;
-/** Smoothed copies kept besides the raw data (one per distinct half-window). */
-const SMOOTHING_CACHE_SIZE = 3;
+/**
+ * Smoothed copies kept besides the raw data (one per distinct half-window): up to 3, and
+ * fewer for very large fields so the cache stays within about 64 MB.
+ */
+const SMOOTHING_CACHE_MAX = 3;
+const SMOOTHING_CACHE_BYTES = 64 * 1024 * 1024;
 /** Ranges at or below this normalize to 0. */
 const RANGE_EPSILON = 1e-12;
 
@@ -252,6 +256,10 @@ export function createSampler(
 
   // Smoothed tracks, least recently used first.
   const cache = new Map<number, Track>();
+  const cacheSize = Math.max(
+    1,
+    Math.min(SMOOTHING_CACHE_MAX, Math.floor(SMOOTHING_CACHE_BYTES / (rawField.byteLength || 1))),
+  );
   const trackFor = (halfWindow: number): Track => {
     if (halfWindow <= 0 || frameCount <= 1) return raw;
     const hit = cache.get(halfWindow);
@@ -270,7 +278,7 @@ export function createSampler(
     });
     const track: Track = { field, features };
     cache.set(halfWindow, track);
-    while (cache.size > SMOOTHING_CACHE_SIZE) {
+    while (cache.size > cacheSize) {
       const oldest = cache.keys().next().value;
       if (oldest === undefined) break;
       cache.delete(oldest);

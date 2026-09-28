@@ -155,35 +155,60 @@ export async function getSignatureMeta(id: string): Promise<SignatureMeta | unde
   return (await openLibraryDb()).get('signatureMeta', id);
 }
 
-/** Rebuild list entries for signatures written without one, and drop stray entries. */
-async function repairMeta(db: LibraryDatabase): Promise<void> {
-  const [sigKeys, metaKeys] = await Promise.all([
-    db.getAllKeys('signatures'),
-    db.getAllKeys('signatureMeta'),
-  ]);
-  const hasMeta = new Set(metaKeys);
+/**
+ * Keep list entries in step with signatures: rebuild entries for signatures written
+ * without one (or without a thumbnail, e.g. saved where no canvas was available) and drop
+ * entries whose signature is gone. Every change is re-checked inside the write
+ * transaction, so a save that lands meanwhile is never undone.
+ */
+async function repairMeta(db: LibraryDatabase, metas: SignatureMeta[]): Promise<boolean> {
+  const snapshot = db.transaction(['signatures', 'signatureMeta']);
+  const sigKeys = await snapshot.objectStore('signatures').getAllKeys();
+  await snapshot.done;
   const hasSig = new Set(sigKeys);
-  const missing = sigKeys.filter((id) => !hasMeta.has(id));
-  const strays = metaKeys.filter((id) => !hasSig.has(id));
-  if (missing.length === 0 && strays.length === 0) return;
+  const hasMeta = new Set(metas.map((m) => m.id));
+  const canDraw = typeof document !== 'undefined';
+  const rebuild = [
+    ...sigKeys.filter((id) => !hasMeta.has(id)),
+    ...(canDraw
+      ? metas.filter((m) => m.thumbnail === '' && hasSig.has(m.id)).map((m) => m.id)
+      : []),
+  ];
+  const strays = metas.filter((m) => !hasSig.has(m.id)).map((m) => m.id);
+  if (rebuild.length === 0 && strays.length === 0) return false;
+
+  // Draw thumbnails before the write transaction (it must only wait on the database).
+  const existing = new Map(metas.map((m) => [m.id, m]));
   const rebuilt: SignatureMeta[] = [];
-  for (const id of missing) {
+  for (const id of rebuild) {
     const sig = await db.get('signatures', id);
-    if (sig) rebuilt.push(signatureMetaOf(sig, sig.createdAt, tryThumbnail(sig)));
+    if (!sig) continue;
+    const before = existing.get(id);
+    rebuilt.push(signatureMetaOf(sig, before?.updatedAt ?? sig.createdAt, tryThumbnail(sig)));
   }
-  const tx = db.transaction('signatureMeta', 'readwrite');
-  await Promise.all([
-    ...rebuilt.map((m) => tx.store.put(m)),
-    ...strays.map((id) => tx.store.delete(id)),
-    tx.done,
-  ]);
+  const tx = db.transaction(['signatures', 'signatureMeta'], 'readwrite');
+  const signatures = tx.objectStore('signatures');
+  const metaStore = tx.objectStore('signatureMeta');
+  for (const meta of rebuilt) {
+    const sig = await signatures.get(meta.id);
+    const current = await metaStore.get(meta.id);
+    if (!sig || sig.contentHash !== meta.contentHash) continue;
+    if (current && current.thumbnail !== '') continue;
+    await metaStore.put(current ? { ...current, thumbnail: meta.thumbnail } : meta);
+  }
+  for (const id of strays) {
+    if ((await signatures.getKey(id)) === undefined) await metaStore.delete(id);
+  }
+  await tx.done;
+  return true;
 }
 
 /** Every signature's list entry, most recently changed first. */
 export async function listSignatureMeta(): Promise<SignatureMeta[]> {
   const db = await openLibraryDb();
-  await repairMeta(db);
-  return (await db.getAll('signatureMeta')).sort(byUpdatedDesc);
+  const metas = await db.getAll('signatureMeta');
+  const repaired = await repairMeta(db, metas);
+  return (repaired ? await db.getAll('signatureMeta') : metas).sort(byUpdatedDesc);
 }
 
 /** Signatures holding this exact movement data (same content hash). */

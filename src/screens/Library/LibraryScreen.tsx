@@ -83,8 +83,13 @@ export function LibraryScreen() {
   const signaturesHeading = useRef<HTMLHeadingElement>(null);
   const compositionsHeading = useRef<HTMLHeadingElement>(null);
 
+  // Load on arrival, and again when coming back to this window (another window may have
+  // changed the library meanwhile).
   useEffect(() => {
     void refresh();
+    const onFocus = () => void refresh();
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
   }, [refresh]);
 
   // After a delete, move focus to the list (or the page title if the list is gone).
