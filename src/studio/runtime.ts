@@ -25,7 +25,12 @@ import { visualRng, visualSeed } from '../engine/seeds';
 import { snapshotChanges } from '../engine/snapshots';
 import { stepsForTime, VisualRunner } from '../engine/visualRunner';
 import { getVisualMaterial } from '../materials/registry';
-import type { PropertyValues, Quality, VisualMaterial } from '../materials/types';
+import {
+  FIXED_DT,
+  type PropertyValues,
+  type Quality,
+  type VisualMaterial,
+} from '../materials/types';
 import { getVisualContext, releaseVisualContext } from '../materials/visual/shared/gl';
 import { renderOffscreen } from '../perf/offscreenRender';
 import { createSampler } from '../signature/sampler';
@@ -38,8 +43,10 @@ import {
   CatchUpBudget,
   FAR_BEHIND_STEPS,
   FRAME_STEP_TIME_MS,
+  isJumpBack,
   LAG_STEPS,
   PLAY_STEPS_PER_FRAME,
+  SeekHold,
 } from './stepBudget';
 
 export type { SoundProblem } from './sound';
@@ -144,6 +151,7 @@ export class StudioRuntime {
   /** A property changed since the last reset, so the state isn't what a render would show. */
   private dirtySinceReset = false;
   private readonly budget = new CatchUpBudget();
+  private readonly seekHold = new SeekHold();
   private scrubResume = false;
 
   private lastEmitTs = 0;
@@ -256,9 +264,11 @@ export class StudioRuntime {
     if (this.disposed) return;
     const target = Math.min(this.sampler.duration, Math.max(0, Number.isFinite(t) ? t : 0));
     this.clock.seek(target);
+    if (this.clock.playing) this.seekHold.hold(target, performance.now());
+    else this.seekHold.clear();
     this.seekVisualTo(target);
     this.wake();
-    this.emitTransport(performance.now(), true);
+    this.emitTransport(performance.now(), true, target);
   }
 
   /** Scrub with the playhead: playback holds during the drag and resumes after it. */
@@ -472,7 +482,7 @@ export class StudioRuntime {
     if (this.disposed) return;
     const interval = this.lastFrameTs > 0 ? ts - this.lastFrameTs : 16.7;
     this.lastFrameTs = ts;
-    const t = this.clock.now(ts);
+    const t = this.seekHold.apply(this.clock.now(ts), ts);
     this.advance(t, ts, interval);
     this.emitTransport(ts, false, t);
     if (this.clock.playing || this.seeking || (this.needsDraw && this.runner !== null)) {
@@ -487,10 +497,13 @@ export class StudioRuntime {
     if (!runner || !this.material || this.contextLost) return;
     const target = stepsForTime(t);
     if (runner.steps > target) {
-      // The playhead went back (a loop wrap or a seek elsewhere): replay from the start.
-      runner.seek(t);
-      this.dirtySinceReset = false;
-      this.startCatchUp(ts);
+      // The playhead went back: after a loop wrap, replay from the start. A hair's
+      // jitter of the sound clock just waits for the playhead to catch up.
+      if (isJumpBack(runner.simTime, t, this.sampler.duration, FIXED_DT)) {
+        runner.seek(t);
+        this.dirtySinceReset = false;
+        this.startCatchUp(ts);
+      }
     } else if (!this.seeking && target - runner.steps > FAR_BEHIND_STEPS) {
       // Far behind (the tab was hidden): catch up without drawing, like a seek.
       this.startCatchUp(ts);

@@ -57,3 +57,43 @@ export class CatchUpBudget {
     this.value = this.initial;
   }
 }
+
+/**
+ * Did the playhead jump back (a loop wrap), or only jitter? The sound engine's clock can
+ * step back by a hair when a new audio timestamp arrives; only a real jump may reset the
+ * wake. Anything more than a quarter second back (or half a very short timeline) counts.
+ */
+export function isJumpBack(simTime: number, t: number, duration: number, dt: number): boolean {
+  const threshold = Math.max(2 * dt, Math.min(0.25, 0.5 * Math.max(0, duration)));
+  return simTime - t > threshold;
+}
+
+/**
+ * After a seek while playing, the sound engine takes a moment (~30 ms) to jump; meanwhile
+ * its clock still reports the old time. Hold the playhead at the seek target until the
+ * clock arrives there (or a short while passes), so no stale frame is shown.
+ */
+export class SeekHold {
+  private target: number | null = null;
+  private untilMs = 0;
+
+  hold(t: number, nowMs: number, forMs = 300): void {
+    this.target = t;
+    this.untilMs = nowMs + forMs;
+  }
+
+  /** The playhead to use this frame. */
+  apply(t: number, nowMs: number): number {
+    const target = this.target;
+    if (target === null) return t;
+    if (Math.abs(t - target) < 0.1 || nowMs > this.untilMs) {
+      this.target = null;
+      return t;
+    }
+    return target;
+  }
+
+  clear(): void {
+    this.target = null;
+  }
+}

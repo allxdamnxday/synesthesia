@@ -7,7 +7,7 @@ import { WallClock } from '../../src/studio/clock';
 import { backingSize, fitAspect, pixelRatioFor } from '../../src/studio/layout';
 import { peakFrame, peakMomentTime, thumbnailTime } from '../../src/studio/moments';
 import { resolvePreviewQuality } from '../../src/studio/quality';
-import { CatchUpBudget } from '../../src/studio/stepBudget';
+import { CatchUpBudget, isJumpBack, SeekHold } from '../../src/studio/stepBudget';
 import {
   freshComposition,
   restorableComposition,
@@ -115,6 +115,41 @@ describe('catch-up budget', () => {
     expect(b.steps).toBe(8);
     b.reset();
     expect(b.steps).toBe(30);
+  });
+});
+
+describe('playhead jumps and seeks', () => {
+  const dt = 1 / 60;
+
+  it('tells a loop wrap from the sound clock’s jitter', () => {
+    // The runner is up to one step ahead of the playhead normally.
+    expect(isJumpBack(1.0167, 1.0, 5.2, dt)).toBe(false);
+    // A hair back (a new audio timestamp): not a jump.
+    expect(isJumpBack(1.0167, 0.999, 5.2, dt)).toBe(false);
+    expect(isJumpBack(1.2, 1.0, 5.2, dt)).toBe(false);
+    // A loop wrap.
+    expect(isJumpBack(5.2, 0.01, 5.2, dt)).toBe(true);
+    // Very short timelines wrap by less than a quarter second.
+    expect(isJumpBack(0.2, 0.01, 0.2, dt)).toBe(true);
+    expect(isJumpBack(0.2, 0.18, 0.2, dt)).toBe(false);
+  });
+
+  it('holds the playhead at a seek target until the clock arrives', () => {
+    const hold = new SeekHold();
+    expect(hold.apply(3, 0)).toBe(3);
+    hold.hold(1, 1000);
+    // The sound engine still reports the old time for a moment.
+    expect(hold.apply(3.01, 1010)).toBe(1);
+    expect(hold.apply(3.03, 1025)).toBe(1);
+    // It arrives: from now on the clock is followed.
+    expect(hold.apply(1.004, 1040)).toBeCloseTo(1.004);
+    expect(hold.apply(3.5, 1050)).toBe(3.5);
+    // A hold never lasts long.
+    hold.hold(2, 2000);
+    expect(hold.apply(4, 2400)).toBe(4);
+    hold.hold(2, 3000);
+    hold.clear();
+    expect(hold.apply(4, 3001)).toBe(4);
   });
 });
 
