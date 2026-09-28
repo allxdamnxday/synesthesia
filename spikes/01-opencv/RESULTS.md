@@ -69,6 +69,24 @@ Notes:
 - The wasm heap is 128 MiB from the start; it did not grow over 200 frames or 20
   create/dispose cycles, so every `Mat` is being deleted.
 
+## Full extraction pipeline (Milestone 1)
+
+Measured through `dev/extraction/` (headless Chrome 153, dev server, OpenCV already loaded)
+on 10 s, 30 fps clips (300 analysis frames), after one warm-up run. Each frame is decoded,
+drawn (rotated, cropped, resized) onto a canvas, read back as grayscale, blurred, run
+through Farneback against the previous frame, and pooled.
+
+| Source clip | Analysis frame | Per analysis frame | 10 s clip |
+|---|---|---|---|
+| 320×180 H.264 | 320×180 | 23.5–25.6 ms | 7.3–8.9 s |
+| 1920×1080 H.264 | 320×180 | 28.8–30.5 ms | 8.8–9.3 s |
+| 1080×1920 H.264 (portrait) | 320×569 | 77.6–85.3 ms | 23.6–26.0 s |
+
+Portrait clips cost about 3.3× more because the analysis frame is 320 *wide* (SPEC 8.1),
+so it is 569 px tall. On a 2017 MacBook Pro a 10 s portrait clip may approach the 60 s
+budget; landscape clips should stay well inside it. First extraction in a session adds
+about 0.5–1 s to load OpenCV.
+
 ## Mac checks for Braden
 
 Open `spikes/01-opencv/` from a build on the Mac (served over `localhost` or HTTPS) in
