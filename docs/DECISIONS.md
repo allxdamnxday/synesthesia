@@ -335,6 +335,56 @@ implementation follows the intent. To revisit with Freeman only if a material fe
   never depend on the particle count.
 - Measured here: 60 fps on every tier at 1× and 2×, even at Density 1.
 
+## 2026-09-28: Studio
+- **Clock:** the sound engine is the master once its material has loaded; a wall clock with the
+  same loop and end behaviour stands in before that and when there's no playable sound, and
+  the handover keeps the playhead. Picture and sound share one sampler configured by
+  `samplerConfigFor()` (the same helper the render uses).
+- **Seek:** reset and fast-forward without drawing, with an adaptive step budget (8–600 steps
+  per frame, halving on slow frames, 12 ms CPU cap) and "Catching up…" after 0.5 s; a small
+  backward jitter of the audio clock is ignored; the playhead holds at a seek target until
+  the sound arrives. Going forward from an untouched state simply continues.
+- **Edits while playing:** property edits affect the preview from now on and apply from t = 0
+  at the next loop or seek; Movement changes re-seek at once.
+- **Quality:** the preview's pixel ratio is capped at 1 / 1.5 / 2 by tier (Retina smoothness);
+  the first Studio visit measures the computer ("Getting to know this computer…").
+- **Loop is on by default** (a session setting): the artist watches the same movement again
+  and again.
+- **Linked layout:** Visual, then the Linked toggle with a "Both" group, then Sound. A shared
+  property is in Both if either material uses it (primary if either shows it as primary).
+- **Switching materials keeps shared values** the new material doesn't use, so switching to
+  the Signature view and back loses nothing.
+- **Chance:** the pool excludes the Signature view; only shared properties lock (material-
+  specific ones stay playable); the same seed repeats the same draw ("New seed" draws again).
+- **Undo** covers the wake (materials, properties, Movement, seed, Linked, mute/solo, chance,
+  unlocks, snapshot recall); name, notes and status are saved and autosaved but aren't undo
+  steps. **Autosave** keeps one record per composition (or per signature for new work);
+  restoring shows a notice with "Discard changes" (confirmed).
+- **Thumbnail:** 320×180 JPEG at Standard, 0.25 s after the peak moment (at the peak itself the
+  wake hasn't formed yet).
+- **Presentation:** full screen with a window-covering fallback; the pointer hides after 2 s;
+  a quiet "Present" button makes the mode findable without Help.
+- **Keys:** Space plays/pauses even when a button has focus (switches and choices keep Space);
+  letter shortcuts fire only without modifiers; Cmd/Ctrl+S also saves; Ctrl+Y redoes.
+- **Save as new** saves "‹name› copy" and opens it. Saving records the installed material
+  versions (after the "this material has changed" notice).
+
+## 2026-09-28: Resonance and Pulse sounds
+- **Resonance:** a bank of 12 modes in an AudioWorklet (each a pair of slightly detuned
+  resonators, so pitch bends without clicks); onsets strike at the exact sample, seeded noise
+  bows while the movement lasts, a damper settles when it stops. Bodies: Glass (G5), Wood (F4),
+  Metal (A3). Rigidity sets inharmonicity (in tune at 0, the body's natural ratios at 0.5) and
+  strike hardness; Elasticity the ring time and a pitch bounce that follows direction.
+  Body and Rigidity are primary; Brightness and Dispersion move under More.
+- **Pulse:** Karplus-Strong strings in an AudioWorklet; a pulse clock quickens with energy
+  (Range sets its span); every onset plucks an accent that always sounds and restarts the
+  clock (this keeps the wink's timing clear); other pulses sound by seeded chance from the
+  density feature × Density; pitch follows height; Rigidity first snaps notes to the Scale
+  (0.15–0.45), then pulls timing onto a steady grid (0.55–0.9). Scale defaults to Pentatonic.
+- **Worklet events** are AudioParam triggers, never port messages; Pulse's randomness is
+  `hash32(seed, step, stream)` with no generator state, so seeks, live edits and renders
+  draw the same values. Both are bit-identical at every property extreme.
+
 ## Pending
 - Freeman's MacBook Pro model, year, chip, macOS version (Diagnostics' Copy report now
   records macOS version, CPU architecture and GPU whenever it runs on his Mac).
