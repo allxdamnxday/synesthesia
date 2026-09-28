@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { expect, test } from '@playwright/test';
 
 test('the introduction walks through three steps and opens the sample wink', async ({ page }) => {
@@ -46,4 +48,26 @@ test('the dedication shows once, dismisses on a click, and respects the setting'
   await page.goto('./?dedication=1#/');
   await expect(page.getByRole('heading', { name: 'Library' })).toBeVisible();
   await expect(page.getByTestId('dedication')).toHaveCount(0);
+});
+
+test('a clip dropped on the Library opens in Prepare, even with the introduction showing', async ({
+  page,
+}) => {
+  await page.goto('./?introduction=1#/');
+  await expect(page.getByRole('dialog', { name: 'Welcome' })).toBeVisible();
+  // Simulate dropping a clip file onto the window (bytes read here, in the test process).
+  const base64 = readFileSync(resolve(import.meta.dirname, '../fixtures/dot-right.mp4')).toString(
+    'base64',
+  );
+  const dataTransfer = await page.evaluateHandle((b64) => {
+    const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+    const dt = new DataTransfer();
+    dt.items.add(new File([bytes], 'dot-right.mp4', { type: 'video/mp4' }));
+    return dt;
+  }, base64);
+  await page.dispatchEvent('body', 'dragover', { dataTransfer });
+  await page.dispatchEvent('body', 'drop', { dataTransfer });
+  await expect(page).toHaveURL(/#\/prepare$/);
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.getByText('dot-right.mp4').first()).toBeVisible();
 });

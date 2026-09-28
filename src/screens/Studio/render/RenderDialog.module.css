@@ -1,0 +1,262 @@
+.dialog {
+  width: min(520px, calc(100vw - 2 * var(--space-5)));
+  max-height: calc(100vh - 2 * var(--space-5));
+  overflow: auto;
+  padding: var(--space-5);
+  border: 1px solid color-mix(in srgb, var(--color-pearl) 14%, transparent);
+  border-radius: var(--radius-lg);
+  background: var(--color-basin);
+  color: var(--color-pearl);
+  box-shadow: 0 24px 64px rgb(0 0 0 / 0.5);
+}
+
+.dialog::backdrop {
+  background: rgb(4 10 15 / 0.66);
+}
+
+/* The dialog takes focus when it opens so its title is announced; it needs no ring. */
+.dialog:focus,
+.dialog:focus-visible {
+  outline: none;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 24px 64px rgb(0 0 0 / 0.5);
+}
+
+.title {
+  font-size: var(--font-size-lg);
+  margin-bottom: var(--space-1);
+}
+
+.subtitle {
+  color: var(--color-mist);
+  font-size: var(--font-size-sm);
+  margin-bottom: var(--space-4);
+  overflow-wrap: anywhere;
+}
+
+.form {
+  display: block;
+}
+
+.choices {
+  display: grid;
+  gap: var(--space-4);
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.checking {
+  margin: 0 0 var(--space-4);
+  color: var(--color-mist);
+  font-size: var(--font-size-sm);
+}
+
+/* While the capability check runs, the choices are visibly waiting. */
+.choices:disabled .option,
+.choices:disabled .legend,
+.choices:disabled .hint {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.details {
+  margin-top: var(--space-2);
+  color: var(--color-mist);
+  font-size: var(--font-size-sm);
+}
+
+.details summary {
+  cursor: pointer;
+  width: fit-content;
+}
+
+.details code {
+  display: block;
+  margin-top: var(--space-1);
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
+.field {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.legend {
+  padding: 0;
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-strong);
+  color: var(--color-pearl);
+}
+
+.options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 2px;
+  width: fit-content;
+  max-width: 100%;
+  background: var(--color-deep);
+  border: 1px solid color-mix(in srgb, var(--color-pearl) 14%, transparent);
+  border-radius: var(--radius-md);
+}
+
+.option {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--hit-min);
+  padding: 2px var(--space-3);
+  border-radius: 6px;
+  color: var(--color-mist);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition:
+    background-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.option:hover {
+  color: var(--color-pearl);
+}
+
+.option:has(.radio:checked) {
+  background: var(--color-basin-raised);
+  color: var(--color-pearl);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-honey) 60%, transparent);
+}
+
+.option:has(.radio:focus-visible) {
+  box-shadow: var(--focus-ring);
+}
+
+.optionDisabled,
+.optionDisabled:hover {
+  opacity: 0.5;
+  cursor: not-allowed;
+  color: var(--color-mist);
+}
+
+.radio {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+}
+
+.optionDetail {
+  color: var(--color-mist);
+}
+
+.hint {
+  margin: var(--space-1) 0 0;
+  color: var(--color-mist);
+  font-size: var(--font-size-sm);
+}
+
+.folderRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.notes {
+  margin: 0 0 var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  list-style: none;
+  border-radius: var(--radius-md);
+  background: var(--color-deep);
+  color: var(--color-mist);
+  font-size: var(--font-size-sm);
+  display: grid;
+  gap: var(--space-1);
+}
+
+.progressBlock {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+}
+
+.phase {
+  margin: 0;
+  font-size: var(--font-size-md);
+}
+
+.progress {
+  width: 100%;
+  height: 8px;
+  appearance: none;
+  border: 0;
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--color-deep);
+}
+
+.progress::-webkit-progress-bar {
+  background: var(--color-deep);
+  border-radius: 4px;
+}
+
+.progress::-webkit-progress-value {
+  background: var(--color-honey);
+  border-radius: 4px;
+  transition: width var(--transition-fast);
+}
+
+.progress::-moz-progress-bar {
+  background: var(--color-honey);
+}
+
+.timeLeft {
+  margin: 0;
+  min-height: 1.45em;
+  color: var(--color-mist);
+  font-size: var(--font-size-sm);
+}
+
+.done {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.doneText {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.status:empty {
+  display: none;
+}
+
+.status {
+  margin-top: var(--space-4);
+}
+
+.status p {
+  margin: 0;
+  font-size: var(--font-size-sm);
+}
+
+.info {
+  color: var(--color-pearl);
+}
+
+.error {
+  color: var(--color-alert);
+}
+
+.buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+}
