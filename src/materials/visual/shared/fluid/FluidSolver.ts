@@ -9,7 +9,8 @@
  * One `step()` advances the fluid by a fixed dt of composition time:
  *   1. upload the signature field (optionally low-passed, for Honey's lag)
  *   2. force: add the projected field × gain × dt to velocity
- *   3. dye: release dye ∝ |field| × amount, coloured by direction (palette texture)
+ *   3. dye: release dye ∝ |field| × amount, coloured by direction (palette texture);
+ *      skipped when the amount is 0 (a material releasing its own)
  *   4. viscosity: implicit diffusion of velocity (Jacobi), true viscosity
  *   5. vorticity confinement
  *   6. hooks.beforeProjection (body forces: buoyancy, springs)
@@ -23,15 +24,17 @@
  * caller's seeded rng). Parameters are resolution-independent (lengths are in canvas
  * short sides), so a Standard preview and a High render show the same wake.
  *
- * Extending (later milestones):
- * - Smoke: allocate a temperature DoubleRenderTarget at `simGrid` size with
- *   `createFieldTarget('r')`, inject heat from `fieldTexture` in `beforeProjection`
- *   with a pass from `createPass()`, add buoyancy (temperature × up) to velocity in the
- *   same hook, and `advect()` the temperature in `afterAdvection`.
- * - Honey: `forceLowPassSec` gives the heavy, lagging push. Elastic spring-back: keep a
- *   displacement accumulator (RG) that integrates velocity and is advected with the flow
- *   (`afterAdvection`), and add a damped spring force −k·D to velocity in
- *   `beforeProjection`.
+ * Extending: materials add fields with `createFieldTarget()` and passes with
+ * `createPass()`, run them in the hooks, and `advect()` their fields. A pass that needs
+ * the signature's push includes SIGNATURE_FORCE_GLSL and calls `bindSignatureForce()`;
+ * `fieldMagnitude()` says whether anything moves this step.
+ * - Honey (visual/honey): a lagging push (`forceLowPassSec`) with dye released from the
+ *   field as it arrives (`dyeFromRawField`) and drawn into strokes (`dyeStrokeLength`);
+ *   viscous diffusion by a Gaussian kernel and an elastic spring −k·D in
+ *   `beforeProjection`, the displacement D carried with the flow in `afterAdvection`.
+ * - Smoke (visual/smoke): its own emission pass (burst radius, vents) instead of the dye
+ *   pass, heat and buoyancy in `beforeProjection`, heat carried in `afterAdvection`, and
+ *   its own simulation grid (`simCells`) solved to convergence at every tier.
  */
 import type { Quality } from '../../../types';
 import {

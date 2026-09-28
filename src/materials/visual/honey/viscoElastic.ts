@@ -14,10 +14,11 @@ import {
   bindTexture,
   clearTarget,
   deleteDoubleRenderTarget,
+  resetPassState,
   type DoubleRenderTarget,
   type ShaderProgram,
 } from '../shared/gl';
-import { diffusionSigmaTexels, gaussianKernel } from './kernel';
+import { BLUR_TAPS, diffusionSigmaTexels, gaussianKernel } from './kernel';
 import type { HoneyBodyParams } from './mapping';
 import { BLUR_FRAGMENT, BLUR_SPRING_FRAGMENT, DISPLACEMENT_FRAGMENT } from './shaders';
 
@@ -33,6 +34,10 @@ export class ViscoElasticBody {
   private readonly copy: ShaderProgram;
   private scratch: DoubleRenderTarget;
   private displacement: DoubleRenderTarget;
+  /** The kernel for the current width (recomputed only when viscosity or grid change). */
+  private kernelSigma = Number.NaN;
+  private kernelSpacing = 0;
+  private readonly kernelWeights = new Float32Array(BLUR_TAPS + 1);
 
   constructor(solver: FluidSolver, params: HoneyBodyParams) {
     this.solver = solver;
@@ -69,6 +74,7 @@ export class ViscoElasticBody {
     this.scratch = this.solver.createFieldTarget('rg');
     this.displacement = this.solver.createFieldTarget('rg');
     const gl = this.solver.gl;
+    resetPassState(gl);
     this.copy.use();
     gl.uniform2f(
       this.copy.u('uTexelSize'),
@@ -84,15 +90,21 @@ export class ViscoElasticBody {
     const velocity = solver.velocity;
     const short = Math.min(solver.simGrid.width, solver.simGrid.height);
     const sigma = diffusionSigmaTexels(this.params.viscosity, params.dt, short);
-    const kernel = gaussianKernel(sigma);
-    const weights = new Float32Array(kernel.weights);
+    if (sigma !== this.kernelSigma) {
+      const kernel = gaussianKernel(sigma);
+      this.kernelWeights.set(kernel.weights);
+      this.kernelSpacing = kernel.spacing;
+      this.kernelSigma = sigma;
+    }
+    const weights = this.kernelWeights;
+    const spacing = this.kernelSpacing;
 
     // Along x, into scratch.
     const blur = this.blur;
     blur.use();
     gl.uniform2f(blur.u('uTexelSize'), velocity.texelSizeX, velocity.texelSizeY);
     gl.uniform2f(blur.u('uVelocityTexel'), velocity.texelSizeX, velocity.texelSizeY);
-    gl.uniform2f(blur.u('uStep'), kernel.spacing * velocity.texelSizeX, 0);
+    gl.uniform2f(blur.u('uStep'), spacing * velocity.texelSizeX, 0);
     gl.uniform1fv(blur.u('uWeights'), weights);
     gl.uniform1i(blur.u('uVelocity'), bindTexture(gl, 0, velocity.read.texture));
     solver.blit(this.scratch.write);
@@ -103,7 +115,7 @@ export class ViscoElasticBody {
     p.use();
     gl.uniform2f(p.u('uTexelSize'), velocity.texelSizeX, velocity.texelSizeY);
     gl.uniform2f(p.u('uVelocityTexel'), velocity.texelSizeX, velocity.texelSizeY);
-    gl.uniform2f(p.u('uStep'), 0, kernel.spacing * velocity.texelSizeY);
+    gl.uniform2f(p.u('uStep'), 0, spacing * velocity.texelSizeY);
     gl.uniform1fv(p.u('uWeights'), weights);
     gl.uniform1f(p.u('uSpring'), Math.max(0, this.params.springStiffness) * params.dt * short);
     gl.uniform1f(p.u('uMaxSpeed'), Math.max(0, this.params.maxSpeed) * short);

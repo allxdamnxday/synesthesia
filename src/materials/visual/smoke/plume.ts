@@ -2,9 +2,9 @@
  * Smoke's plume: emission with a burst radius, heat, buoyancy and seeded turbulence,
  * added to the shared fluid solver through its hooks.
  *
- * - beforeProjection: while the signature moves, average its push over the burst disk
- *   (emission), release tinted smoke into the dye and heat into the heat field; then
- *   warm smoke rises (or sinks) and seeded eddies stir it.
+ * - beforeProjection: while the signature moves, find where it pushes within the burst
+ *   radius (emission), release tinted smoke into the dye and heat into the heat field;
+ *   then warm smoke rises (or sinks) and seeded eddies stir it.
  * - afterAdvection: carry the heat with the flow as it cools.
  *
  * Lengths are in canvas short sides, so every quality tier shows the same smoke.
@@ -124,7 +124,7 @@ export class SmokePlume {
     const short = Math.min(solver.simGrid.width, solver.simGrid.height);
     const velocity = solver.velocity;
     if (solver.fieldMagnitude() > 1e-9) {
-      // Emission: the push averaged over the burst disk.
+      // Emission: the strongest push within the burst radius, and its direction.
       const e = this.emission;
       e.use();
       if (solver.bindSignatureForce(e, this.emitted)) {

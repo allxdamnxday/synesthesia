@@ -101,7 +101,10 @@ export class SmokeMaterial implements VisualMaterial {
     if (this.plume) {
       this.plume.params = params.emit;
       this.plume.radius = burstRadius(params.emit.burstRadius, frame.normalized.divergence);
-      this.plume.noise = { phaseX: this.phaseX, phaseY: this.phaseY, seed: this.noiseSeed };
+      const noise = this.plume.noise;
+      noise.phaseX = this.phaseX;
+      noise.phaseY = this.phaseY;
+      noise.seed = this.noiseSeed;
     }
     this.solver?.step(frame, {
       ...params.step,
