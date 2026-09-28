@@ -17,6 +17,7 @@ import {
   clearWorkingState,
   errorDetail,
   findSignatureForComposition,
+  getAlbum,
   getComposition,
   getSettings,
   getSignature,
@@ -140,6 +141,8 @@ export interface StudioState {
   session: number;
   target: StudioTarget | null;
   signature: KineticSignature | null;
+  /** The album this composition is a track of, if any (for the breadcrumb). */
+  album: { id: string; title: string } | null;
   composition: Composition | null;
   /** What "unchanged" means: the saved composition, or the fresh one for a new composition. */
   baseline: Composition | null;
@@ -300,6 +303,7 @@ export const useStudioStore = create<StudioState>()((set, get) => {
     isNew: boolean,
     notices: StudioNotice[],
     quality: Quality | null,
+    album: StudioState['album'] = null,
   ): void => {
     history = new UndoHistory<WakeState>(wakeOf(composition));
     set((s) => ({
@@ -309,6 +313,7 @@ export const useStudioStore = create<StudioState>()((set, get) => {
       session: s.session + 1,
       target,
       signature,
+      album,
       composition,
       baseline,
       isNew,
@@ -343,6 +348,7 @@ export const useStudioStore = create<StudioState>()((set, get) => {
       failure,
       missingSignature: missing ?? null,
       signature: null,
+      album: null,
       composition: null,
       baseline: null,
     });
@@ -374,6 +380,7 @@ export const useStudioStore = create<StudioState>()((set, get) => {
     session: 0,
     target: null,
     signature: null,
+    album: null,
     composition: null,
     baseline: null,
     isNew: false,
@@ -493,7 +500,19 @@ export const useStudioStore = create<StudioState>()((set, get) => {
           sound: registryCatalog.sound(composition.sound.materialId),
         });
         if (changed.visual || changed.sound) notices.push(notice('info', MATERIAL_CHANGED));
-        startSession(target, signature, composition, pointed, false, notices, quality);
+        const albumId = composition.chance?.albumId;
+        const album = albumId ? await getAlbum(albumId).catch(() => undefined) : undefined;
+        if (token !== loadToken) return;
+        startSession(
+          target,
+          signature,
+          composition,
+          pointed,
+          false,
+          notices,
+          quality,
+          album ? { id: album.id, title: album.title } : null,
+        );
       } catch (error) {
         if (token !== loadToken) return;
         console.error('The Studio could not open:', errorDetail(error));
@@ -510,6 +529,7 @@ export const useStudioStore = create<StudioState>()((set, get) => {
         status: 'idle',
         target: null,
         signature: null,
+        album: null,
         composition: null,
         baseline: null,
         snapshots: {},
