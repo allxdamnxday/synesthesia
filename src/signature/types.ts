@@ -135,6 +135,10 @@ export interface KineticSignature {
   frameRate: number;
   /** Number of field frames. Frame i describes motion from analysis frame i to i + 1. */
   frameCount: number;
+  /**
+   * cols across (x) × rows down (y). Extraction gives the frame's longer side the
+   * `gridCols` option's cells (32 × 18 for landscape, 18 × 32 for portrait by default).
+   */
   grid: { cols: number; rows: number };
   /**
    * frameCount × rows × cols × 2 float32 values (u, v), row-major, base64-encoded.
@@ -219,7 +223,11 @@ export interface ExtractionOptions {
    * cropped frame (default 320; Advanced). Portrait 1080×1920 → 180×320.
    */
   analysisWidth: number;
-  /** Grid columns (default 32; Advanced). Rows follow the aspect ratio, clamped 8–48. */
+  /**
+   * Grid cells along the **longer** side of the analysis frame (default 32, 8–64;
+   * Advanced). The shorter side gets round(gridCols × short / long), clamped 8–48. So
+   * landscape is 32×18 and portrait 18×32 (cols × rows) by default.
+   */
   gridCols: number;
   noiseFloorMode: 'auto' | 'manual';
   /** Used when noiseFloorMode is 'manual'; field diagonals per second. */

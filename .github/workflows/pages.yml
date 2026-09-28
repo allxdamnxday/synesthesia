@@ -1,0 +1,50 @@
+# Optional: deploy to GitHub Pages (free only for public repositories).
+# Enable Pages in the repository settings (Source: GitHub Actions) before running it.
+name: Deploy to GitHub Pages
+
+on:
+  workflow_dispatch:
+    inputs:
+      build:
+        description: "release (for Freeman) or test (includes spike and harness pages)"
+        required: true
+        default: release
+        type: choice
+        options: [release, test]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build:release
+        if: ${{ inputs.build == 'release' }}
+      - run: npm run build
+        if: ${{ inputs.build == 'test' }}
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
