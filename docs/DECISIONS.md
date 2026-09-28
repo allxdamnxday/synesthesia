@@ -317,6 +317,24 @@ implementation follows the intent. To revisit with Freeman only if a material fe
   input; Chrome sums three or more in an order that depends on memory addresses, which makes
   renders non-bit-identical. Use `mixPairwise`.
 
+## 2026-09-28: Descending bubbles and Filaments
+- **Density sets the count; the quality tier only caps it** (bubbles 1,500 / 4,000 / 8,000;
+  filaments 150 / 400 / 800), so a Draft preview at baseline matches a High render. In a
+  Draft preview, Density has no further effect above ~0.6 (the cap binds); renders show more.
+- **Bubbles:** Persistence wears out and pops the bubbles the movement pushes (they re-form on
+  their path) and sets how long their glow lasts, rather than a lifetime for every bubble
+  (which emptied the water at low Persistence). Elasticity springs each bubble back toward
+  its falling path. Bubbles stretch with speed and glow in the direction colors (not
+  physical, but it makes the close and open readable, matching Water). Rigidity hidden.
+- **Filaments:** Rigidity (bending stiffness) is primary and Dispersion moves under More.
+  Strands rest along a flow that points every way rather than hanging down (hanging strands
+  made the close and open look unequal). Each segment paints the area it sweeps into a
+  fading half-float buffer (8-bit fallback) that advances only in `step()`. Still strands
+  skip the solve until the movement reaches them.
+- **Randomness:** one PRNG draw per step, with per-particle values hashed from it, so draws
+  never depend on the particle count.
+- Measured here: 60 fps on every tier at 1× and 2×, even at Density 1.
+
 ## Pending
 - Freeman's MacBook Pro model, year, chip, macOS version (Diagnostics' Copy report now
   records macOS version, CPU architecture and GPU whenever it runs on his Mac).
