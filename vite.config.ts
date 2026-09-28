@@ -1,6 +1,7 @@
 import { existsSync, readdirSync } from 'node:fs';
 import { relative, resolve } from 'node:path';
 import react from '@vitejs/plugin-react';
+import { VitePWA } from 'vite-plugin-pwa';
 import { defineConfig } from 'vitest/config';
 
 const root = import.meta.dirname;
@@ -30,7 +31,40 @@ export default defineConfig(({ mode }) => ({
   // Relative base so the build works from any static host path (GitHub Pages
   // project path, Vercel root, or a local folder served over localhost).
   base: './',
-  plugins: [react()],
+  plugins: [
+    react(),
+    // Offline after the first visit (SPEC C5, M8): precache the whole instrument, including
+    // OpenCV.js, fonts, worklets and the sample signature. Spike and harness pages are
+    // development tools and stay out of the cache.
+    VitePWA({
+      registerType: 'autoUpdate',
+      injectRegister: false,
+      manifest: {
+        name: 'Synesthesia',
+        short_name: 'Synesthesia',
+        description:
+          'An instrument that applies one movement’s kinetic signature to different visual and sound materials.',
+        display: 'standalone',
+        background_color: '#0E1A24',
+        theme_color: '#0E1A24',
+        start_url: './',
+        scope: './',
+        icons: [{ src: 'favicon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' }],
+      },
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,svg,woff2,json,wasm,png}'],
+        globIgnores: ['spikes/**', 'dev/**', '**/fixtures/**'],
+        // OpenCV.js is ~11 MB (wasm embedded); the default limit is 2 MB.
+        maximumFileSizeToCacheInBytes: 16 * 1024 * 1024,
+        navigateFallback: 'index.html',
+        navigateFallbackDenylist: [/\/spikes\//, /\/dev\//],
+        cleanupOutdatedCaches: true,
+        clientsClaim: true,
+        skipWaiting: true,
+      },
+      devOptions: { enabled: false },
+    }),
+  ],
   worker: { format: 'es' },
   build: {
     target: 'es2022',
