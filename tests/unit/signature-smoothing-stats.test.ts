@@ -27,29 +27,30 @@ describe('centered moving average over time', () => {
     expect(Array.from(out)).toEqual([0, 1, 1, 1, 0]);
   });
 
-  it('shrinks symmetrically at the edges (first and last frames stay as they are)', () => {
+  it('shrinks to the frames that exist at the edges (end frames are smoothed too)', () => {
     const data = series([9, 0, 0, 0, 0, 0, 6]);
     const out = smoothOverTime(data, 7, 1, 5);
-    expect(out[0]).toBe(9); // k = 0
-    expect(out[1]).toBeCloseTo(3, 6); // frames 0..2
+    expect(out[0]).toBeCloseTo(3, 6); // frames 0..2
+    expect(out[1]).toBeCloseTo(9 / 4, 6); // frames 0..3
     expect(out[2]).toBeCloseTo(9 / 5, 6); // frames 0..4
-    expect(out[5]).toBeCloseTo(2, 6); // frames 4..6
-    expect(out[6]).toBe(6);
+    expect(out[5]).toBeCloseTo(6 / 4, 6); // frames 3..6
+    expect(out[6]).toBeCloseTo(2, 6); // frames 4..6
   });
 
-  it('is zero-phase: a linear ramp comes back unchanged, edges included', () => {
-    const ramp = series([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+  it('is centered away from the edges: a linear ramp comes back unchanged there', () => {
+    const ramp = series([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
     for (const window of [3, 5, 7, 9]) {
-      const out = smoothOverTime(ramp, 10, 1, window);
-      out.forEach((v, i) => expect(v).toBeCloseTo(i, 5));
+      const half = (window - 1) / 2;
+      const out = smoothOverTime(ramp, 12, 1, window);
+      for (let i = half; i < 12 - half; i++) expect(out[i]).toBeCloseTo(i, 5);
     }
   });
 
   it('smooths every value of a frame independently (stride) and leaves the input alone', () => {
-    // Two frames of 2 values, three frames in all: [a0 b0] [a1 b1] [a2 b2]
+    // Three frames of 2 values: [a0 b0] [a1 b1] [a2 b2]
     const data = series([0, 10, 3, 10, 0, 40]);
     const out = smoothOverTime(data, 3, 2, 3);
-    expect(Array.from(out)).toEqual([0, 10, 1, 20, 0, 40]);
+    expect(Array.from(out)).toEqual([1.5, 10, 1, 20, 1.5, 25]);
     expect(Array.from(data)).toEqual([0, 10, 3, 10, 0, 40]);
   });
 });
