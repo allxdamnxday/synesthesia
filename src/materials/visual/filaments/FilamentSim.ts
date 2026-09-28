@@ -18,6 +18,12 @@
  * The positions at the start of the step are kept (`ox`, `oy`) so the renderer can paint
  * the area each segment swept.
  *
+ * A strand that is still (every point slower than a pixel a second or so), unpushed and
+ * not pulled by its spring falls asleep: it keeps its shape and costs nothing until the
+ * movement reaches it or its spring would move it. Most movements touch only part of the
+ * water, so this saves most of the constraint work; the decision depends only on the
+ * state, so preview and render agree.
+ *
  * Randomness: `reset(seed)` recreates a seeded PRNG and draws the keys for anchors and
  * shapes; every step draws exactly one more value (the key for this step's jitter),
  * whatever the state. Per-strand and per-point values come from counter-based hashes, so
@@ -58,6 +64,19 @@ const R2_B = 0.5698402909980532;
 
 /** Strands solved side by side (see solveStrands). */
 const LANES = 4;
+/**
+ * Sleep thresholds: speed (short sides per second, about half a pixel a second at 1080p),
+ * felt push, and spring pull (short sides per second²) below which a strand may sleep.
+ */
+const SLEEP_SPEED = 5e-4;
+const SLEEP_PUSH = 1e-5;
+const SLEEP_PULL = 5e-3;
+/**
+ * A push slower than this (short sides per second) neither wakes a sleeping strand nor
+ * keeps one awake: it would move the strand by a fraction of a pixel. (Smooth fields,
+ * like the synthetic wink's, are faintly nonzero almost everywhere.)
+ */
+const WAKE_PUSH = 2e-3;
 
 /** Length constraint: points i and i + 1 one segment apart (i fixed when it is a root). */
 function keepLength(
@@ -127,19 +146,19 @@ function keepCurve(
 }
 
 /**
- * Constraint iterations (Gauss–Seidel) for `count` consecutive strands starting at point
- * index `base`: length along each strand from the root out, then its resting curve.
+ * Constraint iterations (Gauss–Seidel) for the strands listed in `strands[from …
+ * from + count)`: length along each strand from the root out, then its resting curve.
  * The strands advance side by side, constraint by constraint: each constraint waits on
  * the one before it on the same strand, so interleaving independent strands lets the
- * CPU overlap them (about twice as fast). The result is identical to solving the
- * strands one at a time.
+ * CPU overlap them. The result is identical to solving the strands one at a time.
  */
 function solveStrands(
   x: Float64Array,
   y: Float64Array,
   restAlong: Float64Array,
   restAcross: Float64Array,
-  base: number,
+  strands: Int32Array,
+  from: number,
   count: number,
   segment: number,
   bendStep: number,
@@ -147,12 +166,14 @@ function solveStrands(
   const N = POINTS_PER_STRAND;
   for (let it = 0; it < ITERATIONS; it++) {
     for (let j = 0; j < N - 1; j++) {
-      for (let l = 0; l < count; l++) keepLength(x, y, base + l * N + j, j === 0, segment);
+      for (let l = 0; l < count; l++) {
+        keepLength(x, y, strands[from + l] * N + j, j === 0, segment);
+      }
     }
     if (!(bendStep > 0)) continue;
     for (let j = 1; j < N - 1; j++) {
       for (let l = 0; l < count; l++) {
-        keepCurve(x, y, restAlong, restAcross, base + l * N + j, j === 1, bendStep);
+        keepCurve(x, y, restAlong, restAcross, strands[from + l] * N + j, j === 1, bendStep);
       }
     }
   }
@@ -202,7 +223,16 @@ export class FilamentSim {
   readonly glow: Float64Array;
   readonly appear: Float64Array;
   readonly segment: Float64Array;
+  /** Per strand: 1 while asleep (still, unpushed, unpulled). */
+  readonly asleep: Uint8Array;
+  /**
+   * Let still strands sleep (see the file header). Tests may turn it off to compare; the
+   * difference is a fraction of a pixel.
+   */
+  sleeping = true;
 
+  private readonly awake: Int32Array;
+  private readonly pushed: Uint8Array;
   private rng: Rng = createRng(0);
   private shapeKey = 0;
   private stepKey = 0;
@@ -234,7 +264,17 @@ export class FilamentSim {
     this.glow = new Float64Array(this.capacity);
     this.appear = new Float64Array(this.capacity);
     this.segment = new Float64Array(this.capacity);
+    this.asleep = new Uint8Array(this.capacity);
+    this.awake = new Int32Array(this.capacity);
+    this.pushed = new Uint8Array(this.capacity);
     this.setCanvas(width, height);
+  }
+
+  /** Strands awake after the last step (for tests and diagnostics). */
+  get awakeCount(): number {
+    let n = 0;
+    for (let f = 0; f < this.count; f++) if (this.asleep[f] === 0) n++;
+    return n;
   }
 
   /** The canvas's pixel size (only its aspect ratio matters to the simulation). */
@@ -309,12 +349,27 @@ export class FilamentSim {
     const appearStep = dt / FADE_IN_SECONDS;
     const field = this.field;
     const pushing = field.maxSpeed > 0;
-    const { x, y, ox, oy, vx, vy, rx, ry, fx, fy } = this;
+    const { x, y, ox, oy, vx, vy, rx, ry, fx, fy, asleep, pushed } = this;
+    const awakeList = this.awake;
+    let awake = 0;
 
-    // 1. Forces: the push, drag and the spring toward rest.
+    // 1. Forces: the push, drag and the spring toward rest. Sleeping strands only check
+    // whether something would move them.
     for (let f = 0; f < n; f++) {
       if (this.appear[f] < 1) this.appear[f] = Math.min(1, this.appear[f] + appearStep);
       const base = f * N;
+      if (asleep[f] === 1) {
+        if (!this.shouldWake(base, pushing, spring)) {
+          for (let i = base; i < base + N; i++) {
+            ox[i] = x[i];
+            oy[i] = y[i];
+          }
+          continue;
+        }
+        asleep[f] = 0;
+      }
+      awakeList[awake++] = f;
+      let anyPush = 0;
       // The root stays on its anchor.
       ox[base] = x[base] = rx[base];
       oy[base] = y[base] = ry[base];
@@ -331,6 +386,7 @@ export class FilamentSim {
         if (pushing && field.sample(px, py) > 0) {
           pu = field.u;
           pv = field.v;
+          if (pu * pu + pv * pv > WAKE_PUSH * WAKE_PUSH) anyPush = 1;
           if (scatter > 0) {
             const a = SCATTER_ANGLE * scatter * this.deflect[i];
             const c = Math.cos(a);
@@ -356,23 +412,76 @@ export class FilamentSim {
         x[i] = px + nvx * dt;
         y[i] = py + nvy * dt;
       }
+      pushed[f] = anyPush;
     }
 
     // 2. Constraints: length (the roots are fixed) and the resting curve. Every strand
     // has the same segment length (they share Length).
     const segment = n > 0 ? this.segment[0] : 0;
-    for (let f = 0; f < n; f += LANES) {
-      const lanes = Math.min(LANES, n - f);
-      solveStrands(x, y, this.restAlong, this.restAcross, f * N, lanes, segment, bendStep);
+    for (let k = 0; k < awake; k += LANES) {
+      const lanes = Math.min(LANES, awake - k);
+      solveStrands(x, y, this.restAlong, this.restAcross, awakeList, k, lanes, segment, bendStep);
     }
 
-    // 3. Velocity is what the constraints left of the motion.
-    for (let i = 0, end = n * N; i < end; i++) {
-      if (i % N === 0) continue;
-      vx[i] = (x[i] - ox[i]) * invDt;
-      vy[i] = (y[i] - oy[i]) * invDt;
+    // 3. Velocity is what the constraints left of the motion; still strands fall asleep.
+    const sleepSpeed2 = SLEEP_SPEED * SLEEP_SPEED;
+    const sleepPush2 = SLEEP_PUSH * SLEEP_PUSH;
+    for (let k = 0; k < awake; k++) {
+      const f = awakeList[k];
+      const base = f * N;
+      let still = this.sleeping && pushed[f] === 0;
+      for (let i = base + 1; i < base + N; i++) {
+        const nvx = (x[i] - ox[i]) * invDt;
+        const nvy = (y[i] - oy[i]) * invDt;
+        vx[i] = nvx;
+        vy[i] = nvy;
+        if (
+          still &&
+          (nvx * nvx + nvy * nvy > sleepSpeed2 || fx[i] * fx[i] + fy[i] * fy[i] > sleepPush2)
+        ) {
+          still = false;
+        }
+      }
+      if (still && !this.shouldWake(base, false, spring)) {
+        asleep[f] = 1;
+        for (let i = base; i < base + N; i++) {
+          vx[i] = 0;
+          vy[i] = 0;
+          fx[i] = 0;
+          fy[i] = 0;
+        }
+      }
     }
     this.steps++;
+  }
+
+  /**
+   * Would anything move sleeping strand (points base …)? The movement reaching one of its
+   * points, or its spring pulling harder than SLEEP_PULL.
+   */
+  private shouldWake(base: number, pushing: boolean, spring: number): boolean {
+    const end = base + POINTS_PER_STRAND;
+    if (pushing) {
+      const field = this.field;
+      const wake2 = WAKE_PUSH * WAKE_PUSH;
+      for (let i = base + 1; i < end; i++) {
+        if (
+          field.sample(this.x[i], this.y[i]) > 0 &&
+          field.u * field.u + field.v * field.v > wake2
+        ) {
+          return true;
+        }
+      }
+    }
+    if (spring > 0) {
+      const limit = (SLEEP_PULL / spring) ** 2;
+      for (let i = base + 1; i < end; i++) {
+        const dx = this.x[i] - this.rx[i];
+        const dy = this.y[i] - this.ry[i];
+        if (dx * dx + dy * dy > limit) return true;
+      }
+    }
+    return false;
   }
 
   /** Mean distance of the strands' points from their resting places (for tests). */
@@ -393,6 +502,7 @@ export class FilamentSim {
   /** Put strand f's points on its resting places, still. */
   private placeAtRest(f: number): void {
     const N = POINTS_PER_STRAND;
+    this.asleep[f] = 0;
     for (let j = 0; j < N; j++) {
       const i = f * N + j;
       this.x[i] = this.ox[i] = this.rx[i];
@@ -412,6 +522,7 @@ export class FilamentSim {
     this.shapeTangle = p.tangle;
     for (let f = 0; f < this.count; f++) {
       const base = f * N;
+      this.asleep[f] = 0;
       // Scale the current shape about the root so segment lengths match at once.
       const x0 = this.x[base];
       const y0 = this.y[base];

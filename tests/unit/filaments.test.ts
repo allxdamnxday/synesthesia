@@ -228,6 +228,39 @@ describe('Filaments simulation', () => {
     expect(stiff).toBeLessThan(limp * 0.3);
   });
 
+  it('lets still strands sleep, within a fraction of a pixel of solving them all', () => {
+    const sampler = createSyntheticSampler('wink');
+    const params = filamentParams(baseline, 'draft').sim;
+    const make = (sleeping: boolean) => {
+      const sim = new FilamentSim(FILAMENT_TIER_CAPS.draft, 1920, 1080);
+      sim.sleeping = sleeping;
+      sim.reset(4);
+      return sim;
+    };
+    const full = make(false);
+    const lazy = make(true);
+    let slept = false;
+    let wokeInWink = false;
+    for (let s = 0; s < 360; s++) {
+      const frame = sampler.sample(s * FIXED_DT);
+      full.step(frame, params, FIXED_DT);
+      lazy.step(frame, params, FIXED_DT);
+      if (s === 10 && lazy.awakeCount === 0) slept = true;
+      if (s === 50 && lazy.awakeCount > 0) wokeInWink = true;
+    }
+    expect(slept).toBe(true); // at rest before the wink
+    expect(wokeInWink).toBe(true); // the wink wakes the strands it reaches
+    expect(lazy.awakeCount).toBe(0); // settled again six seconds in
+    let worst = 0;
+    for (let i = 0; i < full.count * N; i++) {
+      worst = Math.max(
+        worst,
+        Math.hypot((full.x[i] ?? 0) - (lazy.x[i] ?? 0), (full.y[i] ?? 0) - (lazy.y[i] ?? 0)),
+      );
+    }
+    expect(worst * 1080).toBeLessThan(0.5); // pixels at 1080p
+  });
+
   it('draws each strand from its own seed, whatever the count', () => {
     const sparse = run('still', 1, { ...baseline, density: 0.2 });
     const dense = run('still', 1, { ...baseline, density: 0.6 });
