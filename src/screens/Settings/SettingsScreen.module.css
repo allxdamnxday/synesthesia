@@ -1,0 +1,56 @@
+.page {
+  padding: var(--space-6) var(--space-5) var(--space-7);
+  max-width: 720px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.group {
+  padding: var(--space-5) 0;
+  border-top: 1px solid color-mix(in srgb, var(--color-silt) 45%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.group h2 {
+  margin: 0;
+}
+
+.hint {
+  color: var(--color-mist);
+  font-size: var(--font-size-sm);
+  margin: 0;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-6);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.good {
+  color: var(--color-water);
+  margin: 0;
+  font-size: var(--font-size-sm);
+}
+
+.caution {
+  color: var(--color-honey);
+  margin: 0;
+  font-size: var(--font-size-sm);
+}
+
+.message {
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-basin);
+  border-radius: var(--radius-md);
+  border-left: 3px solid var(--color-water);
+  font-size: var(--font-size-sm);
+}

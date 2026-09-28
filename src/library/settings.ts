@@ -10,6 +10,15 @@ export type RenderResolution = '720p' | '1080p' | 'square';
 /** Outcome of asking the browser to keep the library (navigator.storage.persist()). */
 export type PersistenceState = 'not-asked' | 'granted' | 'denied' | 'unavailable';
 
+/** Result of the preview-quality benchmark (SPEC 14.2). */
+export interface BenchmarkResult {
+  tier: 'draft' | 'standard' | 'high';
+  /** Sustained frames per second per tier, as measured. */
+  fpsByTier: { draft: number; standard: number; high: number };
+  /** ISO date/time of the measurement. */
+  measuredAt: string;
+}
+
 export interface AppSettings {
   /** Preview quality tier; 'auto' uses the first-launch benchmark (SPEC 14.2). */
   previewQuality: PreviewQualitySetting;
@@ -22,6 +31,8 @@ export interface AppSettings {
   /** Name of the folder renders were last saved to ('' if none), shown as a reminder. */
   renderFolderHint: string;
   persistence: PersistenceState;
+  /** Last preview benchmark, used when previewQuality is 'auto'. */
+  benchmark: BenchmarkResult | null;
 }
 
 export const DEFAULT_SETTINGS: Readonly<AppSettings> = {
@@ -32,6 +43,7 @@ export const DEFAULT_SETTINGS: Readonly<AppSettings> = {
   onboardingDone: false,
   renderFolderHint: '',
   persistence: 'not-asked',
+  benchmark: null,
 };
 
 /** Pixel sizes of the render resolutions. */
@@ -49,6 +61,21 @@ const oneOf =
     (allowed as unknown[]).includes(v);
 const isBoolean = (v: unknown): v is boolean => typeof v === 'boolean';
 const isShortText = (v: unknown): v is string => typeof v === 'string' && v.length <= 500;
+const isFps = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && v >= 0;
+const isBenchmark = (v: unknown): v is BenchmarkResult | null => {
+  if (v === null) return true;
+  if (typeof v !== 'object') return false;
+  const b = v as Partial<BenchmarkResult>;
+  return (
+    (b.tier === 'draft' || b.tier === 'standard' || b.tier === 'high') &&
+    typeof b.measuredAt === 'string' &&
+    typeof b.fpsByTier === 'object' &&
+    b.fpsByTier !== null &&
+    isFps(b.fpsByTier.draft) &&
+    isFps(b.fpsByTier.standard) &&
+    isFps(b.fpsByTier.high)
+  );
+};
 
 const VALID: { [K in keyof AppSettings]: (v: unknown) => v is AppSettings[K] } = {
   previewQuality: oneOf<PreviewQualitySetting>('auto', 'draft', 'standard', 'high'),
@@ -58,6 +85,7 @@ const VALID: { [K in keyof AppSettings]: (v: unknown) => v is AppSettings[K] } =
   onboardingDone: isBoolean,
   renderFolderHint: isShortText,
   persistence: oneOf<PersistenceState>('not-asked', 'granted', 'denied', 'unavailable'),
+  benchmark: isBenchmark,
 };
 
 const SETTING_KEYS = Object.keys(DEFAULT_SETTINGS) as (keyof AppSettings)[];

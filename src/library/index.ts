@@ -42,6 +42,7 @@ export {
   setSetting,
   updateSettings,
   type AppSettings,
+  type BenchmarkResult,
   type PersistenceState,
   type PreviewQualitySetting,
   type RenderResolution,
