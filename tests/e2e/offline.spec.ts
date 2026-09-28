@@ -3,6 +3,8 @@ import { expect, test } from '@playwright/test';
 
 const FIXTURES = join(import.meta.dirname, '..', 'fixtures');
 
+test.use({ serviceWorkers: 'allow' });
+
 // SPEC C5 / M8: after the first visit, the instrument loads and works with the network off.
 test('after the first visit, the instrument works offline, extraction included', async ({
   page,

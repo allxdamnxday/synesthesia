@@ -20,6 +20,9 @@ export default defineConfig({
     headless: true,
     viewport: { width: 1280, height: 800 },
     permissions: ['clipboard-read', 'clipboard-write'],
+    // The offline service worker would sit between tests and their network routes; only the
+    // offline spec lets it run (test.use({ serviceWorkers: 'allow' })).
+    serviceWorkers: 'block',
     launchOptions: {
       args: ['--autoplay-policy=no-user-gesture-required', '--enable-unsafe-swiftshader'],
     },
