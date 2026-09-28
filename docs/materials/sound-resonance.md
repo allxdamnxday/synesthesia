@@ -97,17 +97,25 @@ in-between ones.
   strike starts each mode in sine phase. Mode frequency, ring time and gain are k-rate
   parameters; `damp` adds a decay rate. Strikes are `strike` trigger events (see
   `shared/triggers.ts`) carrying velocity, mallet time (a unit-area Hann pulse, 0.08–1.6 ms)
-  and the bounce; `reset` fades every mode out in 2 ms under the engine's fade when playback
-  starts or jumps. Bowed noise enters through the node's input, scaled per mode by √(1 − r²)
-  so the singing level doesn't depend on the ring time.
+  and the bounce; `reset` fades every mode out in 2 ms. Bowed noise enters through the node's
+  input, scaled per mode by √(1 − r²) so the singing level doesn't depend on the ring time.
+  The processor is driven only through AudioParams; it stops when the material sets `alive` to
+  0 on dispose.
 - The control program (200 Hz grid) runs the singing envelope, the damper and the pan; strikes
   are ControlTimeline events at `sampler.onsetsBetween`.
-- The bow noise is a looped, seeded buffer restarted on every start and seek at the position
-  matching composition time, so the same moment is always bowed by the same noise: in a
-  render, and in preview after any jump.
+- The bow noise is a looped, seeded buffer restarted at the position matching composition
+  time, so the same moment is always bowed by the same noise: in a render, and in preview
+  after any jump (preview follows the render with a loudness correlation of 1.000 and within
+  0.03 dB).
+- After a seek (including the engine's resync of a starved scheduler, which doesn't fade) the
+  output dips (`shared/seekDipGain.ts`: out in 4 ms, silent to 25 ms, back in by 40 ms); the
+  body is reset and the noise realigned under the dip, and the control buses glide from where
+  they froze (`HoldingControlBus`, `shared/seekDip.ts`). A render never seeks, so never dips.
+- The twelve modes are summed inside the worklet in a fixed order, and no Web Audio input
+  takes more than two sounding sources (see `mixPairwise`), so renders are bit-identical also
+  at Density 1 and at the property extremes.
 - Cost: the resonator bank uses about 2–2.5% of one core on the build machine (12 modes,
   bowed and struck); a 10 s timeline renders offline in about 1.4 s, 60 s in about 10 s.
-- Deterministic: offline renders are bit-identical across runs and scheduling windows.
 
 ## To revisit with Freeman
 

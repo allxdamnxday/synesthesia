@@ -85,13 +85,19 @@ silence to −36 dB. At Rigidity 1 every pluck falls on the 80.8 ms grid (baseli
   a pick position, windowed), the loop has a one-zero low-pass and a loss set from the ring
   time, the delay is read with 4-point Hermite interpolation (in tune within 6 cents from 110
   to 1320 Hz), and a string that gives way to a new pluck fades out over 4 ms. `reset` fades
-  every string out in 2 ms when playback starts or jumps.
+  every string out in 2 ms. The processor is driven only through AudioParams; it stops when the
+  material sets `alive` to 0 on dispose.
+- After a seek (including the engine's resync of a starved scheduler, which doesn't fade) the
+  output dips (`shared/seekDipGain.ts`: out in 4 ms, silent to 25 ms, back in by 40 ms) and the
+  strings still ringing are reset under the dip. A render never seeks, so never dips.
 - The seek fast-forward reaches 60 s back (the clock remembers its phase while movement goes
   on; it rests after any stillness anyway).
+- The strings are summed inside the worklet in a fixed order and no Web Audio input takes more
+  than two sounding sources (see `mixPairwise`), so renders are bit-identical also at Density 1
+  and at the property extremes; preview follows the render with a loudness correlation of 1.000.
 - Cost: the strings use about 0.5% of one core per ringing string and about 2.4% at the worst
   case measured (12 strings ringing, 20 plucks a second) on the build machine; a 10 s timeline
   renders offline in about 1.2 s, 60 s in about 4 s.
-- Deterministic: offline renders are bit-identical across runs and scheduling windows.
 
 ## To revisit with Freeman
 
