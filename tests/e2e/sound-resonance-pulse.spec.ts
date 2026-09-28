@@ -40,7 +40,13 @@ interface ProbeResult {
   contextState: string;
 }
 
+interface MaterialInfo {
+  id: string;
+  properties: { id: string; kind: 'continuous' | 'choice'; choices?: string[] }[];
+}
+
 interface SpSound {
+  listMaterials(): MaterialInfo[];
   renderHash(o: RenderOptions): Promise<string>;
   renderStats(o: RenderOptions): Promise<RenderStats>;
   previewProbe(o: RenderOptions): Promise<ProbeResult>;
@@ -298,22 +304,58 @@ test.describe('A4 Resonance and A5 Pulse', () => {
     );
   });
 
-  test('every Body and Scale renders bit-identically, however it is scheduled', async ({
+  test('renders are bit-identical at high Density, every choice and the property extremes', async ({
     page,
   }) => {
-    const cases: RenderOptions[] = [
+    // Many modes or strings sounding at once is where a summing order that varied between runs
+    // would show (see mixPairwise in shared/graph.ts); both materials sum inside a worklet.
+    const list = await sp(page, 'listMaterials');
+    const extremes = (id: string, level: 0 | 1): Record<string, number> => {
+      const props: Record<string, number> = {};
+      for (const p of list.find((m) => m.id === id)?.properties ?? []) {
+        props[p.id] = p.kind === 'choice' ? level * ((p.choices?.length ?? 1) - 1) : level;
+      }
+      return props;
+    };
+    const cases: RenderOptions[] = [];
+    for (const materialId of ['resonance', 'pulse']) {
+      cases.push(
+        { materialId, kind: 'sweep', seconds: 2.4, props: { density: 1 } },
+        { materialId, kind: 'wink', seconds: 2, props: extremes(materialId, 0) },
+        { materialId, kind: 'sweep', seconds: 2.4, props: extremes(materialId, 1) },
+        {
+          materialId,
+          kind: 'swirl',
+          seconds: 2.4,
+          props: { ...extremes(materialId, 1), range: 0 },
+        },
+      );
+    }
+    cases.push(
       { materialId: 'resonance', kind: 'wink', seconds: 2, props: { body: 1 } },
-      { materialId: 'resonance', kind: 'sweep', seconds: 2, props: { body: 2 } },
+      { materialId: 'resonance', kind: 'sweep', seconds: 2, props: { body: 2, density: 1 } },
       { materialId: 'pulse', kind: 'sweep', seconds: 2, props: { scale: 0 } },
       { materialId: 'pulse', kind: 'wink', seconds: 2, props: { scale: 2, rigidity: 1 } },
-    ];
+    );
     for (const c of cases) {
-      const label = `${c.materialId} ${JSON.stringify(c.props)}`;
+      const label = `${c.materialId} ${c.kind} ${JSON.stringify(c.props)}`;
       const first = await sp(page, 'renderHash', c);
       expect(await sp(page, 'renderHash', c), label).toBe(first);
       expect(await sp(page, 'renderHash', { ...c, windowSec: 0.05 }), `${label}, windowed`).toBe(
         first,
       );
+    }
+    // The busiest settings, five times over.
+    for (const materialId of ['resonance', 'pulse']) {
+      const busiest: RenderOptions = {
+        materialId,
+        kind: 'sweep',
+        seconds: 2.4,
+        props: { ...extremes(materialId, 1), density: 1, range: 1 },
+      };
+      const hashes = new Set<string>();
+      for (let i = 0; i < 5; i++) hashes.add(await sp(page, 'renderHash', busiest));
+      expect(hashes.size, `${materialId}: five renders of the busiest settings`).toBe(1);
     }
   });
 
