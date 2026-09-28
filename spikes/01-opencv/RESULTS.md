@@ -84,11 +84,11 @@ through Farneback against the previous frame, and pooled.
 | 1080×1920 H.264 (portrait), now | 180×320 | 30.2–34.9 ms | 9.5–10.8 s |
 
 The first version made the analysis frame 320 *wide* (SPEC 8.1's wording), so a portrait
-clip's was 569 px tall and cost about 3× as much. The `analysisWidth` option now sets the
-*longer* side (see DECISIONS), so portrait costs the same as landscape. Portrait grids stay
-32×48 (rows follow the aspect ratio, clamped to 48), so their signatures are about 2.6×
-larger than landscape ones (4.9 MB vs 1.9 MB of JSON for 10 s at 30 fps). First
-extraction in a session adds about 0.5–1 s to load OpenCV.
+clip's was 569 px tall and cost about 3× as much. The `analysisWidth` and `gridCols`
+options now set the *longer* side (see DECISIONS), so portrait costs the same as
+landscape: a 180×320 analysis frame and an 18×32 grid, the mirror of 320×180 and 32×18,
+so portrait and landscape signatures are the same size (about 1.9 MB of JSON for 10 s at
+30 fps). First extraction in a session adds about 0.5–1 s to load OpenCV.
 
 ## Mac checks for Braden
 
