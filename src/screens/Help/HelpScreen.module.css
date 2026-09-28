@@ -1,0 +1,182 @@
+.layout {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 760px);
+  gap: var(--space-7);
+  justify-content: center;
+  padding: var(--space-6) var(--space-5) var(--space-7);
+}
+
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .toc {
+    display: none;
+  }
+}
+
+.toc {
+  position: sticky;
+  top: var(--space-5);
+  align-self: start;
+}
+
+.tocTitle {
+  color: var(--color-mist);
+  font-size: var(--font-size-sm);
+  margin-bottom: var(--space-2);
+}
+
+.toc ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.toc a {
+  display: block;
+  min-height: var(--hit-min);
+  padding: var(--space-1) var(--space-2);
+  color: var(--color-mist);
+  text-decoration: none;
+  font-size: var(--font-size-sm);
+  border-radius: var(--radius-sm);
+}
+
+.toc a:hover {
+  color: var(--color-pearl);
+  background: var(--color-basin);
+}
+
+.article section {
+  margin-bottom: var(--space-7);
+  scroll-margin-top: var(--space-5);
+}
+
+.lead {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-light);
+  line-height: 1.5;
+}
+
+.muted {
+  color: var(--color-mist);
+}
+
+.steps,
+.bullets {
+  padding-left: var(--space-5);
+}
+
+.steps li,
+.bullets li {
+  margin-bottom: var(--space-3);
+}
+
+.glossary {
+  margin: 0;
+}
+
+.glossaryRow {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: var(--space-4);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-silt) 35%, transparent);
+}
+
+.glossaryRow dt {
+  font-weight: var(--font-weight-strong);
+}
+
+.glossaryRow dd {
+  margin: 0;
+}
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+
+.table th,
+.table td {
+  text-align: left;
+  vertical-align: top;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-silt) 35%, transparent);
+}
+
+.table thead th {
+  color: var(--color-mist);
+  font-weight: var(--font-weight-regular);
+}
+
+.table tbody th {
+  font-weight: var(--font-weight-strong);
+  white-space: nowrap;
+}
+
+.kbd {
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--color-basin-raised);
+  border: 1px solid color-mix(in srgb, var(--color-pearl) 18%, transparent);
+}
+
+.materialGroup {
+  margin-top: var(--space-5);
+}
+
+.material {
+  border: 1px solid color-mix(in srgb, var(--color-silt) 45%, transparent);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-2);
+  background: var(--color-basin);
+}
+
+.material summary {
+  cursor: pointer;
+  padding: var(--space-3) var(--space-4);
+  min-height: var(--hit-min);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.materialName {
+  font-weight: var(--font-weight-strong);
+}
+
+.materialDescription {
+  color: var(--color-mist);
+  font-size: var(--font-size-sm);
+}
+
+.propertyList {
+  margin: 0;
+  padding: 0 var(--space-4) var(--space-3);
+}
+
+.propertyRow {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-top: 1px solid color-mix(in srgb, var(--color-silt) 30%, transparent);
+  font-size: var(--font-size-sm);
+}
+
+.propertyRow dt {
+  font-weight: var(--font-weight-strong);
+}
+
+.propertyRow dd {
+  margin: 0;
+}
