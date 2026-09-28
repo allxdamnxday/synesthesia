@@ -400,10 +400,16 @@ implementation follows the intent. To revisit with Freeman only if a material fe
   fail until then); no offline support.
 
 ## Pending
-- Freeman's MacBook Pro model, year, chip, macOS version (Diagnostics' Copy report now
-  records macOS version, CPU architecture and GPU whenever it runs on his Mac).
-- M0 spike outcomes on macOS (AAC encode, float render targets, performance).
-- Chance interpretation (SPEC 12.2), to confirm with Freeman after handover.
-- Dedication splash default: on ("Made for Freeman"), toggle in Settings.
-- Hosting: the plan is a free Vercel Hobby deployment from a private GitHub repo. It
-  needs the builder's own Vercel login, so nothing has been deployed yet.
+- **Freeman's MacBook Pro:** model, year, chip, macOS and Chrome versions. Diagnostics' Copy
+  report records the macOS version, CPU type (Intel or Apple Silicon), GPU and Chrome
+  version whenever it runs there.
+- **Everything on macOS** (`docs/MAC_TEST_CHECKLIST.md`): AAC encode and its priming delay
+  (renders may need a small audio offset), float render targets, preview frame rate on a
+  Retina screen, extraction time, QuickTime playback, the offline cache.
+- **A real wink clip** with a focus area (M1 acceptance).
+- **Hosting:** the plan is a free Vercel Hobby deployment from a private GitHub repository
+  (`docs/DEPLOY.md`); it needs the builder's own accounts, so nothing has been deployed.
+- **To confirm with Freeman after handover** (SPEC 18): the chance interpretation (open
+  properties drawn from the shared properties the two materials use; the rest locked at
+  baseline), which materials reveal or obscure the signature, the dedication splash (on by
+  default), names for materials and properties, album format.

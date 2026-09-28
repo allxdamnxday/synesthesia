@@ -70,21 +70,31 @@ to `VisualMaterial.reset()` and the context `rng`; `soundSeed(seed)` goes to
 
 ## Studio runtime (preview)
 
-1. Load the composition and its signature; `createSampler(signature)` and configure it
-   from the composition's timeline (speed, loops, loopMode, tail, smoothing, strength).
-2. Create the visual material from the registry, `init()` it with a WebGL2 context on the
-   preview canvas (backing size capped by the preview quality tier), then wrap it in a
-   `VisualRunner`.
-3. Create the `AudioEngine`, `load()` the sound material with the sampler, properties and
-   `soundSeed(seed)`.
-4. Each animation frame: read the playhead (audio clock while playing), advance the runner
-   (with a per-frame step budget), draw. At the end of the timeline: loop back to 0 if the
-   loop toggle is on, otherwise stop.
-5. Property edits go through the property model (`src/engine/propertyModel.ts`, Linked
-   mode) and undo history (`src/engine/history.ts`); the sound engine reschedules from
-   "now" (`cancelFrom` + `schedule`).
-6. Switching a material disposes the old instance, creates a fresh one, and seeks it to
-   the playhead. Shared property values carry over; specific ones start at baseline.
+`StudioRuntime` (`src/studio/runtime.ts`, one per open composition) owns the preview canvas
+and its WebGL2 context, the visual material and its `VisualRunner`, one sampler (configured
+with `samplerConfigFor()`, shared with the sound), and `StudioSound` (a wrapper around
+`AudioEngine` that loads `soundSeed(seed)`, sends the sound field's property values and
+handles mute and timeline changes).
+
+- **Clock:** the sound engine is the master once its material has loaded
+  (`compositionTimeAt(rAF timestamp)`, output-latency compensated). A wall clock with the
+  same loop and end behaviour stands in before that and when there is no playable sound;
+  the handover keeps the playhead and playing state.
+- **Each animation frame:** read the playhead; hold at a seek target until the sound
+  arrives (~30 ms); ignore a tiny backward step of the audio clock (only a real jump resets
+  the wake); step the visual within a budget (up to 8 steps while playing; adaptive 8–600
+  while catching up, halving on slow frames, 12 ms CPU cap), drawing once caught up.
+  "Catching up…" shows after 0.5 s.
+- **`setComposition()`** decides what to rebuild with `snapshotChanges`: a new visual
+  material or seed recreates the material and seeks it to the playhead; a Movement change
+  reconfigures the sampler and re-seeks; a property change applies from the next step (while
+  paused, `setProperties?.()` and a redraw). Undo and snapshot recall take the same path, so
+  playback never restarts.
+- **Pixel ratio** is capped by preview tier (Draft 1, Standard 1.5, High 2); the tier comes
+  from Settings (Automatic = the stored first-visit benchmark).
+- **Autosave** writes the working composition (debounced ~1 s); unsaved work is restored on
+  return with a notice. Context loss recreates the material on restore. Leaving the Studio
+  disposes everything and closes the AudioContext.
 
 ## Render (offline)
 
