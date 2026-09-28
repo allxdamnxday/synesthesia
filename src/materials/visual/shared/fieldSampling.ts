@@ -94,12 +94,17 @@ export class ProjectedField {
       const m2 = a * a + b * b;
       if (m2 > max2) max2 = m2;
     }
-    const world = worldSize(width, height);
-    const rect = projectField(range, cols / rows, world.width / world.height);
-    const w = rect.width * world.width;
-    const h = rect.height * world.height;
-    this.x0 = rect.x * world.width;
-    this.y0 = rect.y * world.height;
+    // worldSize(), inlined: this runs every step.
+    const cw = Math.max(1, width);
+    const ch = Math.max(1, height);
+    const short = Math.min(cw, ch);
+    const worldWidth = cw / short;
+    const worldHeight = ch / short;
+    const rect = projectField(range, cols / rows, worldWidth / worldHeight);
+    const w = rect.width * worldWidth;
+    const h = rect.height * worldHeight;
+    this.x0 = rect.x * worldWidth;
+    this.y0 = rect.y * worldHeight;
     this.invWidth = w > 0 ? 1 / w : 0;
     this.invHeight = h > 0 ? 1 / h : 0;
     this.diagonal = Math.hypot(w, h);
