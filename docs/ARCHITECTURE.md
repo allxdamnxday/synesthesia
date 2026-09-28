@@ -88,14 +88,47 @@ to `VisualMaterial.reset()` and the context `rng`; `soundSeed(seed)` goes to
 
 ## Render (offline)
 
-SPEC 10.2: pause preview, create fresh material instances on a separate canvas at output
-size, render audio first (`renderSoundOffline`), then for each frame i advance a
-`VisualRunner` to t = i / fps, draw, and add the canvas to a Mediabunny `CanvasSource`;
-add the audio buffer; finalize to a folder (File System Access, streamed) or a download.
+`renderComposition()` (`src/render/`, loaded on first use as its own chunk) follows SPEC 10.2:
+
+1. A dedicated render canvas at output size with its own WebGL2 context; fresh material
+   instances from the registry at the requested quality (High by default); a sampler
+   configured with `samplerConfigFor()` (the same helper the Studio preview uses).
+2. The sound is rendered first with `renderSoundOffline()` (48 kHz stereo, one scheduling
+   pass), peak-normalized to −1 dBFS unless "Even out loudness" is off.
+3. A Mediabunny MP4 output (`fastStart: 'reserve'`, so files are fast-start even when
+   streamed into a folder) with a `CanvasSource` (H.264 at the quality Diagnostics verified)
+   and an `AudioBufferSource` (AAC at the bitrate Diagnostics verified, Opus as fallback).
+   Sound is fed to the encoder in 1 s pieces about a second ahead of the frames.
+4. For frame i: advance a `VisualRunner` to t = i / fps (2 fixed steps per frame at 30 fps),
+   draw, add the frame; yield through a message channel (background tabs aren't throttled).
+5. Finalize into a folder (File System Access, streamed, never overwriting: " (2)") or a
+   download; optional `.spcomp.json` sidecar. Cancel deletes the partial file.
+
+`renderBatch()` renders album tracks one after another into one folder; the Album screen's
+batch panel (`src/screens/Album/batch/`) drives it with pause, cancel and a summary.
 
 ## Persistence
 
 IndexedDB database `synesthesia` (`src/library/db.ts`): signatures (+ a lightweight
 `signatureMeta` list store), compositions, albums, clips (unused by default), settings,
 and the Studio's working state (autosave). Files: `.sig.json`, `.spcomp.json`,
-`.spalbum.json`, `.spbackup.zip`, `ALBUM_LOG.md` (SPEC 11.3).
+`.spalbum.json`, `.spbackup.zip`, `ALBUM_LOG.md` (SPEC 11.3). The Library's Import file
+action recognises signature, composition and album files by their contents. Persistent
+storage is requested on the first save.
+
+## Screens
+
+| Route | Screen |
+|---|---|
+| `#/` | Library: signatures, albums, compositions; import, backup, restore |
+| `#/prepare` | Prepare: clip → signature (the only screen that ever shows a clip) |
+| `#/signature/:id` | A saved signature's bare wake and features |
+| `#/studio/new/:signatureId`, `#/studio/:compositionId` | Studio |
+| `#/album/new/:signatureId`, `#/album/:albumId` | Album mode |
+| `#/settings`, `#/help`, `#/diagnostics` | Settings, Help, Diagnostics |
+
+App-level pieces in `src/app/`: the startup capability gate, the first-run introduction
+(Library only, until finished or skipped) and the optional dedication, a hash router, and a
+file-drop guard (a clip dropped on any screen opens in Prepare; the browser never
+navigates away to play it). First-run overlays stay out of automated browsers unless forced
+with `?introduction=1` / `?dedication=1`.
