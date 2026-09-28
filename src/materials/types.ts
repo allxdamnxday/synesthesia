@@ -62,6 +62,11 @@ export interface VisualMaterial extends MaterialMeta {
   step(frame: SignatureFrame, props: PropertyValues, dt: number): void;
   /** Draw the current state to the default framebuffer. */
   draw(): void;
+  /**
+   * Optional: apply display-only property changes (brightness, palette, surface light…)
+   * so a paused preview can redraw without stepping. Never changes simulation state.
+   */
+  setProperties?(props: PropertyValues): void;
   resize(width: number, height: number): void;
   dispose(): void;
 }

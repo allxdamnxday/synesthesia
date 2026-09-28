@@ -166,6 +166,33 @@ implementation follows the intent. To revisit with Freeman only if a material fe
 - **Why:** correct behaviour at ±π, and no jump in pan or position when the tail starts.
 - The synthetic test signatures now run through the real pipeline and sampler.
 
+## 2026-09-28: Fluid solver and Water: how the wake looks
+- **Range projection:** at 0.5 the signature's field is fitted inside the canvas with its
+  aspect kept (never cropped or stretched); Range scales it exponentially from 0.4× to
+  2.5×, and movement speed scales with it.
+- **Dye color follows the direction of movement** (palette textures), so a close and an
+  open read as two colors: ultramarine falling, sea-glass rising (Deep water palette).
+- **Dye is released from a seeded pattern of fixed spots**, each smeared along its motion,
+  so the wake draws streaks that trace the flow instead of a flat cloud.
+- **True viscosity** (implicit Jacobi diffusion) with iterations scaled by grid size so every
+  quality tier looks equally viscous; Viscosity also adds drag and some lag so the slider
+  visibly does what it says. The pressure step uses the textbook ½ factor.
+- **No bloom:** a soft tone curve gives glow; "Surface light" adds shading and glints from
+  the dye's thickness (fits a 2017 integrated GPU).
+- **Water's primary properties** are viscosity, persistence, dispersion, brightness,
+  intensity and density; range, palette and surface light sit under "More" (SPEC 9.2 lists
+  Range as "More" and Density as "More"; Water promotes Density because dye amount is one of
+  its most visible controls). Elasticity and rigidity are hidden for Water.
+- **Baseline is a dark bowl** (about 7% mean brightness mid-wink): the wake glows out of
+  black. Brightness raises it.
+- **Measured here:** 59–60 fps on every tier at 1× and 2× resolution; a step costs
+  0.1–0.5 ms of GPU time. The benchmark takes about 3 s. Visual determinism: identical
+  frame hashes across runs, instances, sessions and builds on the same machine.
+- **Canvas contexts** are opaque, not anti-aliased, `high-performance` (the discrete GPU on
+  dual-GPU MacBook Pros), created in code and released by their owner.
+- **Alternatives:** stretch or cover projection; time-cycling colors (the original);
+  uniform dye release; bloom.
+
 ## Pending
 - Freeman's MacBook Pro model, year, chip, macOS version (Diagnostics' Copy report now
   records macOS version, CPU architecture and GPU whenever it runs on his Mac).
