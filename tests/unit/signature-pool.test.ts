@@ -5,15 +5,26 @@ describe('grid size', () => {
   it('uses cols and rows = round(cols × h / w), rows clamped to 8–48', () => {
     expect(gridSize(32, 320, 180)).toEqual({ cols: 32, rows: 18 });
     expect(gridSize(32, 320, 240)).toEqual({ cols: 32, rows: 24 });
-    expect(gridSize(32, 320, 569)).toEqual({ cols: 32, rows: 48 }); // portrait: 57 → 48
     expect(gridSize(32, 320, 40)).toEqual({ cols: 32, rows: 8 }); // 4 → 8
     expect(gridSize(16, 320, 180)).toEqual({ cols: 16, rows: 9 });
   });
 
-  it('keeps cols sane', () => {
+  it('gives gridCols cells to the longer side, so portrait mirrors landscape', () => {
+    expect(gridSize(32, 180, 320)).toEqual({ cols: 18, rows: 32 });
+    expect(gridSize(32, 240, 320)).toEqual({ cols: 24, rows: 32 });
+    expect(gridSize(32, 40, 320)).toEqual({ cols: 8, rows: 32 });
+    expect(gridSize(32, 320, 320)).toEqual({ cols: 32, rows: 32 });
+    // The short side is capped at 48 even when gridCols is larger.
+    expect(gridSize(64, 320, 320)).toEqual({ cols: 64, rows: 48 });
+    expect(gridSize(64, 300, 320)).toEqual({ cols: 48, rows: 64 });
+  });
+
+  it('keeps gridCols sane (8–64)', () => {
     expect(gridSize(1000, 320, 180).cols).toBe(64);
-    expect(gridSize(0, 320, 180).cols).toBe(4);
+    expect(gridSize(0, 320, 180)).toEqual({ cols: 8, rows: 8 });
     expect(gridSize(NaN, 320, 180).cols).toBe(32);
+    expect(gridSize(NaN, 180, 320).rows).toBe(32);
+    expect(gridSize(32, 0, 0)).toEqual({ cols: 32, rows: 32 });
   });
 });
 

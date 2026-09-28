@@ -233,6 +233,55 @@ implementation follows the intent. To revisit with Freeman only if a material fe
 - Grid columns (default 32) apply to the longer side of the frame, like the analysis size,
   so portrait signatures are 18×32 rather than 32×48 (about 2.6× smaller files).
 
+## 2026-09-28: Prepare screen
+- The clip preview is muted (the instrument's sound comes from the sound materials; the
+  clip's own audio isn't part of the signature).
+- Trim snaps to frames (4-frame minimum); the preview loops inside the trim. Clips over 60 s
+  open with their first minute selected; Extract stays disabled with a plain message while
+  the selection is longer than a minute.
+- Speed also sets the preview's playback rate and stays adjustable after extraction until
+  the signature is saved (`preferredSpeed` isn't part of the content hash).
+- The focus box turns and flips with the picture when Rotate or Mirror changes, so it stays
+  on the same part of the clip. Arrow keys move it; Option/Alt+arrows resize it.
+- Manual Sensitivity is logarithmic (0.1 → 0.001 field diagonals per second, 50% = 0.01),
+  described as "% of the frame per second"; after an automatic extraction the manual slider
+  starts from the floor Automatic found.
+- Before saving, the button reads "Save and open in Studio", so nothing unsaved reaches the
+  Studio; closing the tab with an unsaved signature asks first.
+- Direction is drawn as a row of arrows averaged from the flow (a line of the angle jumps at
+  ±180° and means nothing when still).
+- Previews play one pass, looping, with no tail and no extra smoothing; they wait for Play
+  when the computer asks for reduced motion.
+
+## 2026-09-28: Honey and Smoke
+- **Honey** is Water's solver made thick: the push is low-passed (lag), drag stops it soon
+  after the push ends, and viscosity is an exact per-step Gaussian diffusion (plain Jacobi
+  can't converge at honey viscosity). Its colour is released on time and drawn out into
+  strokes, so the wink's timing stays legible while the flow lags. **Elasticity** is
+  implemented (a displacement field carried with the flow plus a damped spring), stable
+  across tiers and seeds; baseline 0.3 (at 0.5 it springs back before the open and blurs
+  the wink). Rigidity is hidden (honey has no edges to make crisp).
+- **Smoke** gives off smoke and heat where the movement is, from small seeded vents drawn
+  into wisps; expansion widens the puff; Rise (primary, baseline 0.7) sets buoyancy, and
+  below the middle smoke sinks. Its flow is solved on a fixed 64-cell grid at every tier
+  (finer grids didn't converge and looked different per tier), so previews and High renders
+  show the same motion. Fixed pale tints, cool for downward pushes and warm for upward.
+- Measured here: 60 fps on every tier at 1× and 2× for Water, Honey and Smoke. Smoke's cost
+  is flat across tiers (64 pressure passes); it's the one to watch on a 2017 Mac.
+
+## 2026-09-28: Album mode
+- Default pairing is "Every pairing once" (25 tracks = 5 × 5); the Signature diagnostic view
+  isn't eligible by default. Kept tracks are pre-selected for batch rendering.
+- Status and notes live on each track's composition; an album's "last changed" is its
+  latest change or any track's. Deleting an album keeps its compositions unless the person
+  ticks the box. Tracks whose composition was deleted keep their place, marked missing.
+- Batch render runs tracks one after another; a failed track never stops the batch; pause
+  holds between frames; the folder is chosen once per session. "Even out loudness" and the
+  composition sidecar default to on for albums.
+- Export album log saves `ALBUM_LOG.md` and `.spalbum.json` with one click (Chrome asks once
+  whether the site may download multiple files). Album files can be imported from the
+  Library.
+
 ## Pending
 - Freeman's MacBook Pro model, year, chip, macOS version (Diagnostics' Copy report now
   records macOS version, CPU architecture and GPU whenever it runs on his Mac).

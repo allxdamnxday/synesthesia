@@ -9,11 +9,13 @@ import {
   userMessage,
   type SignatureMeta,
 } from '../../library';
+import { useAlbumStore } from '../../state/albumStore';
 import { useLibraryStore } from '../../state/libraryStore';
 import { Button } from '../../ui/Button';
 import { ConfirmDialog } from '../../ui/ConfirmDialog';
 import { FileButton } from '../../ui/FileButton';
 import { Notice, type NoticeTone } from '../../ui/Notice';
+import { AlbumsSection } from './AlbumsSection';
 import { countOf, formatChanged, formatDuration } from './format';
 import { compositionName, describeImport, signatureName } from './importSummary';
 import { LibraryCard } from './LibraryCard';
@@ -50,6 +52,9 @@ function openComposition(id: string) {
 function startComposition(signatureId: string) {
   navigate(`/studio/new/${encodeURIComponent(signatureId)}`);
 }
+function newAlbum(signatureId: string) {
+  navigate(`/album/new/${encodeURIComponent(signatureId)}`);
+}
 function newFromClip() {
   navigate('/prepare');
 }
@@ -72,6 +77,8 @@ export function LibraryScreen() {
   );
   const refresh = useLibraryStore((s) => s.refresh);
   const store = useLibraryStore.getState;
+  const albumCount = useAlbumStore((s) => s.albums.length);
+  const refreshAlbums = useAlbumStore((s) => s.refresh);
 
   const [notices, setNotices] = useState<NoticeItem[]>([]);
   const [pending, setPending] = useState<Pending | null>(null);
@@ -91,6 +98,12 @@ export function LibraryScreen() {
     window.addEventListener('focus', onFocus);
     return () => window.removeEventListener('focus', onFocus);
   }, [refresh]);
+
+  // Album counts follow the compositions list (reloaded on arrival, on focus and after
+  // every change).
+  useEffect(() => {
+    void refreshAlbums();
+  }, [compositions, refreshAlbums]);
 
   // After a delete, move focus to the list (or the page title if the list is gone).
   useEffect(() => {
@@ -221,7 +234,7 @@ export function LibraryScreen() {
   };
 
   const ready = status === 'ready';
-  const isEmpty = ready && signatures.length === 0 && compositions.length === 0;
+  const isEmpty = ready && signatures.length === 0 && compositions.length === 0 && albumCount === 0;
   const locked = busy !== null || !ready;
 
   return (
@@ -310,8 +323,8 @@ export function LibraryScreen() {
             New from clip
           </Button>
           <p className={styles.hint}>
-            You can also import a signature or composition file, or restore a backup, with the
-            buttons above.
+            You can also import a signature, composition or album file, or restore a backup, with
+            the buttons above.
           </p>
         </div>
       ) : null}
@@ -349,6 +362,7 @@ export function LibraryScreen() {
                       onRenameEnd={() => setRenaming(null)}
                       menu={[
                         { label: 'Start a composition', onSelect: () => startComposition(meta.id) },
+                        { label: 'New album', onSelect: () => newAlbum(meta.id) },
                         {
                           label: 'Rename',
                           onSelect: () => setRenaming({ kind: 'signature', id: meta.id }),
@@ -373,6 +387,8 @@ export function LibraryScreen() {
               </ul>
             )}
           </section>
+
+          <AlbumsSection notify={notify} run={run} busy={busy !== null} />
 
           <section className={styles.section} aria-labelledby="compositions-heading">
             <div className={styles.sectionHead}>
