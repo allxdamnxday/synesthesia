@@ -18,7 +18,7 @@
 import { lerp, smoothstep } from '../../../lib/math';
 import type { SignatureFrame } from '../../../signature/types';
 import type { PropertyValues } from '../../types';
-import { onePoleCoefficient as onePole } from '../shared/automation';
+import { onePoleCoefficient as onePole, timeConstantFor } from '../shared/automation';
 import type { ControlProgram } from '../shared/controlTimeline';
 import { panFromCentroid, upwardFlow } from '../shared/mapping';
 import {
@@ -45,6 +45,8 @@ const LIFT_RELAX_SEC = 1.0;
 const FIRE_SURGE = 0.5;
 const REARM_SURGE = 0.2;
 const KICK_DECAY_SEC = 0.07;
+/** Glide of the base pitch on a register change (matches the oscillators' StaticParams). */
+export const BASE_GLIDE_SEC = 0.08;
 const FLUTTER_DECAY_SEC = 0.09;
 
 export interface WaterState {
@@ -69,6 +71,11 @@ export interface WaterState {
   armed: number;
   /** Smoothed pan. */
   pan: number;
+  /**
+   * FM deviation per unit index (Hz at the base pitch). Glides with the base pitch when the
+   * register changes, so the brightness doesn't spike while the pitch moves. 0 = not yet set.
+   */
+  devBase: number;
   // Outputs written to the control buses at each grid point.
   pitchCents: number;
   amp: number;
@@ -92,6 +99,7 @@ export function createWaterState(): WaterState {
     flutter: 0,
     armed: 1,
     pan: 0,
+    devBase: 0,
     pitchCents: 0,
     amp: 0,
     deviation: 0,
@@ -219,7 +227,9 @@ export class WaterProgram implements ControlProgram<WaterState> {
       s.armed = 1;
     }
     const index = p.indexBase * (0.35 + 0.65 * Math.sqrt(energy)) + p.kickIndex * s.kick;
-    s.deviation = index * p.devScale;
+    if (s.devBase <= 0) s.devBase = p.devScale;
+    else s.devBase += (p.devScale - s.devBase) * onePole(timeConstantFor(BASE_GLIDE_SEC), dt);
+    s.deviation = index * s.devBase;
     s.flutterDepth = s.flutter;
 
     // Pan follows where the movement is, and stays put when it stops.

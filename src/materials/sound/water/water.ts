@@ -24,7 +24,7 @@ import { Reverb } from '../shared/reverb';
 import { reverbDecaySeconds } from '../shared/mapping';
 import { WATER_SOUND_META } from './meta';
 import { MOD_RATIO, VOICE_COUNT, waterVariation, type WaterParams } from './params';
-import { WaterProgram, type WaterState } from './program';
+import { BASE_GLIDE_SEC, WaterProgram, type WaterState } from './program';
 
 /** Curve for the drive stage: tanh over ±DRIVE_HEADROOM (see `applyDrive`). */
 const DRIVE_HEADROOM = 4;
@@ -212,8 +212,8 @@ class WaterSound implements SoundMaterial {
         depth,
         level,
         panner,
-        carrierFreq: new StaticParam(carrier.frequency, 0.08),
-        modFreq: new StaticParam(modulator.frequency, 0.08),
+        carrierFreq: new StaticParam(carrier.frequency, BASE_GLIDE_SEC),
+        modFreq: new StaticParam(modulator.frequency, BASE_GLIDE_SEC),
         carrierDetune: new StaticParam(carrier.detune, 0.1),
         modDetune: new StaticParam(modulator.detune, 0.1),
         levelParam: new StaticParam(level.gain, 0.08),

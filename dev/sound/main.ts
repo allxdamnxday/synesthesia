@@ -249,6 +249,8 @@ export interface ProbeOptions extends RenderOptions {
   /** Wall seconds after start to seek, and the composition time to seek to. */
   seekAt?: number;
   seekTo?: number;
+  /** Drag a property slider: set `prop` from `from` to `to` in steps over `seconds`. */
+  drag?: { prop: string; from: number; to: number; startAt: number; seconds: number };
   /** Wall seconds after start to pause, and milliseconds until playing on from there. */
   pauseAt?: number;
   resumeAfterMs?: number;
@@ -294,7 +296,7 @@ export interface ProbeResult {
   }[];
 }
 
-type ActionKind = 'edit' | 'seek' | 'pause' | 'play';
+type ActionKind = 'edit' | 'seek' | 'pause' | 'play' | 'drag';
 
 /**
  * Play through the preview engine in real time, record its output, and compare it with the
@@ -352,6 +354,7 @@ async function previewProbe(opts: ProbeOptions): Promise<ProbeResult> {
   let edited = false;
   let sought = false;
   let paused = false;
+  let dragStep = -1;
   let currentProps = props;
   const actions: {
     kind: ActionKind;
@@ -384,6 +387,28 @@ async function previewProbe(opts: ProbeOptions): Promise<ProbeResult> {
         });
         currentProps = next;
         engine.setProps(next);
+      }
+      const drag = opts.drag;
+      if (drag && elapsed >= drag.startAt && dragStep < 10) {
+        // One slider step per poll (~50 ms), like a hand dragging a slider.
+        const step = Math.min(10, Math.floor(((elapsed - drag.startAt) / drag.seconds) * 10));
+        if (step > dragStep) {
+          dragStep = step;
+          const value = drag.from + ((drag.to - drag.from) * step) / 10;
+          const next = { ...currentProps, [drag.prop]: value };
+          const at = soon();
+          const comp = engine.timeAtContextTime(at);
+          actions.push({
+            kind: 'drag',
+            ctx: at,
+            compFrom: comp,
+            compTo: comp,
+            before: currentProps,
+            after: next,
+          });
+          currentProps = next;
+          engine.setProps(next);
+        }
       }
       if (!paused && opts.pauseAt !== undefined && elapsed >= opts.pauseAt) {
         paused = true;
@@ -464,15 +489,34 @@ async function previewProbe(opts: ProbeOptions): Promise<ProbeResult> {
   const clickMax = (env: number[], fromSec: number, toSec: number): number =>
     Math.max(0, ...env.slice(Math.max(0, Math.floor(fromSec / 0.01)), Math.ceil(toSec / 0.01)));
   const actionResults: ProbeResult['actions'] = [];
+  const refCache = new Map<string, number[]>();
+  const refClicks = async (p: PropertyValues): Promise<number[]> => {
+    const key = JSON.stringify(p);
+    let env = refCache.get(key);
+    if (!env) {
+      const ref = await render({ ...opts, props: p, normalize: false });
+      env = envelopes(channelsOf(ref), sr, 0.01).click;
+      refCache.set(key, env);
+    }
+    return env;
+  };
+  const before = 0.02;
+  const after = 0.15;
   for (const a of actions) {
     const recSec = a.ctx - offset;
-    const previewClick = clickMax(fullEnv.click, recSec - 0.02, recSec + 0.15);
+    const previewClick = clickMax(fullEnv.click, recSec - before, recSec + after);
+    // Every setting heard inside the window: this action's before and after, plus any later
+    // action that lands inside it (a slider drag changes values every ~50 ms).
+    const settings = [a.before, a.after];
+    for (const b of actions) {
+      const t = b.ctx - offset;
+      if (b !== a && t > recSec && t < recSec + after) settings.push(b.after);
+    }
     let referenceClick = 0;
-    for (const p of [a.before, a.after]) {
-      const ref = await render({ ...opts, props: p, normalize: false });
-      const env = envelopes(channelsOf(ref), sr, 0.01);
+    for (const p of settings) {
+      const env = await refClicks(p);
       for (const comp of [a.compFrom, a.compTo]) {
-        referenceClick = Math.max(referenceClick, clickMax(env.click, comp - 0.05, comp + 0.2));
+        referenceClick = Math.max(referenceClick, clickMax(env, comp - 0.05, comp + 0.2));
       }
     }
     actionResults.push({ kind: a.kind, recSec, previewClick, referenceClick });

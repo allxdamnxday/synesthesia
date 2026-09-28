@@ -60,7 +60,7 @@ interface ProbeResult {
   times: number[];
   contextState: string;
   actions: {
-    kind: 'edit' | 'seek' | 'pause' | 'play';
+    kind: 'edit' | 'seek' | 'pause' | 'play' | 'drag';
     recSec: number;
     previewClick: number;
     referenceClick: number;
@@ -86,6 +86,7 @@ interface SpSound {
       editProps?: Record<string, number>;
       seekAt?: number;
       seekTo?: number;
+      drag?: { prop: string; from: number; to: number; startAt: number; seconds: number };
       pauseAt?: number;
       resumeAfterMs?: number;
       loop?: boolean;
@@ -300,7 +301,9 @@ test.describe('sound materials', () => {
     }
   });
 
-  test('preview stays click-free through live edits, seeks and loop wraps', async ({ page }) => {
+  test('preview stays click-free through live edits, slider drags, seeks, pauses and loop wraps', async ({
+    page,
+  }) => {
     for (const m of await materials(page)) {
       const edits: Record<string, number> = {};
       for (const prop of m.properties) edits[prop.id] = prop.kind === 'choice' ? 2 : 0.9;
@@ -326,6 +329,30 @@ test.describe('sound materials', () => {
       // The seek shows up in the clock: time jumps back to ~0.62 s.
       const jumpedBack = edited.times.some((t, i) => i > 0 && t < (edited.times[i - 1] ?? 0) - 0.5);
       expect(jumpedBack, `${m.id}: seek moves the clock`).toBe(true);
+
+      // Drag sliders by hand-sized steps (~50 ms apart) while the sound moves. Persistence
+      // regenerates the reverb; a choice property steps through its values.
+      const choice = m.properties.find((p) => p.kind === 'choice');
+      const drags = [
+        { prop: 'persistence', from: 0.2, to: 1 },
+        ...(choice ? [{ prop: choice.id, from: 0, to: 2 }] : []),
+      ];
+      for (const d of drags) {
+        const dragged = await sp(page, 'previewProbe', {
+          materialId: m.id,
+          kind: 'sweep',
+          seconds: 2.8,
+          tailSec: 0.5,
+          drag: { ...d, startAt: 0.6, seconds: 0.5 },
+          playSeconds: 2.2,
+        });
+        expect(dragged.actions.length, `${m.id}: ${d.prop} drag steps`).toBeGreaterThanOrEqual(4);
+        for (const a of dragged.actions) {
+          expect(a.previewClick, `${m.id}: ${d.prop} drag`).toBeLessThanOrEqual(
+            a.referenceClick * 1.5 + 0.01,
+          );
+        }
+      }
 
       // Pause mid-movement and play on almost at once (the pause is still fading out).
       const paused = await sp(page, 'previewProbe', {
