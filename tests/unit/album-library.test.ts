@@ -462,8 +462,12 @@ describe('album log', () => {
     expect(log).toContain('## 02. 02');
     expect(log).toContain('| Status | Set aside |');
     expect(log).toContain('Too busy: the wink is lost.');
-    expect(log).toContain('| Visual material | Water |');
-    expect(log).toContain('| Sound material | Water |');
+    // Whatever materials the plan chose, the log names them with their display names.
+    const first = compositions[0];
+    expect(log).toContain(
+      `| Visual material | ${materialName('visual', first.visual.materialId)} |`,
+    );
+    expect(log).toContain(`| Sound material | ${materialName('sound', first.sound.materialId)} |`);
     expect(log).toContain('SP_Wink_01_000123.mp4');
     expect(log).toContain('| Render | Not rendered |');
     expect(log).toContain(`## 03. (missing composition \`${compositions[2].id}\`)`);
