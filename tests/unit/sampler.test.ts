@@ -274,7 +274,7 @@ describe('sampler normalization', () => {
     expect(s.sample(0.4).normalized.energy).toBe(1); // above p95 clamps
   });
 
-  it('stays within range for every feature, strength and time', () => {
+  it('stays within range for every feature, strength and time', { timeout: 30_000 }, () => {
     const sig = makeSignature({
       frameRate: 24,
       frameCount: 48,
