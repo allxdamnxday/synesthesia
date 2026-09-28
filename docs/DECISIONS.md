@@ -385,6 +385,20 @@ implementation follows the intent. To revisit with Freeman only if a material fe
   `hash32(seed, step, stream)` with no generator state, so seeks, live edits and renders
   draw the same values. Both are bit-identical at every property extreme.
 
+## 2026-09-28: Offline after the first visit
+- **Decision:** vite-plugin-pwa precaches the whole instrument (app code, the extraction
+  worker, the render chunk, OpenCV.js, fonts, worklets, the sample signature) on the first
+  visit; the service worker updates itself on the next visit. Spike and harness pages stay
+  out of the cache. End-to-end tests block service workers except the offline test.
+- **Why:** SPEC C5. OpenCV.js (11 MB) is fetched in the background by the service worker
+  after the page has loaded, so the first page load stays fast and extraction still works
+  offline later (SPEC 14.3 asked for OpenCV to load lazily; this keeps the page load lazy
+  while making it available offline).
+- **Verified:** with the network cut after one visit, the Library, Help and a full
+  extraction work (tests/e2e/offline.spec.ts).
+- **Alternatives:** cache OpenCV only after the first extraction (offline extraction would
+  fail until then); no offline support.
+
 ## Pending
 - Freeman's MacBook Pro model, year, chip, macOS version (Diagnostics' Copy report now
   records macOS version, CPU architecture and GPU whenever it runs on his Mac).

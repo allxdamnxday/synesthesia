@@ -52,6 +52,8 @@ cross-origin-isolation headers.
 | prettier | 3.9.9 | MIT | Formatting |
 | vitest | 4.1.11 | MIT | Unit tests |
 | @playwright/test | 1.63.0 | Apache-2.0 | End-to-end tests (drives installed Google Chrome) |
+| vite-plugin-pwa | 1.3.0 | MIT | Service worker and web app manifest for offline use (M8) |
+| workbox-build, workbox-window | 7.4.1 | MIT | Peer dependencies of vite-plugin-pwa (build-time precache generation; the generated service worker ships) |
 
 ## Development tools on the builder's machine (not in the repo)
 
