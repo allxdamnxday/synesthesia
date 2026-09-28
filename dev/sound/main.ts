@@ -249,6 +249,9 @@ export interface ProbeOptions extends RenderOptions {
   /** Wall seconds after start to seek, and the composition time to seek to. */
   seekAt?: number;
   seekTo?: number;
+  /** Wall seconds after start to pause, and milliseconds until playing on from there. */
+  pauseAt?: number;
+  resumeAfterMs?: number;
   /** Transport loop on. */
   loop?: boolean;
   /** Stop after this many wall seconds (default: when playback ends). */
@@ -284,12 +287,14 @@ export interface ProbeResult {
    * before and after it at the same composition times. A click makes the first far larger.
    */
   actions: {
-    kind: 'edit' | 'seek';
+    kind: ActionKind;
     recSec: number;
     previewClick: number;
     referenceClick: number;
   }[];
 }
+
+type ActionKind = 'edit' | 'seek' | 'pause' | 'play';
 
 /**
  * Play through the preview engine in real time, record its output, and compare it with the
@@ -346,9 +351,10 @@ async function previewProbe(opts: ProbeOptions): Promise<ProbeResult> {
   const wallTimes: number[] = [];
   let edited = false;
   let sought = false;
+  let paused = false;
   let currentProps = props;
   const actions: {
-    kind: 'edit' | 'seek';
+    kind: ActionKind;
     ctx: number;
     compFrom: number;
     compTo: number;
@@ -378,6 +384,19 @@ async function previewProbe(opts: ProbeOptions): Promise<ProbeResult> {
         });
         currentProps = next;
         engine.setProps(next);
+      }
+      if (!paused && opts.pauseAt !== undefined && elapsed >= opts.pauseAt) {
+        paused = true;
+        const at = soon();
+        const comp = engine.timeAtContextTime(at);
+        engine.pause();
+        const where = engine.compositionTime();
+        const common = { compFrom: comp, compTo: comp, before: currentProps, after: currentProps };
+        actions.push({ kind: 'pause', ctx: at, ...common });
+        setTimeout(() => {
+          actions.push({ kind: 'play', ctx: soon(), ...common, compFrom: where, compTo: where });
+          void engine.play();
+        }, opts.resumeAfterMs ?? 0);
       }
       if (!sought && opts.seekAt !== undefined && elapsed >= opts.seekAt) {
         sought = true;

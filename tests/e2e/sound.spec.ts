@@ -60,7 +60,7 @@ interface ProbeResult {
   times: number[];
   contextState: string;
   actions: {
-    kind: 'edit' | 'seek';
+    kind: 'edit' | 'seek' | 'pause' | 'play';
     recSec: number;
     previewClick: number;
     referenceClick: number;
@@ -86,6 +86,8 @@ interface SpSound {
       editProps?: Record<string, number>;
       seekAt?: number;
       seekTo?: number;
+      pauseAt?: number;
+      resumeAfterMs?: number;
       loop?: boolean;
       playSeconds?: number;
     },
@@ -324,6 +326,23 @@ test.describe('sound materials', () => {
       // The seek shows up in the clock: time jumps back to ~0.62 s.
       const jumpedBack = edited.times.some((t, i) => i > 0 && t < (edited.times[i - 1] ?? 0) - 0.5);
       expect(jumpedBack, `${m.id}: seek moves the clock`).toBe(true);
+
+      // Pause mid-movement and play on almost at once (the pause is still fading out).
+      const paused = await sp(page, 'previewProbe', {
+        materialId: m.id,
+        kind: 'sweep',
+        seconds: 2.8,
+        tailSec: 0.5,
+        pauseAt: 1.0,
+        resumeAfterMs: 10,
+        playSeconds: 2.5,
+      });
+      expect(paused.actions.map((a) => a.kind)).toEqual(['pause', 'play']);
+      for (const a of paused.actions) {
+        expect(a.previewClick, `${m.id}: ${a.kind}`).toBeLessThanOrEqual(
+          a.referenceClick * 1.5 + 0.01,
+        );
+      }
 
       // Transport loop over an excerpt that ends mid-movement: the wrap lands while the
       // sound is loud and moving, where a reset would click.

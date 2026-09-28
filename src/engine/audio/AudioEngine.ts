@@ -234,14 +234,19 @@ export class AudioEngine {
     const duration = this.duration;
     let t = clamp(from ?? this.position, 0, duration);
     if (t >= duration - 1e-6) t = 0;
-    const start = this.context.currentTime + this.safetyMargin();
+    const at = this.context.currentTime + this.safetyMargin();
+    // If a pause is still fading out, finish that fade first so the jump to the new
+    // position happens in silence.
+    const fadeOut = this.fade.valueAt(at) > 0 ? FADE_SEC : 0;
+    const start = at + fadeOut;
+    this.fade.rampTo(0, at, fadeOut);
+    this.slot.material.cancelFrom(start);
     this.map.reset(start, t);
     this.scheduledCtx = start;
     this.scheduledT = t;
     this.endCtx = Number.POSITIVE_INFINITY;
     this.endFadeAt = Number.NaN;
     this.pendingWraps = [];
-    this.fade.setAt(0, start);
     this.fade.rampTo(1, start, FADE_SEC);
     this.playingFlag = true;
     this.tick();
@@ -410,10 +415,10 @@ export class AudioEngine {
 
     const margin = this.safetyMargin();
     if (this.scheduledCtx < now + margin) {
-      // The timer was starved (e.g. a busy main thread): resynchronise at the audible
-      // position. The material treats it as a seek.
-      const t = this.timeAtContextTime(now + margin);
+      // The timer was starved (e.g. a busy main thread) and the schedule ran out:
+      // resynchronise where playback should be now. The material treats it as a seek.
       const at = now + margin;
+      const t = Math.min(this.map.timeAt(at), this.duration);
       this.slot?.material.cancelFrom(at);
       this.map.push(at, t);
       this.scheduledCtx = at;
