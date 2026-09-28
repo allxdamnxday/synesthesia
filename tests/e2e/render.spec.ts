@@ -48,6 +48,7 @@ interface RenderBytesOptions {
   returnBytes?: boolean;
   missingVisualMaterial?: string;
   failAtStep?: number;
+  encoding?: { audioCodec: 'aac' | 'opus' | null; audioBitrate: number | null };
 }
 interface RenderResultSummary {
   fileName: string;
@@ -682,6 +683,28 @@ test.describe('offline render to MP4', () => {
     };
     expect(sidecar.format).toBe('sp-composition');
     expect(sidecar.render).toEqual({ width: 1280, height: 720, fps: 30 });
+  });
+
+  test('falls back to Opus sound, or no sound track, when AAC is unavailable', async ({
+    page,
+  }, testInfo) => {
+    const opus = await renderToFile(page, testInfo, 'opus.mp4', {
+      seconds: 1,
+      encoding: { audioCodec: 'opus', audioBitrate: 128_000 },
+    });
+    expect(opus.out.result?.audio.codec).toBe('opus');
+    const opusAudio = ffprobe(opus.file).streams.find((s) => s.codec_type === 'audio');
+    expect(opusAudio?.codec_name).toBe('opus');
+    expect(opusAudio?.sample_rate).toBe('48000');
+    expect(opusAudio?.channels).toBe(2);
+
+    const silent = await renderToFile(page, testInfo, 'no-sound.mp4', {
+      seconds: 1,
+      encoding: { audioCodec: null, audioBitrate: null },
+    });
+    expect(silent.out.result?.audio.codec).toBeNull();
+    const streams = ffprobe(silent.file).streams.map((s) => s.codec_type);
+    expect(streams).toEqual(['video']);
   });
 
   test('muted fields render black frames and silence', async ({ page }, testInfo) => {
