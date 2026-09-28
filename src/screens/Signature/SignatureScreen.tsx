@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { href, navigate } from '../../app/router';
-import { errorDetail, exportSignatureFile, getSignature, userMessage } from '../../library';
+import { errorDetail, getSignature, userMessage } from '../../library';
 import type { KineticSignature } from '../../signature/types';
 import { useLibraryStore } from '../../state/libraryStore';
 import { Button } from '../../ui/Button';
@@ -48,15 +48,7 @@ export function SignatureScreen({ params }: { params?: Record<string, string> })
   }, [id, attempt]);
 
   if (loaded.state === 'ready') {
-    return (
-      <SignatureView
-        key={loaded.signature.id}
-        signature={loaded.signature}
-        onRenamed={(name) =>
-          setLoaded({ state: 'ready', signature: { ...loaded.signature, name } })
-        }
-      />
-    );
+    return <SignatureView key={loaded.signature.id} signature={loaded.signature} />;
   }
 
   return (
@@ -93,18 +85,15 @@ export function SignatureScreen({ params }: { params?: Record<string, string> })
   );
 }
 
-function SignatureView({
-  signature,
-  onRenamed,
-}: {
-  signature: KineticSignature;
-  onRenamed: (name: string) => void;
-}) {
+function SignatureView({ signature }: { signature: KineticSignature }) {
+  // The movement never changes here; only the name can, so it is kept apart and the
+  // preview keeps playing through a rename.
   const playback = useSignaturePlayback(signature, signature.preferredSpeed);
+  const [savedName, setSavedName] = useState(signature.name);
   const [renaming, setRenaming] = useState(false);
   const [notice, setNotice] = useState<{ tone: NoticeTone; text: string } | null>(null);
   const titleRow = useRef<HTMLDivElement>(null);
-  const name = signatureName(signature.name);
+  const name = signatureName(savedName);
   const { clock } = playback;
   /** After renaming, put focus back on the Rename button. */
   const refocus = () =>
@@ -120,16 +109,17 @@ function SignatureView({
   const rename = async (next: string) => {
     try {
       const meta = await useLibraryStore.getState().renameSignature(signature.id, next);
-      onRenamed(meta.name);
+      setSavedName(meta.name);
     } catch (err) {
       console.error(errorDetail(err));
       setNotice({ tone: 'error', text: userMessage(err) });
     }
   };
 
-  const exportFile = () => {
+  const exportFile = async () => {
     try {
-      const fileName = exportSignatureFile(signature);
+      // From the library, so the file has the latest name even if it changed elsewhere.
+      const fileName = await useLibraryStore.getState().exportSignature(signature.id);
       setNotice({ tone: 'success', text: `Exported as “${fileName}”.` });
     } catch (err) {
       console.error(errorDetail(err));
@@ -184,7 +174,7 @@ function SignatureView({
             )}
           </div>
           <div className={styles.actions}>
-            <Button onClick={exportFile}>Export file</Button>
+            <Button onClick={() => void exportFile()}>Export file</Button>
             <Button
               variant="primary"
               onClick={() => navigate(`/studio/new/${encodeURIComponent(signature.id)}`)}
