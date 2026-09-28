@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Spike 5: fluid simulation in React</title>
+    <link rel="icon" type="image/svg+xml" href="../../favicon.svg" />
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      body {
+        background: #0e1a24;
+        color: #e8e4da;
+        font:
+          16px/1.5 system-ui,
+          sans-serif;
+        margin: 0;
+        padding: 24px 32px;
+      }
+      main {
+        max-width: 1000px;
+      }
+      h1 {
+        font-size: 24px;
+        margin: 0 0 8px;
+      }
+      h2 {
+        font-size: 20px;
+        margin: 20px 0 8px;
+      }
+      a {
+        color: #7fb7c9;
+      }
+      .lede,
+      .meta,
+      .detail {
+        color: #9aabb5;
+      }
+      .stage {
+        background: #000;
+        width: 960px;
+        max-width: 100%;
+        height: 540px;
+      }
+      .work > div {
+        background: #000;
+      }
+      .buttons {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+      }
+      button {
+        background: #1f3342;
+        color: #e8e4da;
+        border: 1px solid #5e6f7a;
+        border-radius: 4px;
+        min-height: 36px;
+        padding: 0 14px;
+        font: inherit;
+        cursor: pointer;
+      }
+      button:disabled {
+        opacity: 0.6;
+        cursor: default;
+      }
+      button:focus-visible {
+        outline: 2px solid #d9a441;
+        outline-offset: 2px;
+      }
+      .pass {
+        color: #7fb7c9;
+      }
+      .fail {
+        color: #e8806a;
+      }
+      .checks {
+        padding-left: 20px;
+      }
+      .checks li {
+        margin: 8px 0;
+      }
+      pre {
+        background: #172733;
+        padding: 12px;
+        border-radius: 8px;
+        overflow-x: auto;
+        font-size: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="./main.tsx"></script>
+  </body>
+</html>
