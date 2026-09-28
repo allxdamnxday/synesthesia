@@ -26,17 +26,19 @@ export function Toggle({
       htmlFor={id}
       title={description}
     >
-      <input
-        id={id}
-        type="checkbox"
-        role="switch"
-        className={styles.input}
-        checked={checked}
-        disabled={disabled}
-        onChange={(e) => onChange(e.target.checked)}
-      />
-      <span className={styles.track} aria-hidden="true">
-        <span className={styles.knob} />
+      <span className={styles.switch}>
+        <input
+          id={id}
+          type="checkbox"
+          role="switch"
+          className={styles.input}
+          checked={checked}
+          disabled={disabled}
+          onChange={(e) => onChange(e.target.checked)}
+        />
+        <span className={styles.track} aria-hidden="true">
+          <span className={styles.knob} />
+        </span>
       </span>
       <span className={styles.label}>{label}</span>
     </label>
