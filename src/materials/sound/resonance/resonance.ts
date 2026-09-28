@@ -7,22 +7,34 @@
  *   control buses (ConstantSource, automated at the control rate)
  *     bow ──► bow gain        damp ──► bank.damp        pan ──► panner
  *
- *   seeded noise (loop) ─► low-pass ─► bow gain ─► modal bank ─► panner ─► level ─► drive
- *   strikes: `strike` lane on the bank (one event per onset, exact sample)    │
- *                                                     ┌──────────── low-pass ◄─┘
- *                                                     ├─► dry ─► out
- *                                                     └─► send ─► reverb ─► out
+ *   seeded noise (loop) ─► low-pass ─► bow gain ─► modal bank ─► panner ─► seek dip ─► level
+ *   strikes: `strike` lane on the bank (one event per onset, exact sample)                │
+ *                                              ┌──────── low-pass ◄──────── drive ◄──────┘
+ *                                              ├─► dry ─► out
+ *                                              └─► send ─► reverb ─► out
  *
- * The modal table (frequency, ring time and gain of each mode) and everything else that changes
- * only with properties are StaticParams. Strikes and resets are TriggerLane events.
+ * The twelve modes are summed inside the worklet in a fixed order, and no input here takes
+ * more than two sounding sources (see mixPairwise in shared/graph.ts), so renders are
+ * bit-identical. The modal table (frequency, ring time and gain of each mode) and everything
+ * else that changes only with properties are StaticParams. Strikes and resets are
+ * TriggerLane events.
+ *
+ * After a seek (or the engine's resync of a starved scheduler, which is a seek without its
+ * fade) the output dips briefly (shared/seekDipGain.ts): under the dip the body is silenced
+ * and the bow noise realigned to composition time, and the control buses glide from where they
+ * froze (shared/seekDip.ts, shared/holdingBus.ts).
  */
 import { hash32 } from '../../../chance/prng';
 import type { ScheduleWindow, SoundMaterial } from '../../types';
-import { ControlBus, StaticParam } from '../shared/automation';
+import { StaticParam } from '../shared/automation';
 import { ControlTimeline, type ContinuityMode } from '../shared/controlTimeline';
+import { driveCurve, driveStageGains } from '../shared/graph';
+import { HoldingControlBus } from '../shared/holdingBus';
 import { reverbDecaySeconds, upwardFlow } from '../shared/mapping';
 import { createNoiseBuffer } from '../shared/noise';
 import { Reverb } from '../shared/reverb';
+import { seekGlideHolds } from '../shared/seekDip';
+import { SeekDipGain } from '../shared/seekDipGain';
 import { TriggerLane, workletParam } from '../shared/triggers';
 import { loadWorklet } from '../shared/worklets';
 import { RESONANCE_SOUND_META } from './meta';
@@ -34,24 +46,12 @@ import { ResonanceProgram, type ResonanceState } from './program';
 export const MODAL_PROCESSOR = 'sp-modal-bank';
 export const MODAL_WORKLET_URL: string = modalUrl;
 
-/** Curve for the drive stage: tanh over ±DRIVE_HEADROOM (as Water). */
-const DRIVE_HEADROOM = 4;
-const DRIVE_CURVE_SIZE = 2049;
 /** Seconds of seeded noise looped for the bowed excitation. */
 const BOW_NOISE_SEC = 2.5;
 const NOISE_SALT = 0x424f5721; // "BOW!"
 const REVERB_SALT = 0x5245534f; // "RESO"
 /** Where the strike reads the movement after an onset (s). */
 const STRIKE_LOOK = [0, 0.02, 0.04] as const;
-
-function driveCurve(): Float32Array<ArrayBuffer> {
-  const curve = new Float32Array(DRIVE_CURVE_SIZE);
-  const half = (DRIVE_CURVE_SIZE - 1) / 2;
-  for (let i = 0; i < DRIVE_CURVE_SIZE; i++) {
-    curve[i] = Math.tanh(((i - half) / half) * DRIVE_HEADROOM);
-  }
-  return curve;
-}
 
 type StrikeKey = 'velocity' | 'mallet' | 'bounce' | 'bounceHz' | 'bounceDecay';
 
@@ -76,7 +76,11 @@ class ResonanceSound implements SoundMaterial {
   private bowTone: BiquadFilterNode | null = null;
   /** Bow noise sources: the current one, plus stopped ones not yet released. */
   private noises: { source: AudioBufferSourceNode; stopAt: number }[] = [];
-  private buses: { bow: ControlBus; damp: ControlBus; pan: ControlBus } | null = null;
+  private buses: {
+    bow: HoldingControlBus;
+    damp: HoldingControlBus;
+    pan: HoldingControlBus;
+  } | null = null;
   private modes: ModeStatics[] = [];
   private statics: {
     width: StaticParam;
@@ -91,6 +95,7 @@ class ResonanceSound implements SoundMaterial {
   } | null = null;
   private strikes: TriggerLane<StrikeKey> | null = null;
   private resets: TriggerLane<never> | null = null;
+  private dip: SeekDipGain | null = null;
   private reverb: Reverb | null = null;
   private nodes: AudioNode[] = [];
 
@@ -112,9 +117,9 @@ class ResonanceSound implements SoundMaterial {
     this.bank = bank;
 
     const buses = {
-      bow: new ControlBus(ctx, 0),
-      damp: new ControlBus(ctx, 0),
-      pan: new ControlBus(ctx, 0),
+      bow: new HoldingControlBus(ctx, 0),
+      damp: new HoldingControlBus(ctx, 0),
+      pan: new HoldingControlBus(ctx, 0),
     };
     this.buses = buses;
 
@@ -139,6 +144,8 @@ class ResonanceSound implements SoundMaterial {
 
     const panner = ctx.createStereoPanner();
     buses.pan.connect(panner.pan);
+    const dip = new SeekDipGain(ctx);
+    this.dip = dip;
     const level = ctx.createGain();
     const drivePre = ctx.createGain();
     const drive = ctx.createWaveShaper();
@@ -160,7 +167,8 @@ class ResonanceSound implements SoundMaterial {
     this.reverb = reverb;
 
     bank.connect(panner);
-    panner.connect(level);
+    panner.connect(dip.node);
+    dip.node.connect(level);
     level.connect(drivePre);
     drivePre.connect(drive);
     drive.connect(drivePost);
@@ -204,22 +212,31 @@ class ResonanceSound implements SoundMaterial {
   }
 
   schedule(win: ScheduleWindow): void {
-    const { program, timeline, buses } = this;
-    if (!program || !timeline || !buses) return;
+    const { ctx, program, timeline, buses } = this;
+    if (!ctx || !program || !timeline || !buses) return;
     const params = program.params(win.props);
+    let first = false;
+    let seek = false;
     timeline.schedule(win, {
       begin: (mode) => {
-        if (mode === 'start' || mode === 'seek') this.alignNoise(win.ctxTimeAtT0, win.t0);
-        this.applyStatics(params, win.ctxTimeAtT0, mode);
+        first = mode === 'start';
+        seek = mode === 'seek';
+        this.jumpTo(win, mode);
+        this.applyStatics(params, win.ctxTimeAtT0, first);
       },
       point: (ctxTime, s, _t, jump) => {
-        buses.bow.write(s.bowOut, ctxTime, jump);
-        buses.damp.write(s.dampOut, ctxTime, jump);
-        buses.pan.write(s.panOut, ctxTime, jump);
+        // Set outright only on the very first window. After a seek, the buses glide from where
+        // they froze while the output is dipped (a resync is a seek without the engine's fade).
+        if (seek && seekGlideHolds(ctxTime - win.ctxTimeAtT0)) return;
+        const instant = jump && first;
+        buses.bow.write(s.bowOut, ctxTime, instant);
+        buses.damp.write(s.dampOut, ctxTime, instant);
+        buses.pan.write(s.panOut, ctxTime, instant);
       },
       events: (from, to) => win.sampler.onsetsBetween(from, to),
       event: (t, ctxTime) => this.strike(win, params, t, ctxTime),
     });
+    this.dip?.prune(ctx.currentTime - 1);
   }
 
   cancelFrom(ctxTime: number): void {
@@ -245,15 +262,18 @@ class ResonanceSound implements SoundMaterial {
       source.disconnect();
     }
     this.noises = [];
-    this.bank?.port.postMessage('dispose');
+    // Stop the processor (it returns false from now on), so the node can be released.
+    if (this.bank) workletParam(this.bank, 'alive').value = 0;
     if (this.buses) for (const bus of Object.values(this.buses)) bus.dispose();
     for (const node of this.nodes) node.disconnect();
+    this.dip?.dispose();
     this.reverb?.dispose();
     this.nodes = [];
     this.modes = [];
     this.statics = null;
     this.strikes = null;
     this.resets = null;
+    this.dip = null;
     this.buses = null;
     this.bank = null;
     this.noiseBuffer = null;
@@ -266,12 +286,25 @@ class ResonanceSound implements SoundMaterial {
   // -------------------------------------------------------------------------------------
 
   /**
-   * Start the bow noise at context time `at` from the point matching composition time `t0`
+   * Start or jump playback. On the first window (under the engine's fade in, and at composition
+   * time 0 in a render) the body is silenced and the noise started at once. After a seek the
+   * output dips first, and both happen once it is silent.
+   */
+  private jumpTo(win: ScheduleWindow, mode: ContinuityMode): void {
+    if (mode !== 'start' && mode !== 'seek') return;
+    let at = win.ctxTimeAtT0;
+    if (mode === 'seek' && this.dip) at = this.dip.dip(at);
+    this.resets?.fire(at, {});
+    this.alignNoise(at, win.t0 + (at - win.ctxTimeAtT0));
+  }
+
+  /**
+   * Start the bow noise at context time `at` from the point matching composition time `t`
    * (the looped buffer's position is composition time modulo its length), so a moment of the
    * composition is always bowed by the same noise: in a render, and in preview after any start
-   * or seek. Playback starts and jumps under the engine's fade, so the switch is silent.
+   * or seek. It happens only where the output is silent (see `jumpTo`).
    */
-  private alignNoise(at: number, t0: number): void {
+  private alignNoise(at: number, t: number): void {
     const { ctx, noiseBuffer, bowTone } = this;
     if (!ctx || !noiseBuffer || !bowTone) return;
     const start = Math.max(0, at);
@@ -297,37 +330,34 @@ class ResonanceSound implements SoundMaterial {
     source.buffer = noiseBuffer;
     source.loop = true;
     source.connect(bowTone);
-    const offset = ((t0 % BOW_NOISE_SEC) + BOW_NOISE_SEC) % BOW_NOISE_SEC;
+    const offset = ((t % BOW_NOISE_SEC) + BOW_NOISE_SEC) % BOW_NOISE_SEC;
     source.start(start, offset);
     this.noises.push({ source, stopAt: Number.POSITIVE_INFINITY });
   }
 
-  private applyStatics(p: ResonanceParams, at: number, mode: ContinuityMode): void {
-    const jump = mode === 'start' || mode === 'seek';
-    // Playback starts or jumps under the engine's fade: silence what was ringing.
-    if (jump) this.resets?.fire(at, {});
+  /** Property-only values: set outright on the first window, glided otherwise. */
+  private applyStatics(p: ResonanceParams, at: number, instant: boolean): void {
     this.modes.forEach((m, i) => {
-      m.freq.apply(p.freqs[i] ?? 0, at, jump);
-      m.decay.apply(p.decays[i] ?? 1, at, jump);
-      m.gain.apply(p.gains[i] ?? 0, at, jump);
+      m.freq.apply(p.freqs[i] ?? 0, at, instant);
+      m.decay.apply(p.decays[i] ?? 1, at, instant);
+      m.gain.apply(p.gains[i] ?? 0, at, instant);
     });
     const s = this.statics;
     if (!s) return;
-    s.width.apply(p.width, at, jump);
-    s.detune.apply(p.detuneCents, at, jump);
-    s.bowCutoff.apply(p.bowCutoffHz, at, jump);
-    s.level.apply(p.level, at, jump);
-    // Drive: pre-gain k/H into tanh(H·u), post-gain 1/tanh(k): unity as k → 0, louder and
-    // more saturated as Intensity raises k.
-    s.drivePre.apply(p.drive / DRIVE_HEADROOM, at, jump);
-    s.drivePost.apply(1 / Math.tanh(p.drive), at, jump);
-    s.cutoff.apply(p.cutoffHz, at, jump);
-    s.send.apply(p.reverbSend, at, jump);
-    s.dry.apply(p.dry, at, jump);
+    s.width.apply(p.width, at, instant);
+    s.detune.apply(p.detuneCents, at, instant);
+    s.bowCutoff.apply(p.bowCutoffHz, at, instant);
+    s.level.apply(p.level, at, instant);
+    const drive = driveStageGains(p.drive);
+    s.drivePre.apply(drive.pre, at, instant);
+    s.drivePost.apply(drive.post, at, instant);
+    s.cutoff.apply(p.cutoffHz, at, instant);
+    s.send.apply(p.reverbSend, at, instant);
+    s.dry.apply(p.dry, at, instant);
     const reverb = this.reverb;
     const ctx = this.ctx;
     if (reverb && ctx) {
-      if (jump) reverb.setDecayNow(p.reverbDecaySec, at);
+      if (instant) reverb.setDecayNow(p.reverbDecaySec, at);
       else reverb.setDecay(p.reverbDecaySec, at, ctx.currentTime);
     }
   }

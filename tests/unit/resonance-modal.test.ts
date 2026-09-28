@@ -39,7 +39,9 @@ describe('A4 Resonance modal bank: parameters', () => {
       for (const name of [`freq${m}`, `decay${m}`, `gain${m}`])
         expect(rates.get(name)).toBe('k-rate');
     }
-    for (const name of ['damp', 'width', 'detune']) expect(rates.get(name)).toBe('k-rate');
+    for (const name of ['damp', 'width', 'detune', 'alive']) {
+      expect(rates.get(name)).toBe('k-rate');
+    }
     for (const name of ['strike', 'velocity', 'mallet', 'bounce', 'bounceHz', 'bounceDecay']) {
       expect(rates.get(name)).toBe('a-rate');
     }
@@ -229,12 +231,13 @@ describe('A4 Resonance modal bank: sound', () => {
     }
   }, 30_000);
 
-  it('stops processing after the dispose message', () => {
+  it('keeps running while alive, and stops once the material sets alive to 0', () => {
     const bank = new Bank();
-    bank.port.onmessage?.({ data: 'dispose' });
     const outputs = [[new Float32Array(128), new Float32Array(128)]];
     const parameters: Record<string, Float32Array> = {};
     for (const d of Bank.parameterDescriptors) parameters[d.name] = Float32Array.of(d.defaultValue);
+    expect(bank.process([[]], outputs, parameters)).toBe(true);
+    parameters.alive = Float32Array.of(0);
     expect(bank.process([[]], outputs, parameters)).toBe(false);
   });
 });

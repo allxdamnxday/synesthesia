@@ -17,8 +17,8 @@
 // fades out over 4 ms instead of stopping dead.
 //
 // Deterministic: noise comes from a SplitMix32 generator seeded by the `seed` parameter; no
-// clocks. Sound is driven only through AudioParams; the port carries a single lifecycle
-// message ('dispose') that stops the processor.
+// clocks, no port messages. Everything, including stopping (`alive`, a k-rate parameter set to
+// 0 when the material is disposed), goes through AudioParams.
 
 const POOL = 16;
 const MAX_PLAYING = 12;
@@ -257,13 +257,21 @@ class PluckString {
 
 class PluckProcessor extends AudioWorkletProcessor {
   static get parameterDescriptors() {
-    return PARAMS.map(([name, defaultValue]) => ({
+    const list = PARAMS.map(([name, defaultValue]) => ({
       name,
       defaultValue,
       minValue: -1e9,
       maxValue: 1e9,
       automationRate: 'a-rate',
     }));
+    list.push({
+      name: 'alive',
+      defaultValue: 1,
+      minValue: 0,
+      maxValue: 1,
+      automationRate: 'k-rate',
+    });
+    return list;
   }
 
   constructor() {
@@ -275,11 +283,6 @@ class PluckProcessor extends AudioWorkletProcessor {
     this.scratch = new Float32Array(128);
     this.dcX = [0, 0];
     this.dcY = [0, 0];
-    // Lifecycle only (never sound): the material says 'dispose' and the processor stops.
-    this.alive = true;
-    this.port.onmessage = (event) => {
-      if (event.data === 'dispose') this.alive = false;
-    };
   }
 
   /** A string for a new pluck: an idle one, or the quietest (which fades out first). */
@@ -325,7 +328,8 @@ class PluckProcessor extends AudioWorkletProcessor {
   }
 
   process(_inputs, outputs, parameters) {
-    if (!this.alive) return false;
+    // The material sets `alive` to 0 when it is disposed: stop, so the node can be released.
+    if (!(parameters.alive[0] > 0)) return false;
     const output = outputs[0];
     const left = output[0];
     const right = output.length > 1 ? output[1] : this.scratch;

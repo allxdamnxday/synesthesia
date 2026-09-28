@@ -236,13 +236,14 @@ describe('A5 Pulse strings: sound', () => {
     expect(peakOf(left, at(3), at(4))).toBeLessThan(peakOf(left, 0, at(0.5)) * 1.05);
   }, 30_000);
 
-  it('stops processing after the dispose message', () => {
+  it('keeps running while alive, and stops once the material sets alive to 0', () => {
     const strings = new Pluck();
-    strings.port.onmessage?.({ data: 'dispose' });
     const outputs = [[new Float32Array(128), new Float32Array(128)]];
     const parameters: Record<string, Float32Array> = {};
     for (const d of Pluck.parameterDescriptors)
       parameters[d.name] = Float32Array.of(d.defaultValue);
+    expect(strings.process([], outputs, parameters)).toBe(true);
+    parameters.alive = Float32Array.of(0);
     expect(strings.process([], outputs, parameters)).toBe(false);
   });
 });

@@ -20,8 +20,8 @@
 // Per-mode frequency (Hz), ring time (T60, s) and gain are k-rate parameters written by the
 // material; `damp` adds a decay rate (natural-log amplitude per second) to every mode.
 //
-// Deterministic: no randomness, no clocks. Sound is driven only through AudioParams; the port
-// carries a single lifecycle message ('dispose') that stops the processor.
+// Deterministic: no randomness, no clocks, no port messages. Everything, including stopping
+// (`alive` set to 0 when the material is disposed), goes through AudioParams.
 
 const MODES = 12;
 const VOICES = MODES * 2;
@@ -111,7 +111,7 @@ class ModalBankProcessor extends AudioWorkletProcessor {
       maxValue: 1e9,
       automationRate: 'a-rate',
     });
-    list.push(kRate('damp', 0), kRate('width', 0), kRate('detune', 0));
+    list.push(kRate('damp', 0), kRate('width', 0), kRate('detune', 0), kRate('alive', 1));
     list.push(
       aRate('strike', 0),
       aRate('velocity', 0),
@@ -161,11 +161,6 @@ class ModalBankProcessor extends AudioWorkletProcessor {
     this.lastStrike = 0;
     this.lastReset = 0;
     this.resetLeft = 0;
-    // Lifecycle only (never sound): the material says 'dispose' and the processor stops.
-    this.alive = true;
-    this.port.onmessage = (event) => {
-      if (event.data === 'dispose') this.alive = false;
-    };
   }
 
   /** Read the k-rate parameters; recompute what changed. */
@@ -322,7 +317,8 @@ class ModalBankProcessor extends AudioWorkletProcessor {
   }
 
   process(inputs, outputs, parameters) {
-    if (!this.alive) return false;
+    // The material sets `alive` to 0 when it is disposed: stop, so the node can be released.
+    if (!(parameters.alive[0] > 0)) return false;
     const output = outputs[0];
     const left = output[0];
     const right = output.length > 1 ? output[1] : null;

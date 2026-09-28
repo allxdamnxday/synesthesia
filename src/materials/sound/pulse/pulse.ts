@@ -4,19 +4,29 @@
  *
  * Graph:
  *
- *   pluck strings (worklet; each pluck panned inside) ─► level ─► drive ─► low-pass ─┬─► dry ─► out
- *                                                                                     └─► send ─► reverb ─► out
+ *   pluck strings (worklet; each pluck panned inside) ─► seek dip ─► level ─► drive ─► low-pass
+ *                                                  ┌─────────────────────────────────────┘
+ *                                                  ├─► dry ─► out
+ *                                                  └─► send ─► reverb ─► out
  *
  * Every pluck is a TriggerLane event written at its exact context time (composition time plus
- * the window's offset), so preview and offline render place it identically and offline renders
- * are bit-identical. Values that change only with properties are StaticParams.
+ * the window's offset), so preview and offline render place it identically. The strings are
+ * summed inside the worklet in a fixed order and no input here takes more than two sounding
+ * sources (see mixPairwise in shared/graph.ts), so renders are bit-identical. Values that
+ * change only with properties are StaticParams.
+ *
+ * After a seek (or the engine's resync of a starved scheduler, which is a seek without its
+ * fade) the output dips briefly (shared/seekDipGain.ts) and the strings still ringing are
+ * silenced under the dip.
  */
 import { hash32 } from '../../../chance/prng';
 import type { ScheduleWindow, SoundMaterial } from '../../types';
 import { StaticParam, windowOffset } from '../shared/automation';
 import { ControlTimeline, type ContinuityMode } from '../shared/controlTimeline';
+import { driveCurve, driveStageGains } from '../shared/graph';
 import { reverbDecaySeconds } from '../shared/mapping';
 import { Reverb } from '../shared/reverb';
+import { SeekDipGain } from '../shared/seekDipGain';
 import { TriggerLane, workletParam } from '../shared/triggers';
 import { loadWorklet } from '../shared/worklets';
 import { PULSE_SOUND_META } from './meta';
@@ -28,24 +38,12 @@ import { PulseProgram, plucksToSchedule, type Pluck, type PulseState } from './p
 export const PLUCK_PROCESSOR = 'sp-pluck';
 export const PLUCK_WORKLET_URL: string = pluckUrl;
 
-/** Curve for the drive stage: tanh over ±DRIVE_HEADROOM (as Water). */
-const DRIVE_HEADROOM = 4;
-const DRIVE_CURVE_SIZE = 2049;
 const REVERB_SALT = 0x50554c52; // "PULR"
 /**
  * Longest fast-forward on a seek. The pulse clock remembers its phase while the movement goes
  * on, so it gets a longer reach than the default; it rests after any stillness anyway.
  */
 const MAX_FAST_FORWARD_SEC = 60;
-
-function driveCurve(): Float32Array<ArrayBuffer> {
-  const curve = new Float32Array(DRIVE_CURVE_SIZE);
-  const half = (DRIVE_CURVE_SIZE - 1) / 2;
-  for (let i = 0; i < DRIVE_CURVE_SIZE; i++) {
-    curve[i] = Math.tanh(((i - half) / half) * DRIVE_HEADROOM);
-  }
-  return curve;
-}
 
 type PluckKey =
   | 'freq'
@@ -93,6 +91,7 @@ class PulseSound implements SoundMaterial {
   } | null = null;
   private plucks: TriggerLane<PluckKey> | null = null;
   private resets: TriggerLane<never> | null = null;
+  private dip: SeekDipGain | null = null;
   private reverb: Reverb | null = null;
   private nodes: AudioNode[] = [];
 
@@ -112,6 +111,8 @@ class PulseSound implements SoundMaterial {
       outputChannelCount: [2],
     });
     this.strings = strings;
+    const dip = new SeekDipGain(ctx);
+    this.dip = dip;
     const level = ctx.createGain();
     const drivePre = ctx.createGain();
     const drive = ctx.createWaveShaper();
@@ -132,7 +133,8 @@ class PulseSound implements SoundMaterial {
     });
     this.reverb = reverb;
 
-    strings.connect(level);
+    strings.connect(dip.node);
+    dip.node.connect(level);
     level.connect(drivePre);
     drivePre.connect(drive);
     drive.connect(drivePost);
@@ -160,8 +162,8 @@ class PulseSound implements SoundMaterial {
   }
 
   schedule(win: ScheduleWindow): void {
-    const { program, timeline } = this;
-    if (!program || !timeline) return;
+    const { ctx, program, timeline } = this;
+    if (!ctx || !program || !timeline) return;
     const params = program.params(win.props);
     program.onsets = win.sampler;
     const offset = windowOffset(win);
@@ -170,7 +172,8 @@ class PulseSound implements SoundMaterial {
     timeline.schedule(win, {
       begin: (mode) => {
         continued = mode === 'continue';
-        this.applyStatics(params, win.ctxTimeAtT0, mode);
+        this.jumpTo(win.ctxTimeAtT0, mode);
+        this.applyStatics(params, win.ctxTimeAtT0, mode === 'start');
       },
       point: (_ctxTime, s) => {
         if (s.count > 0) {
@@ -181,6 +184,7 @@ class PulseSound implements SoundMaterial {
         firstPoint = false;
       },
     });
+    this.dip?.prune(ctx.currentTime - 1);
   }
 
   cancelFrom(ctxTime: number): void {
@@ -191,13 +195,16 @@ class PulseSound implements SoundMaterial {
   }
 
   dispose(): void {
-    this.strings?.port.postMessage('dispose');
+    // Stop the processor (it returns false from now on), so the node can be released.
+    if (this.strings) workletParam(this.strings, 'alive').value = 0;
     for (const node of this.nodes) node.disconnect();
+    this.dip?.dispose();
     this.reverb?.dispose();
     this.nodes = [];
     this.statics = null;
     this.plucks = null;
     this.resets = null;
+    this.dip = null;
     this.strings = null;
     this.timeline = null;
     this.program = null;
@@ -206,24 +213,33 @@ class PulseSound implements SoundMaterial {
 
   // -------------------------------------------------------------------------------------
 
-  private applyStatics(p: PulseParams, at: number, mode: ContinuityMode): void {
-    const jump = mode === 'start' || mode === 'seek';
-    // Playback starts or jumps under the engine's fade: silence the strings still ringing.
-    if (jump) this.resets?.fire(at, {});
+  /**
+   * Start or jump playback: silence the strings still ringing. On the first window that is
+   * under the engine's fade in (and at composition time 0 in a render); after a seek the
+   * output dips first and the strings are silenced once it is quiet.
+   */
+  private jumpTo(ctxTimeAtT0: number, mode: ContinuityMode): void {
+    if (mode !== 'start' && mode !== 'seek') return;
+    let at = ctxTimeAtT0;
+    if (mode === 'seek' && this.dip) at = this.dip.dip(at);
+    this.resets?.fire(at, {});
+  }
+
+  /** Property-only values: set outright on the first window, glided otherwise. */
+  private applyStatics(p: PulseParams, at: number, instant: boolean): void {
     const s = this.statics;
     if (!s) return;
-    s.level.apply(p.level, at, jump);
-    // Drive: pre-gain k/H into tanh(H·u), post-gain 1/tanh(k): unity as k → 0, louder and
-    // more saturated as Intensity raises k.
-    s.drivePre.apply(p.drive / DRIVE_HEADROOM, at, jump);
-    s.drivePost.apply(1 / Math.tanh(p.drive), at, jump);
-    s.cutoff.apply(p.cutoffHz, at, jump);
-    s.send.apply(p.reverbSend, at, jump);
-    s.dry.apply(p.dry, at, jump);
+    s.level.apply(p.level, at, instant);
+    const drive = driveStageGains(p.drive);
+    s.drivePre.apply(drive.pre, at, instant);
+    s.drivePost.apply(drive.post, at, instant);
+    s.cutoff.apply(p.cutoffHz, at, instant);
+    s.send.apply(p.reverbSend, at, instant);
+    s.dry.apply(p.dry, at, instant);
     const reverb = this.reverb;
     const ctx = this.ctx;
     if (reverb && ctx) {
-      if (jump) reverb.setDecayNow(p.reverbDecaySec, at);
+      if (instant) reverb.setDecayNow(p.reverbDecaySec, at);
       else reverb.setDecay(p.reverbDecaySec, at, ctx.currentTime);
     }
   }
