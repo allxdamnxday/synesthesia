@@ -27,6 +27,7 @@ import { FpsMeter } from '../../src/perf/fpsMeter';
 import { litFraction, meanLuma, renderOffscreen, sha256Hex } from '../../src/perf/offscreenRender';
 import { createSyntheticSampler, type SyntheticKind } from '../../src/signature/synthetic';
 import type { SignatureSampler } from '../../src/signature/types';
+import { solverHookProbe, type SolverProbeResult } from './solverProbe';
 
 // ---------------------------------------------------------------------------------------
 // Test API
@@ -72,6 +73,8 @@ export interface SpVisualApi {
     height?: number;
     durationMs?: number;
   }): Promise<QualityBenchmarkResult & { ms: number }>;
+  /** Drive the FluidSolver's extension hooks with a Smoke-like temperature field. */
+  solverHookProbe(): Promise<SolverProbeResult>;
 }
 
 declare global {
@@ -140,6 +143,7 @@ async function benchmarkOnFreshCanvas(
 const api: SpVisualApi = {
   ready: false,
   benchmark: benchmarkOnFreshCanvas,
+  solverHookProbe,
   listMaterials: () =>
     listVisualMaterials().map((entry) => ({
       id: entry.meta.id,
