@@ -33,7 +33,8 @@ void main () {
 }
 `;
 
-const PRECISION = /* glsl */ `
+/** Precision header of every fluid pass; material passes run through the hooks use it too. */
+export const PRECISION = /* glsl */ `
 precision highp float;
 precision highp int;
 precision highp sampler2D;
@@ -41,9 +42,10 @@ precision highp sampler2D;
 
 /**
  * Bilinear filtering by hand, for float textures that can't be filtered linearly
- * (compiled in with MANUAL_FILTERING; the textures then use NEAREST).
+ * (compiled in with MANUAL_FILTERING; the textures then use NEAREST). Material passes
+ * that read solver targets at another resolution must sample through `sampleLinear`.
  */
-const SAMPLING = /* glsl */ `
+export const SAMPLING = /* glsl */ `
 vec4 bilerp (sampler2D sam, vec2 uv, vec2 tsize) {
   vec2 st = uv / tsize - 0.5;
   vec2 iuv = floor(st);
@@ -66,12 +68,13 @@ vec4 sampleLinear (sampler2D sam, vec2 uv, vec2 tsize) {
 /**
  * The signature's push at a canvas point, in field units (diagonals per second, y up),
  * after the Range projection and the seeded jitter. Shared by the force and dye passes
- * so dye always appears exactly where the water is pushed.
+ * so dye always appears exactly where the water is pushed. Material passes can include it
+ * too (Smoke's emission); `FluidSolver.bindSignatureForce()` sets its uniforms.
  *
  * Jitter uses value noise over an integer hash (PCG3D, Jarzynski & Olano 2020), which is
  * exact on every GPU, so a seed always gives the same scatter.
  */
-const SIGNATURE_FORCE = /* glsl */ `
+export const SIGNATURE_FORCE = /* glsl */ `
 uniform sampler2D uField;
 uniform vec4 uRect;        // projected field: x, y, width, height (canvas-normalized)
 uniform vec2 uFieldCells;  // columns, rows
@@ -149,6 +152,10 @@ void main () {
  * it, so the dye draws streaks that follow the flow (streaklines) instead of a
  * featureless cloud. Each deposit is smeared along this step's motion (three taps) so
  * fast flow draws continuous streaks rather than a row of dots.
+ *
+ * Compiled with DYE_STREAK (a separate program, so the plain one is untouched), each
+ * deposit is also drawn out along the push into a stroke (five taps): a slow fluid
+ * (Honey) then shows strokes from the moment of release instead of round spots.
  */
 export const DYE_FRAGMENT = /* glsl */ `
 ${PRECISION}
@@ -162,6 +169,9 @@ uniform vec2 uVelocityTexel;
 uniform float uDt;
 uniform float uAmount;         // dye per field unit this step
 uniform vec3 uSpots;           // amount 0..1, coverage 0..1, gain
+#ifdef DYE_STREAK
+uniform float uStreak;         // stroke length, short sides
+#endif
 out vec4 fragColor;
 
 float spotRelease (vec2 uv) {
@@ -174,13 +184,32 @@ float spotRelease (vec2 uv) {
   return sum * (uSpots.z / 3.0);
 }
 
+#ifdef DYE_STREAK
+float spotStroke (vec2 uv, vec2 f) {
+  vec2 travel = texture(uVelocity, uv).xy * uVelocityTexel * uDt;
+  // Along the push, uStreak short sides long, centred on the point.
+  vec2 stroke = f * (uStreak / max(length(f), 1e-6)) / uShortScale;
+  float sum = 0.0;
+  for (int k = 0; k < 5; k++) {
+    vec2 at = uv + travel * (float(k) / 5.0) + stroke * (float(k) / 4.0 - 0.5);
+    vec2 s = texture(uSpotTex, at * uShortScale).rg;
+    sum += s.r * smoothstep(s.g - 0.03, s.g + 0.03, uSpots.y);
+  }
+  return sum * (uSpots.z / 5.0);
+}
+#endif
+
 void main () {
   vec4 dye = texture(uDye, vUv);
   vec2 f = signatureForce(vUv);
   float m = length(f);
   if (m > 1e-6) {
     float turn = atan(f.y, f.x) * 0.15915494309;
+#ifdef DYE_STREAK
+    float release = uSpots.x > 0.0 ? mix(1.0, spotStroke(vUv, f), uSpots.x) : 1.0;
+#else
     float release = uSpots.x > 0.0 ? mix(1.0, spotRelease(vUv), uSpots.x) : 1.0;
+#endif
     dye.rgb += texture(uPalette, vec2(turn, 0.5)).rgb * m * uAmount * release;
   }
   fragColor = vec4(dye.rgb, 1.0);

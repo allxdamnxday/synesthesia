@@ -69,6 +69,7 @@ import {
   projectField,
   tierIterations,
   type GridSize,
+  type ProjectionRect,
 } from './projection';
 import {
   ADVECTION_FRAGMENT,
@@ -158,6 +159,18 @@ export interface FluidStepParams {
   pressureIterations?: number;
   /** Fraction of last step's pressure kept as the starting guess (original: 0.8). */
   pressureWarmStart?: number;
+  /**
+   * Release dye from the field as it arrives instead of the low-passed push (default
+   * false). With `forceLowPassSec`, the dye then marks the moment of movement while the
+   * fluid's response lags behind it (Honey). No effect without a low-pass.
+   */
+  dyeFromRawField?: boolean;
+  /**
+   * Draw each spot's release out into a stroke this long along the push, in short sides
+   * (default 0: round spots, smeared only by the flow). A slow fluid (Honey) then shows
+   * strokes from the moment of release.
+   */
+  dyeStrokeLength?: number;
 }
 
 export interface FluidDisplayParams {
@@ -205,6 +218,12 @@ export interface FluidHookContext {
   params: Readonly<FluidStepParams>;
 }
 
+/** Anything with texel sizes: a RenderTarget or a DoubleRenderTarget. */
+export interface TexelSized {
+  readonly texelSizeX: number;
+  readonly texelSizeY: number;
+}
+
 /** Extension points for materials that add fields or body forces (see file header). */
 export interface FluidHooks {
   beforeProjection?: (ctx: FluidHookContext) => void;
@@ -214,6 +233,8 @@ export interface FluidHooks {
 interface Programs {
   force: ShaderProgram;
   dye: ShaderProgram;
+  /** The dye pass compiled with DYE_STREAK (`dyeStrokeLength`). */
+  dyeStreak: ShaderProgram;
   viscosity: ShaderProgram;
   curl: ShaderProgram;
   vorticity: ShaderProgram;
@@ -259,10 +280,17 @@ export class FluidSolver {
   private divergence!: RenderTarget;
   private curl!: RenderTarget;
   private fieldTex: WebGLTexture | null = null;
+  /** The field before the low-pass, for `dyeFromRawField`; created on first use. */
+  private rawFieldTex: WebGLTexture | null = null;
   private fieldCols = 0;
   private fieldRows = 0;
   private lowPass: Float32Array | null = null;
   private upload: Float32Array = new Float32Array(0);
+  /** This step's projection, parameters and largest push, for hook passes. */
+  private stepRect: ProjectionRect = { x: 0, y: 0, width: 1, height: 1 };
+  private stepParams: FluidStepParams | null = null;
+  private stepForceMagnitude = 0;
+  private stepRawMagnitude = 0;
   private readonly paletteTex: WebGLTexture;
   private readonly spotTex: WebGLTexture;
   private spotSeed: number | null = null;
@@ -344,6 +372,30 @@ export class FluidSolver {
     return this.fieldTex;
   }
 
+  /**
+   * Largest |push| in this step's field (field diagonals per second): the low-passed
+   * field when a low-pass is on, or the field as it arrived with `raw`. Hooks use it to
+   * skip work while nothing moves.
+   */
+  fieldMagnitude(raw = false): number {
+    return raw ? this.stepRawMagnitude : this.stepForceMagnitude;
+  }
+
+  /**
+   * For hook passes whose shader includes SIGNATURE_FORCE_GLSL: set its uniforms for the
+   * current step (Range projection and seeded scatter, exactly as the force and dye
+   * passes use them), set `uTexelSize` for `target`, and bind the field on texture unit 1.
+   * `raw` binds the field before the low-pass (when `dyeFromRawField` keeps one).
+   * Returns false before the first step, when there is no field yet.
+   */
+  bindSignatureForce(prog: ShaderProgram, target: TexelSized, raw = false): boolean {
+    const p = this.stepParams;
+    if (!p || !this.fieldTex) return false;
+    const texture = raw && this.rawFieldTex ? this.rawFieldTex : this.fieldTex;
+    this.setForceUniforms(prog, this.stepRect, p, target, texture);
+    return true;
+  }
+
   /** Semi-Lagrangian advection of any target through the current velocity. */
   advect(target: DoubleRenderTarget, dt: number, dissipation: number): void {
     const gl = this.gl;
@@ -405,10 +457,17 @@ export class FluidSolver {
     this.triangle.bind();
 
     const maxMagnitude = this.uploadField(input, p);
+    const rect = projectField(p.range, input.cols / input.rows, this.width / this.height);
+    this.stepRect = rect;
+    this.stepParams = p;
     if (maxMagnitude > 1e-9) {
-      const rect = projectField(p.range, input.cols / input.rows, this.width / this.height);
       const cellsPerDiagonal = fieldDiagonalInCells(rect, this.simGrid.width, this.simGrid.height);
       this.applyForce(rect, cellsPerDiagonal * p.forceGain * dt, p);
+      if (!this.rawDye(p) && p.dyeAmount > 0) this.injectDye(rect, p.dyeAmount * dt, p);
+    }
+    // Dye from the field as it arrived: it can move while the low-passed push is still
+    // (the start of a movement) and vice versa (the lag after it).
+    if (this.rawDye(p) && this.stepRawMagnitude > 1e-9 && p.dyeAmount > 0) {
       this.injectDye(rect, p.dyeAmount * dt, p);
     }
     const short = this.simShort();
@@ -498,6 +557,7 @@ export class FluidSolver {
     return {
       force: this.createPass(FORCE_FRAGMENT, 'fluid force'),
       dye: this.createPass(DYE_FRAGMENT, 'fluid dye'),
+      dyeStreak: this.createPass(DYE_FRAGMENT, 'fluid dye (strokes)', ['DYE_STREAK']),
       viscosity: this.createPass(VISCOSITY_FRAGMENT, 'fluid viscosity'),
       curl: this.createPass(CURL_FRAGMENT, 'fluid curl'),
       vorticity: this.createPass(VORTICITY_FRAGMENT, 'fluid vorticity'),
@@ -570,15 +630,27 @@ export class FluidSolver {
     this.spotSeed = s;
   }
 
-  /** Upload the (optionally low-passed) field; returns its largest |v| for skipping. */
+  /** Dye comes from the field before the low-pass this step. */
+  private rawDye(p: FluidStepParams): boolean {
+    return p.dyeFromRawField === true && p.forceLowPassSec > 0;
+  }
+
+  /**
+   * Upload the (optionally low-passed) field; returns its largest |v| for skipping. With
+   * `dyeFromRawField`, the field before the low-pass is uploaded to a second texture.
+   */
   private uploadField(input: SignatureField, p: FluidStepParams): number {
     const gl = this.gl;
+    this.stepForceMagnitude = 0;
+    this.stepRawMagnitude = 0;
     const cols = Math.max(0, Math.floor(input.cols));
     const rows = Math.max(0, Math.floor(input.rows));
     if (cols < 1 || rows < 1) return 0;
     const n = cols * rows * 2;
     if (!this.fieldTex || cols !== this.fieldCols || rows !== this.fieldRows) {
       if (this.fieldTex) this.resources.deleteTexture(this.fieldTex);
+      if (this.rawFieldTex) this.resources.deleteTexture(this.rawFieldTex);
+      this.rawFieldTex = null;
       this.fieldTex = createTexture(this.resources, cols, rows, FIELD_FORMAT(gl), {
         filter: gl.LINEAR,
       });
@@ -593,6 +665,19 @@ export class FluidSolver {
     upload.set(input.field.subarray(0, available));
     if (available < n) upload.fill(0, available);
     for (let i = 0; i < n; i++) if (!Number.isFinite(upload[i])) upload[i] = 0;
+    if (this.rawDye(p)) {
+      if (!this.rawFieldTex) {
+        this.rawFieldTex = createTexture(this.resources, cols, rows, FIELD_FORMAT(gl), {
+          filter: gl.LINEAR,
+        });
+      }
+      this.stepRawMagnitude = maxVectorMagnitude(upload, n);
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, this.rawFieldTex);
+      resetUnpackState(gl);
+      gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, cols, rows, gl.RG, gl.FLOAT, upload);
+      gl.bindTexture(gl.TEXTURE_2D, null);
+    }
     if (p.forceLowPassSec > 0) {
       if (!this.lowPass) this.lowPass = Float32Array.from(upload);
       const k = 1 - Math.exp(-p.dt / p.forceLowPassSec);
@@ -602,26 +687,23 @@ export class FluidSolver {
     } else {
       this.lowPass = null;
     }
-    let max2 = 0;
-    for (let i = 0; i < n; i += 2) {
-      const u = upload[i];
-      const v = upload[i + 1];
-      const m2 = u * u + v * v;
-      if (m2 > max2) max2 = m2;
-    }
+    const max = maxVectorMagnitude(upload, n);
+    this.stepForceMagnitude = max;
+    if (!this.rawDye(p)) this.stepRawMagnitude = max;
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.fieldTex);
     resetUnpackState(gl);
     gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, cols, rows, gl.RG, gl.FLOAT, upload);
     gl.bindTexture(gl.TEXTURE_2D, null);
-    return Math.sqrt(max2);
+    return max;
   }
 
   private setForceUniforms(
     prog: ShaderProgram,
     rect: { x: number; y: number; width: number; height: number },
     p: FluidStepParams,
-    target: DoubleRenderTarget,
+    target: TexelSized,
+    field: WebGLTexture | null = this.fieldTex,
   ): void {
     const gl = this.gl;
     const short = Math.min(this.width, this.height);
@@ -638,7 +720,7 @@ export class FluidSolver {
     );
     gl.uniform1f(prog.u('uJitterFreq'), Math.max(0.01, p.jitterFrequency));
     gl.uniform1ui(prog.u('uJitterSeed'), p.patternSeed >>> 0);
-    if (this.fieldTex) gl.uniform1i(prog.u('uField'), bindTexture(gl, 1, this.fieldTex));
+    if (field) gl.uniform1i(prog.u('uField'), bindTexture(gl, 1, field));
   }
 
   private applyForce(
@@ -662,9 +744,12 @@ export class FluidSolver {
     p: FluidStepParams,
   ): void {
     const gl = this.gl;
-    const prog = this.programs.dye;
+    const stroke = Math.max(0, p.dyeStrokeLength ?? 0);
+    const prog = stroke > 0 ? this.programs.dyeStreak : this.programs.dye;
     prog.use();
-    this.setForceUniforms(prog, rect, p, this.dye);
+    const field = this.rawDye(p) ? this.rawFieldTex : this.fieldTex;
+    this.setForceUniforms(prog, rect, p, this.dye, field);
+    if (stroke > 0) gl.uniform1f(prog.u('uStreak'), stroke);
     const spots = Math.min(1, Math.max(0, p.dyeSpots));
     const coverage = Math.min(1, Math.max(0.05, p.dyeSpotCoverage));
     if (spots > 0) this.ensureSpotPattern(p.patternSeed);
@@ -765,4 +850,16 @@ export class FluidSolver {
 
 function sameSize(a: GridSize, b: GridSize): boolean {
   return a.width === b.width && a.height === b.height;
+}
+
+/** Largest |(u, v)| over the first `n` values of an interleaved uv array. */
+function maxVectorMagnitude(uv: Float32Array, n: number): number {
+  let max2 = 0;
+  for (let i = 0; i < n; i += 2) {
+    const u = uv[i];
+    const v = uv[i + 1];
+    const m2 = u * u + v * v;
+    if (m2 > max2) max2 = m2;
+  }
+  return Math.sqrt(max2);
 }
