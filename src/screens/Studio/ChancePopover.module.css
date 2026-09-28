@@ -1,0 +1,82 @@
+.anchor {
+  display: inline-flex;
+}
+
+/* The button remembers that this composition was drawn by chance. */
+.drawn {
+  border-color: color-mix(in srgb, var(--color-honey) 55%, transparent);
+}
+
+.popover {
+  /* Override the popover's centred defaults; sit above the button. */
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  bottom: anchor(top);
+  right: anchor(right);
+  translate: 0 -8px;
+  width: min(360px, calc(100vw - 32px));
+  max-height: calc(100vh - 96px);
+  overflow-y: auto;
+  padding: var(--space-4);
+  display: none;
+  flex-direction: column;
+  gap: var(--space-3);
+  background: var(--color-basin-raised);
+  color: var(--color-pearl);
+  border: 1px solid color-mix(in srgb, var(--color-pearl) 22%, transparent);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+}
+
+.popover:popover-open {
+  display: flex;
+}
+
+.title {
+  margin: 0;
+  font-size: var(--font-size-md);
+}
+
+.hint {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-mist);
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.label {
+  font-size: var(--font-size-sm);
+  color: var(--color-pearl);
+  padding: 0;
+}
+
+.pool {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: var(--space-4);
+}
+
+.pool legend {
+  margin-bottom: var(--space-1);
+}
+
+.problem {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-alert);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}

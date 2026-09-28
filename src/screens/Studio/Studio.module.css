@@ -1,0 +1,350 @@
+/* Studio (SPEC 13.3): the wake dominates; the chrome recedes. */
+
+.studio {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+/* Fills the space under the app header exactly; the panel scrolls inside it. */
+.grid {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 340px);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    'header header'
+    'stage panel'
+    'transport transport';
+  background: var(--color-deep);
+}
+
+.opening,
+.message {
+  padding: var(--space-6) var(--space-5);
+  max-width: 720px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.opening {
+  color: var(--color-mist);
+}
+
+/* Header ----------------------------------------------------------------------------- */
+
+.header {
+  grid-area: header;
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-height: 52px;
+  padding: var(--space-1) var(--space-4);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-silt) 45%, transparent);
+}
+
+.crumbs {
+  flex: 1;
+  min-width: 0;
+}
+
+.crumbs ol {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--font-size-sm);
+  min-width: 0;
+}
+
+.crumbs li {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.crumbs li + li::before {
+  content: '/';
+  color: var(--color-silt);
+  margin: 0 var(--space-2);
+}
+
+.crumbs a {
+  color: var(--color-mist);
+  text-decoration: none;
+  padding: var(--space-1) 2px;
+}
+
+.crumbs a:hover {
+  color: var(--color-pearl);
+  text-decoration: underline;
+}
+
+.current {
+  flex: 1;
+}
+
+.nameButton {
+  min-height: var(--hit-min);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border: 0;
+  background: transparent;
+  color: var(--color-pearl);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-strong);
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-sm);
+  text-align: left;
+}
+
+.nameButton:hover {
+  background: var(--color-basin-raised);
+}
+
+.renameField {
+  min-width: 280px;
+}
+
+.saveState {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-mist);
+  white-space: nowrap;
+}
+
+.headerActions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+/* Stage -------------------------------------------------------------------------------- */
+
+.stage {
+  grid-area: stage;
+  position: relative;
+  overflow: hidden;
+  background: var(--color-surround);
+}
+
+.canvasHost {
+  position: absolute;
+  inset: 0;
+}
+
+.presenting .stage {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+}
+
+.stage:fullscreen {
+  width: 100%;
+  height: 100%;
+}
+
+.cursorHidden,
+.cursorHidden * {
+  cursor: none;
+}
+
+.measuring,
+.pictureProblem {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  margin: 0;
+  max-width: min(480px, 80%);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-deep) 82%, transparent);
+  color: var(--color-pearl);
+  font-size: var(--font-size-sm);
+  text-align: center;
+}
+
+.mutedLabel {
+  position: absolute;
+  left: var(--space-3);
+  bottom: var(--space-2);
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-mist);
+}
+
+.notices {
+  position: absolute;
+  top: var(--space-3);
+  left: var(--space-3);
+  right: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-width: 640px;
+  pointer-events: none;
+}
+
+.notices > * {
+  pointer-events: auto;
+  background: color-mix(in srgb, var(--color-basin) 94%, transparent);
+}
+
+.noticeAction {
+  min-height: var(--hit-min);
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid color-mix(in srgb, var(--color-pearl) 25%, transparent);
+  background: transparent;
+  color: var(--color-pearl);
+  font-size: var(--font-size-sm);
+  white-space: nowrap;
+}
+
+.noticeAction:hover {
+  border-color: var(--color-pearl);
+}
+
+/* Panel -------------------------------------------------------------------------------- */
+
+.panel {
+  grid-area: panel;
+  overflow-y: auto;
+  background: var(--color-basin);
+  border-left: 1px solid color-mix(in srgb, var(--color-silt) 45%, transparent);
+  padding: var(--space-3) var(--space-4) var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-silt) 35%, transparent);
+}
+
+.section:last-child {
+  border-bottom: 0;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-strong);
+  color: var(--color-mist);
+}
+
+.linkRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-height: var(--hit-min);
+}
+
+.linkRow .sectionTitle {
+  color: var(--color-water);
+}
+
+.materialHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.picker {
+  flex: 1;
+  min-width: 0;
+}
+
+.toggleButton {
+  min-height: var(--hit-min);
+  min-width: var(--hit-min);
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-md);
+  border: 1px solid color-mix(in srgb, var(--color-pearl) 18%, transparent);
+  background: transparent;
+  color: var(--color-mist);
+  font-size: var(--font-size-sm);
+}
+
+.toggleButton:hover {
+  color: var(--color-pearl);
+}
+
+.toggleButton[aria-pressed='true'] {
+  color: var(--color-deep);
+  background: var(--color-honey);
+  border-color: var(--color-honey);
+}
+
+.fieldNote,
+.hint {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-mist);
+}
+
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.seedRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.seedInput {
+  width: 8ch;
+  min-height: var(--hit-min);
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-md);
+  border: 1px solid color-mix(in srgb, var(--color-pearl) 18%, transparent);
+  background: var(--color-deep);
+  color: var(--color-pearl);
+  font-size: var(--font-size-md);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.06em;
+}
+
+.seedInput:focus-visible {
+  border-color: var(--color-honey);
+}
+
+.notes {
+  width: 100%;
+  min-height: 96px;
+  resize: vertical;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid color-mix(in srgb, var(--color-pearl) 18%, transparent);
+  background: var(--color-deep);
+  color: var(--color-pearl);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height);
+}
+
+.notes::placeholder {
+  color: var(--color-mist);
+}
+
+.notes:focus-visible {
+  border-color: var(--color-honey);
+}
+
+/* Transport ---------------------------------------------------------------------------- */
+
+.transport {
+  grid-area: transport;
+  min-width: 0;
+}

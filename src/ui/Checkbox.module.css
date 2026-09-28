@@ -1,0 +1,51 @@
+.checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--hit-min);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  position: relative;
+}
+
+.input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+
+.box {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid color-mix(in srgb, var(--color-mist) 70%, transparent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: transparent;
+  background: var(--color-deep);
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+.input:checked + .box {
+  background: var(--color-honey);
+  border-color: var(--color-honey);
+  color: var(--color-deep);
+}
+
+.input:focus-visible + .box {
+  box-shadow: var(--focus-ring);
+}
+
+.input:disabled + .box,
+.input:disabled ~ .label {
+  opacity: 0.5;
+}
+
+.label {
+  color: var(--color-pearl);
+}
