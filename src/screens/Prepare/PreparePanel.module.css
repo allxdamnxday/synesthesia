@@ -137,8 +137,13 @@
   font-size: var(--font-size-md);
 }
 
-.notice:empty {
+.notice:empty,
+.topNotice:empty {
   display: none;
+}
+
+.topNotice {
+  padding: var(--space-3) var(--space-5) 0;
 }
 
 .progress {

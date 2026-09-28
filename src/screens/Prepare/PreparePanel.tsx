@@ -406,6 +406,7 @@ export function SignaturePanel({
   const name = usePrepareStore((s) => s.name);
   const saved = usePrepareStore((s) => s.saved);
   const hideSource = usePrepareStore((s) => s.hideSource);
+  const notice = usePrepareStore((s) => s.notice);
   const store = usePrepareStore.getState;
   const nameId = useId();
   if (!body) return null;
@@ -415,6 +416,14 @@ export function SignaturePanel({
 
   return (
     <div className={styles.panelBody}>
+      {/* E.g. a clip dropped here that couldn't be opened; this signature stays. */}
+      <div role="status" aria-live="polite" className={styles.topNotice}>
+        {notice ? (
+          <Notice tone={notice.tone} onDismiss={() => store().setNotice(null)}>
+            {notice.message}
+          </Notice>
+        ) : null}
+      </div>
       <Section title="Signature">
         <label className={styles.fieldLabel} htmlFor={nameId}>
           Name

@@ -5,6 +5,7 @@
  * dot-right.mp4 (2.5 s, a dot gliding right), ring-expand.mp4 (2 s), pan-right.mp4 (2 s, the
  * whole picture drifting, so the automatic noise floor comes out high).
  */
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 
@@ -338,5 +339,100 @@ test('a clip that keeps moving suggests raising Sensitivity', async ({ page }) =
   await page.getByRole('button', { name: 'Extract again' }).click();
   await expect(page.getByRole('button', { name: 'Extract signature' })).toBeEnabled();
   await expect(page.getByTestId('trim-summary')).toHaveText('0:00.00 to 0:02.00 · 2 seconds');
+  expect(errors).toEqual([]);
+});
+
+test('drop a clip on the screen, step through frames, resize the box and set the speed', async ({
+  page,
+}) => {
+  const errors = watchErrors(page);
+  await page.goto('./#/prepare');
+
+  // A drag and drop carrying the fixture file, as from Finder or Explorer.
+  const transfer = await page.evaluateHandle(
+    (b64) => {
+      const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+      const data = new DataTransfer();
+      data.items.add(new File([bytes], 'dropped wink.mp4', { type: 'video/mp4' }));
+      return data;
+    },
+    readFileSync(join(FIXTURES, 'dot-right.mp4')).toString('base64'),
+  );
+  const zone = page.getByText('Drop a clip here');
+  await zone.dispatchEvent('dragover', { dataTransfer: transfer });
+  await expect(page.getByText('Drop the clip here')).toBeVisible();
+  await page.getByText('Drop the clip here').dispatchEvent('drop', { dataTransfer: transfer });
+  await expect(page.getByText('dropped wink.mp4', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Extract signature' })).toBeEnabled();
+  expect(page.url()).toMatch(/#\/prepare$/); // the browser didn't open the file itself
+
+  // Step frame by frame with the buttons and the , and . keys.
+  const playhead = page.getByRole('slider', { name: 'Playhead' });
+  await page.getByRole('button', { name: 'Forward one frame' }).click();
+  await page.getByRole('button', { name: 'Forward one frame' }).click();
+  await expect(playhead).toHaveAttribute('aria-valuenow', '0.07');
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+  await page.keyboard.press('.');
+  await expect(playhead).toHaveAttribute('aria-valuenow', '0.1');
+  await expect(page.getByTestId('clip-time')).toHaveText('0:00.10 / 0:02.50');
+  await page.keyboard.press(',');
+  await expect(playhead).toHaveAttribute('aria-valuenow', '0.07');
+
+  // Start the trim here: two frames go.
+  await page.getByRole('button', { name: 'Start the trim at the playhead' }).click();
+  await expect(page.getByTestId('trim-summary')).toHaveText('0:00.07 to 0:02.50 · 2.4 seconds');
+
+  // Draw a box, then drag its bottom-right corner out.
+  await drawBox(page, [0.3, 0.3], [0.5, 0.5]);
+  const box = page.getByRole('group', { name: /^Focus area/ });
+  await expect(box).toHaveAccessibleName(
+    'Focus area: 20% wide and 20% tall, 30% from the left and 30% from the top',
+  );
+  const frame = await page.getByTestId('clip-frame').boundingBox();
+  const corner = await page.locator('[data-handle="se"]').boundingBox();
+  if (!frame || !corner) throw new Error('No box');
+  const cx = corner.x + corner.width / 2;
+  const cy = corner.y + corner.height / 2;
+  await page.mouse.move(cx, cy);
+  await page.mouse.down();
+  await page.mouse.move(cx + 0.1 * frame.width, cy + 0.1 * frame.height, { steps: 5 });
+  await page.mouse.up();
+  await expect(box).toHaveAccessibleName(
+    'Focus area: 30% wide and 30% tall, 30% from the left and 30% from the top',
+  );
+  // Clear it: the whole frame is used again.
+  await page.getByRole('button', { name: 'Clear box' }).click();
+  await expect(
+    page.getByText('Using the whole frame. Drag on the clip to draw a box.'),
+  ).toBeVisible();
+
+  // Slowest speed: the clip previews at it and it becomes the signature's preferred speed.
+  const speed = page.getByRole('slider', { name: 'Speed' });
+  await speed.focus();
+  await speed.press('Home');
+  await expect(speed).toHaveAttribute('aria-valuetext', '0.25×');
+  expect(await page.locator('video').evaluate((v: HTMLVideoElement) => v.playbackRate)).toBe(0.25);
+
+  await page.getByRole('button', { name: 'Extract signature' }).click();
+  await waitForSignatureView(page);
+  // It stays open after extraction, until the signature is saved.
+  const speedAfter = page.getByRole('slider', { name: 'Speed' });
+  await speedAfter.focus();
+  await speedAfter.press('End');
+  await expect(speedAfter).toHaveAttribute('aria-valuetext', '2×');
+  await speedAfter.press('ArrowLeft');
+  await expect(speedAfter).toHaveAttribute('aria-valuetext', '1.95×');
+  await page.getByRole('textbox', { name: 'Name' }).press('Enter'); // Enter saves too
+  await expect(page.getByText('Saved to your library.')).toBeVisible();
+  await expect(speedAfter).toHaveAttribute('aria-disabled', 'true');
+
+  await page.getByRole('button', { name: 'Open in Studio' }).click();
+  await expect(page).toHaveURL(/#\/studio\/new\/[0-9a-f-]{36}$/);
+  const id = decodeURIComponent(page.url().split('/').pop() ?? '');
+  const saved = await storedSignature(page, id);
+  expect(saved?.name).toBe('dropped wink');
+  expect(saved?.preferredSpeed).toBe(1.95);
+  expect(saved?.source.focusArea).toBeNull();
+  expect(saved?.source.trim.startSec).toBeCloseTo(2 / 30, 6);
   expect(errors).toEqual([]);
 });
