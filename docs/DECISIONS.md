@@ -76,6 +76,29 @@ Freeman reviews this after handover.
   (HTTPS or localhost), so a Mac can't simply open the dev server over the LAN.
 - **Alternatives:** separate build config for spikes (more to maintain).
 
+## 2026-09-28: Capability checks run real tests, and the startup gate blocks only on certainty
+- **Decision:** Diagnostics confirms H.264 export (720p, 1080p, square) and AAC with tiny
+  real encodes (packets must come out), not only `isConfigSupported`. Half-float support
+  means RGBA16F is renderable, keeps values outside 0..1, and filters linearly (checked by
+  readback). The startup gate blocks only when WebGL2, half-float targets or Web Audio +
+  AudioWorklet definitely fail; a check that throws or times out is a warning.
+  Diagnostics stays reachable while blocked. Safari/Firefox get a dismissible notice.
+- **Why:** hardware encoders can accept a configuration and still fail; extension lists
+  can lie; a false lockout on Freeman's Mac would be worse than a warning.
+- **Alternatives:** trust support queries and extension lists; block on any non-pass.
+
+## 2026-09-28: AAC bitrate and render quality
+- **Decision:** try AAC at 192, 160, 128, 96 kbps and use the first that encodes (Windows'
+  Media Foundation accepts only those four). Fall back to Opus with a warning that
+  QuickTime may not play the audio. Video uses Mediabunny `Quality('high')` (quantizer
+  mode where supported); the Diagnostics check uses the same settings the render will.
+- **Why:** measured on the builder's machine: 192 kbps works; 64, 256 and 320 are refused.
+  Spike 3 files: H.264 High, 90 frames, AAC-LC 48 kHz stereo, `moov` before `mdat`,
+  flash and click aligned to 0.0 ms.
+- **Alternatives:** fixed 128 kbps; explicit video bitrates (more predictable file sizes).
+- **Watch on the Mac:** Chrome on macOS encodes AAC with AudioToolbox, which usually primes
+  2112 samples (~44 ms). If spike 3 shows about +44 ms there, the render must compensate.
+
 ## Pending
 - Freeman's MacBook Pro model, year, chip, macOS version (Diagnostics' Copy report now
   records macOS version, CPU architecture and GPU whenever it runs on his Mac).

@@ -34,6 +34,8 @@ export default defineConfig({
   worker: { format: 'es' },
   build: {
     target: 'es2022',
+    // Mediabunny loads lazily in its own ~0.5 MB chunk; that's expected.
+    chunkSizeWarningLimit: 1024,
     rolldownOptions: { input: htmlEntries() },
   },
   server: {
