@@ -13,17 +13,18 @@ import type {
   SoundMaterialEntry,
   VisualMaterialEntry,
 } from '../../src/materials/types';
+// Through the public entry point, which loads the pipeline lazily, as the app does.
 import {
   createPauseController,
   createTimelineSampler,
   isRenderCancelled,
+  renderComposition,
   signatureDurationOf,
   type RenderDestination,
   type RenderEncoding,
   type RenderPhase,
   type RenderResult,
 } from '../../src/render';
-import { renderComposition } from '../../src/render/renderComposition';
 import { parseSignature } from '../../src/signature/serialize';
 import { createSyntheticSignature } from '../../src/signature/synthetic';
 import type { KineticSignature } from '../../src/signature/types';
