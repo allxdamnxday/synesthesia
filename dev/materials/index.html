@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Visual materials harness</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      body {
+        background: #0e1a24;
+        color: #e8e4da;
+        font:
+          15px/1.45 system-ui,
+          sans-serif;
+        margin: 0;
+        padding: 20px 24px;
+      }
+      h1 {
+        font-size: 20px;
+        font-weight: 600;
+        margin: 0 0 4px;
+      }
+      p.lede {
+        color: #9aabb5;
+        margin: 0 0 16px;
+      }
+      a {
+        color: #7fb7c9;
+      }
+      .layout {
+        display: flex;
+        gap: 20px;
+        align-items: flex-start;
+        flex-wrap: wrap;
+      }
+      .stage {
+        background: #000;
+        width: 960px;
+        max-width: 100%;
+        aspect-ratio: 16 / 9;
+      }
+      .stage canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+      .controls {
+        background: #172733;
+        border-radius: 8px;
+        padding: 14px 16px;
+        width: 320px;
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 6px 0;
+        min-height: 32px;
+      }
+      .row label {
+        flex: 0 0 110px;
+        color: #9aabb5;
+      }
+      .row input[type='range'] {
+        flex: 1;
+      }
+      .row output {
+        flex: 0 0 38px;
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+      }
+      select,
+      input[type='number'],
+      button {
+        background: #1f3342;
+        color: #e8e4da;
+        border: 1px solid #5e6f7a;
+        border-radius: 4px;
+        min-height: 32px;
+        padding: 0 8px;
+        font: inherit;
+      }
+      button {
+        cursor: pointer;
+      }
+      button:focus-visible,
+      select:focus-visible,
+      input:focus-visible {
+        outline: 2px solid #d9a441;
+        outline-offset: 2px;
+      }
+      h2 {
+        font-size: 15px;
+        font-weight: 600;
+        margin: 14px 0 4px;
+        color: #e8e4da;
+      }
+      .transport {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        margin-top: 10px;
+        width: 960px;
+        max-width: 100%;
+      }
+      .transport input[type='range'] {
+        flex: 1;
+      }
+      .readout {
+        color: #9aabb5;
+        font-variant-numeric: tabular-nums;
+        min-width: 150px;
+        text-align: right;
+      }
+      #status {
+        color: #9aabb5;
+        margin-top: 8px;
+        white-space: pre-wrap;
+        font-size: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Visual materials</h1>
+    <p class="lede">
+      Audition registered visual materials against synthetic signatures. Not part of the instrument.
+      <a href="../">All harness pages</a>
+    </p>
+    <div class="layout">
+      <div>
+        <div class="stage"><canvas id="stage" aria-label="Material preview"></canvas></div>
+        <div class="transport">
+          <button id="play" type="button">Pause</button>
+          <input id="seek" type="range" min="0" max="1000" step="1" value="0" aria-label="Seek" />
+          <span class="readout" id="time">0.00 s</span>
+          <span class="readout" id="fps">– fps</span>
+        </div>
+        <div id="status" role="status"></div>
+      </div>
+      <form class="controls" id="controls" onsubmit="return false;">
+        <div class="row">
+          <label for="material">Material</label
+          ><select id="material"></select>
+        </div>
+        <div class="row">
+          <label for="kind">Signature</label>
+          <select id="kind">
+            <option value="wink">Wink</option>
+            <option value="sweep">Sweep</option>
+            <option value="swirl">Swirl</option>
+            <option value="still">Still</option>
+          </select>
+        </div>
+        <div class="row">
+          <label for="quality">Quality</label>
+          <select id="quality">
+            <option value="draft">Draft</option>
+            <option value="standard" selected>Standard</option>
+            <option value="high">High</option>
+          </select>
+        </div>
+        <div class="row">
+          <label for="seed">Seed</label
+          ><input id="seed" type="number" min="0" max="999999" value="1" />
+        </div>
+        <div class="row">
+          <label for="tail">Tail (s)</label
+          ><input id="tail" type="number" min="0" max="10" step="0.5" value="3" />
+        </div>
+        <h2>Properties</h2>
+        <div id="props"></div>
+        <div class="row"><button id="baseline" type="button">Reset to baseline</button></div>
+      </form>
+    </div>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
