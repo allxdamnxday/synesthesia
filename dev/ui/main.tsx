@@ -4,8 +4,10 @@ import '../../src/app/tokens.css';
 import '../../src/app/global.css';
 import { Button } from '../../src/ui/Button';
 import { SegmentedControl } from '../../src/ui/SegmentedControl';
+import { SnapshotBar, type Slot } from '../../src/ui/SnapshotBar';
 import { Slider, type SliderPhase } from '../../src/ui/Slider';
 import { Toggle } from '../../src/ui/Toggle';
+import { Transport } from '../../src/ui/Transport';
 
 declare global {
   interface Window {
@@ -20,8 +22,13 @@ function Gallery() {
   const [locked, setLocked] = useState(true);
   const [palette, setPalette] = useState(0);
   const [linked, setLinked] = useState(true);
+  const [playing, setPlaying] = useState(false);
+  const [loop, setLoop] = useState(false);
+  const [position, setPosition] = useState(0);
+  const [stored, setStored] = useState<Partial<Record<Slot, boolean>>>({});
+  const [activeSlot, setActiveSlot] = useState<Slot | null>(null);
   return (
-    <main style={{ padding: 32, maxWidth: 420, display: 'grid', gap: 24 }}>
+    <main style={{ padding: 32, maxWidth: 800, display: 'grid', gap: 24 }}>
       <h1>UI controls</h1>
       <div data-testid="viscosity">
         <Slider
@@ -66,6 +73,30 @@ function Gallery() {
         <Button variant="quiet">Cancel</Button>
       </div>
       <output data-testid="value">{viscosity.toFixed(3)}</output>
+      <div style={{ width: 760 }}>
+        <Transport
+          playing={playing}
+          onPlayPause={() => setPlaying(!playing)}
+          loop={loop}
+          onLoopChange={setLoop}
+          position={position}
+          duration={11}
+          onSeek={(t) => setPosition(t)}
+          markers={[0.6, 1.15, 2.8, 3.35]}
+          tailStart={8}
+        >
+          <SnapshotBar
+            stored={stored}
+            active={activeSlot}
+            onStore={(slot) => {
+              setStored({ ...stored, [slot]: true });
+              setActiveSlot(slot);
+            }}
+            onRecall={(slot) => setActiveSlot(slot)}
+          />
+        </Transport>
+      </div>
+      <output data-testid="position">{position.toFixed(1)}</output>
     </main>
   );
 }

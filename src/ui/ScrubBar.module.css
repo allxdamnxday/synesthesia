@@ -1,0 +1,70 @@
+.scrub {
+  position: relative;
+  height: var(--hit-min);
+  flex: 1;
+  min-width: 120px;
+  cursor: pointer;
+  touch-action: none;
+  border-radius: var(--radius-sm);
+}
+
+.scrub:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+
+.rail {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 6px;
+  transform: translateY(-50%);
+  background: color-mix(in srgb, var(--color-mist) 30%, transparent);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.tail {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  background: repeating-linear-gradient(
+    135deg,
+    transparent 0 4px,
+    color-mix(in srgb, var(--color-deep) 60%, transparent) 4px 7px
+  );
+}
+
+.played {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  background: var(--color-honey);
+}
+
+.marker {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--color-water);
+}
+
+.head {
+  position: absolute;
+  top: 50%;
+  width: 4px;
+  height: 20px;
+  margin-left: -2px;
+  transform: translateY(-50%);
+  background: var(--color-pearl);
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+.dragging .head {
+  height: 24px;
+}

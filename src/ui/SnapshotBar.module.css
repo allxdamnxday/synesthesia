@@ -1,0 +1,32 @@
+.bar {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.slot {
+  width: var(--hit-min);
+  height: var(--hit-min);
+  border-radius: var(--radius-md);
+  border: 1px dashed color-mix(in srgb, var(--color-mist) 55%, transparent);
+  background: transparent;
+  color: var(--color-mist);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-strong);
+}
+
+.slot:hover {
+  color: var(--color-pearl);
+  border-color: var(--color-pearl);
+}
+
+.full {
+  border-style: solid;
+  background: var(--color-basin-raised);
+  color: var(--color-pearl);
+}
+
+.active {
+  border-color: var(--color-honey);
+  color: var(--color-honey);
+  box-shadow: inset 0 0 0 1px var(--color-honey);
+}

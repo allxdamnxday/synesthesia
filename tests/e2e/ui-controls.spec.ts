@@ -67,3 +67,27 @@ test.describe('slider', () => {
     await expect(track).not.toHaveAttribute('aria-disabled', 'true');
   });
 });
+
+test.describe('transport', () => {
+  test('scrubbing seeks and snapshots store then recall', async ({ page }) => {
+    await page.goto('./dev/ui/');
+    const scrub = page.getByRole('slider', { name: 'Playhead' });
+    const box = await scrub.boundingBox();
+    if (!box) throw new Error('no scrub box');
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+    await expect(page.getByTestId('position')).toHaveText('5.5');
+    await scrub.press('ArrowRight');
+    await expect(page.getByTestId('position')).toHaveText('6.5');
+    await expect(page.getByText('0:06 / 0:11')).toBeVisible();
+
+    await page.getByRole('button', { name: 'Store snapshot B' }).click();
+    const b = page.getByRole('button', { name: /Snapshot B: recall/ });
+    await expect(b).toHaveAttribute('aria-pressed', 'true');
+
+    await page.getByRole('button', { name: 'Play' }).click();
+    await expect(page.getByRole('button', { name: 'Pause' })).toBeVisible();
+    const loop = page.getByRole('button', { name: 'Loop' });
+    await loop.click();
+    await expect(loop).toHaveAttribute('aria-pressed', 'true');
+  });
+});
