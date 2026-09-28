@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Library storage harness</title>
+    <style>
+      body {
+        background: #0e1a24;
+        color: #e8e4da;
+        font:
+          16px/1.5 system-ui,
+          sans-serif;
+        padding: 32px;
+        max-width: 760px;
+        margin: auto;
+      }
+      p {
+        color: #9aabb5;
+      }
+      code {
+        color: #7fb7c9;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Library storage harness</h1>
+    <p>
+      Exposes the library API as <code>window.lib</code> for
+      <code>tests/e2e/library-storage.spec.ts</code>. It uses this browser's real Synesthesia
+      library, so run it in a fresh profile.
+    </p>
+    <p id="status">Loading…</p>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
