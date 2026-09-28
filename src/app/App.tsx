@@ -8,6 +8,8 @@ import { SettingsScreen } from '../screens/Settings/SettingsScreen';
 import { SignatureScreen } from '../screens/Signature/SignatureScreen';
 import { StudioScreen } from '../screens/Studio/StudioScreen';
 import styles from './App.module.css';
+import { DedicationSplash } from './DedicationSplash';
+import { Introduction } from './Introduction';
 import { href, matchPath, useHashPath } from './router';
 import { StartupGate } from './StartupGate';
 
@@ -81,6 +83,8 @@ export function App() {
         </header>
         <main className={styles.main}>{resolve(path)}</main>
       </div>
+      <Introduction />
+      <DedicationSplash />
     </StartupGate>
   );
 }

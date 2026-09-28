@@ -68,11 +68,14 @@ export function SettingsScreen() {
     };
   }, [refreshStorage]);
 
+  // Controls respond at once; the change is saved in the background.
   const update = async (patch: Partial<AppSettings>) => {
+    setSettings((current) => (current ? { ...current, ...patch } : current));
     try {
       setSettings(await updateSettings(patch));
     } catch (err) {
       setMessage(userMessage(err));
+      setSettings(await getSettings());
     }
   };
 
