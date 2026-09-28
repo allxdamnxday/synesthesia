@@ -265,6 +265,10 @@ export interface ProbeResult {
   levelDiffDb: number;
   /** Largest sample-to-sample jump anywhere in the preview recording. */
   maxJump: number;
+  /** Where it happened: seconds after the (composition time 0) start of playback. */
+  maxJumpAtSec: number;
+  /** Envelopes of the whole preview recording, from the start of playback. */
+  recording: { rms: number[]; jump: number[]; click: number[] };
   /** Largest sample-to-sample jump in the offline render. */
   offlineMaxJump: number;
   /** Composition seconds per wall second while playing. */
@@ -274,6 +278,17 @@ export interface ProbeResult {
   /** Composition times sampled every ~50 ms from compositionTimeAt(). */
   times: number[];
   contextState: string;
+  /**
+   * Click check around each live action (edit, seek): the preview's largest second
+   * difference just after the action, and the largest in offline renders of the settings
+   * before and after it at the same composition times. A click makes the first far larger.
+   */
+  actions: {
+    kind: 'edit' | 'seek';
+    recSec: number;
+    previewClick: number;
+    referenceClick: number;
+  }[];
 }
 
 /**
@@ -331,6 +346,16 @@ async function previewProbe(opts: ProbeOptions): Promise<ProbeResult> {
   const wallTimes: number[] = [];
   let edited = false;
   let sought = false;
+  let currentProps = props;
+  const actions: {
+    kind: 'edit' | 'seek';
+    ctx: number;
+    compFrom: number;
+    compTo: number;
+    before: PropertyValues;
+    after: PropertyValues;
+  }[] = [];
+  const soon = (): number => ctx.currentTime + 0.03;
   const limit = (opts.playSeconds ?? sampler.duration + 1) * 1000;
   await new Promise<void>((resolve) => {
     const poll = setInterval(() => {
@@ -340,11 +365,33 @@ async function previewProbe(opts: ProbeOptions): Promise<ProbeResult> {
       wallTimes.push(now);
       if (!edited && opts.editAt !== undefined && elapsed >= opts.editAt) {
         edited = true;
-        engine.setProps({ ...props, ...opts.editProps });
+        const next = { ...props, ...opts.editProps };
+        const at = soon();
+        const comp = engine.timeAtContextTime(at);
+        actions.push({
+          kind: 'edit',
+          ctx: at,
+          compFrom: comp,
+          compTo: comp,
+          before: currentProps,
+          after: next,
+        });
+        currentProps = next;
+        engine.setProps(next);
       }
       if (!sought && opts.seekAt !== undefined && elapsed >= opts.seekAt) {
         sought = true;
-        engine.seek(opts.seekTo ?? 0);
+        const at = soon();
+        const target = opts.seekTo ?? 0;
+        actions.push({
+          kind: 'seek',
+          ctx: at,
+          compFrom: engine.timeAtContextTime(at),
+          compTo: target,
+          before: currentProps,
+          after: currentProps,
+        });
+        engine.seek(target);
       }
       if (ended || now - startWall > limit) {
         clearInterval(poll);
@@ -385,12 +432,32 @@ async function previewProbe(opts: ProbeOptions): Promise<ProbeResult> {
   const pl = left.slice(Math.max(0, startFrame), Math.max(0, startFrame) + n);
   const pr = right.slice(Math.max(0, startFrame), Math.max(0, startFrame) + n);
   const previewEnv = envelopes([pl, pr], sr, 0.01);
-  const fullEnv = envelopes([left, right], sr, 0.01);
+  const fromStart = Math.max(0, startFrame);
+  const fullEnv = envelopes([left.slice(fromStart), right.slice(fromStart)], sr, 0.01);
+  const maxJump = Math.max(0, ...fullEnv.jump);
 
   const offlineBuffer = await render({ ...opts, normalize: false });
   const oc = channelsOf(offlineBuffer).map((c) => c.slice(0, n));
   const offlineEnv = envelopes(oc, sr, 0.01);
   const offlineFull = envelopes(channelsOf(offlineBuffer), sr, 0.01);
+
+  // Click check around each action.
+  const clickMax = (env: number[], fromSec: number, toSec: number): number =>
+    Math.max(0, ...env.slice(Math.max(0, Math.floor(fromSec / 0.01)), Math.ceil(toSec / 0.01)));
+  const actionResults: ProbeResult['actions'] = [];
+  for (const a of actions) {
+    const recSec = a.ctx - offset;
+    const previewClick = clickMax(fullEnv.click, recSec - 0.02, recSec + 0.15);
+    let referenceClick = 0;
+    for (const p of [a.before, a.after]) {
+      const ref = await render({ ...opts, props: p, normalize: false });
+      const env = envelopes(channelsOf(ref), sr, 0.01);
+      for (const comp of [a.compFrom, a.compTo]) {
+        referenceClick = Math.max(referenceClick, clickMax(env.click, comp - 0.05, comp + 0.2));
+      }
+    }
+    actionResults.push({ kind: a.kind, recSec, previewClick, referenceClick });
+  }
 
   const sumP = previewEnv.rms.reduce((s, x) => s + x, 0);
   const sumO = offlineEnv.rms.reduce((s, x) => s + x, 0);
@@ -402,13 +469,16 @@ async function previewProbe(opts: ProbeOptions): Promise<ProbeResult> {
     offlineRms: offlineEnv.rms,
     correlation: correlation(previewEnv.rms, offlineEnv.rms),
     levelDiffDb: sumO > 0 && sumP > 0 ? 20 * Math.log10(sumP / sumO) : Number.NaN,
-    maxJump: Math.max(0, ...fullEnv.jump),
+    maxJump,
+    maxJumpAtSec: fullEnv.jump.indexOf(maxJump) * fullEnv.hopSec,
+    recording: { rms: fullEnv.rms, jump: fullEnv.jump, click: fullEnv.click },
     offlineMaxJump: Math.max(0, ...offlineFull.jump),
     clockRate: rateSamples ? clockRateOf(times, wallTimes) : Number.NaN,
     ended,
     wraps,
     times,
     contextState,
+    actions: actionResults,
   };
 }
 
