@@ -183,11 +183,12 @@ test('play, compare, draw by chance, save and reopen a composition', async ({ pa
   await expect(page.getByRole('button', { name: 'Visual Signature' })).toBeVisible();
   await expect(page.getByRole('radiogroup', { name: 'Show readout' })).toBeVisible();
   expect(await position(page)).toBeCloseTo(paused, 2);
-  await page.keyboard.press('Space');
-  await waitForPlayhead(page, 1.15, 1.35);
-  expect((await brightness(page, wake)).lit).toBeGreaterThan(0.001);
-  await page.keyboard.press('Space');
-  await expect(page.getByRole('button', { name: 'Play' })).toBeVisible();
+  // Seek (paused) to the eye opening: its strokes show.
+  const duration = Number(await playhead(page).getAttribute('aria-valuemax'));
+  await clickAt(page, playhead(page), 1.25 / duration);
+  await expect.poll(() => position(page)).toBeGreaterThan(1.1);
+  expect(await position(page)).toBeLessThan(1.4);
+  await expect.poll(async () => (await brightness(page, wake)).lit).toBeGreaterThan(0.001);
   await page.getByRole('button', { name: 'Visual Signature' }).click();
   await page.getByRole('option', { name: /^Water/ }).click();
   await expect(page.getByRole('button', { name: 'Visual Water' })).toBeVisible();

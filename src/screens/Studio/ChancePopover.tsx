@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef } from 'react';
-import { useStudioStore } from '../../state/studioStore';
+import { useStudioStore, type ChancePopoverHandle } from '../../state/studioStore';
 import { chanceSoundMetas, chanceVisualMetas } from '../../studio/catalog';
 import { Button } from '../../ui/Button';
 import { Checkbox } from '../../ui/Checkbox';
@@ -44,20 +44,18 @@ export function ChanceButton() {
     popover.style.setProperty('position-anchor', anchorName);
   }, [anchorName]);
 
-  // The C key (through the store) opens and closes it too.
+  // The popover itself is the truth: its button (a popover invoker), Esc and clicks
+  // elsewhere open and close it natively, and the C key toggles it through this handle.
+  // The store only mirrors whether it is open.
   useEffect(() => {
     const popover = popoverRef.current;
     if (!popover) return;
-    const isOpen = popover.matches(':popover-open');
-    if (open && !isOpen) popover.showPopover();
-    else if (!open && isOpen) popover.hidePopover();
-  }, [open]);
-
-  // The button (a popover invoker), Esc and clicks elsewhere open and close it natively;
-  // the store follows.
-  useEffect(() => {
-    const popover = popoverRef.current;
-    if (!popover) return;
+    const handle: ChancePopoverHandle = {
+      toggle: () => popover.togglePopover(),
+      close: () => {
+        if (popover.matches(':popover-open')) popover.hidePopover();
+      },
+    };
     const onBeforeToggle = (event: Event) => {
       if ((event as ToggleEvent).newState !== 'open' || supportsAnchors) return;
       const r = anchorRef.current?.getBoundingClientRect();
@@ -67,16 +65,18 @@ export function ChanceButton() {
     };
     const onToggle = (event: Event) => {
       const nowOpen = (event as ToggleEvent).newState === 'open';
-      if (useStudioStore.getState().chanceOpen !== nowOpen) store().setChanceOpen(nowOpen);
+      store().setChanceOpen(nowOpen);
       if (nowOpen) {
         popover.querySelector<HTMLElement>('input, button')?.focus();
       } else if (popover.contains(document.activeElement)) {
         anchorRef.current?.querySelector('button')?.focus();
       }
     };
+    store().attachChancePopover(handle);
     popover.addEventListener('beforetoggle', onBeforeToggle);
     popover.addEventListener('toggle', onToggle);
     return () => {
+      store().detachChancePopover(handle);
       popover.removeEventListener('beforetoggle', onBeforeToggle);
       popover.removeEventListener('toggle', onToggle);
     };
@@ -90,7 +90,7 @@ export function ChanceButton() {
   };
 
   const draw = () => {
-    if (store().drawChance()) store().setChanceOpen(false);
+    if (store().drawChance()) popoverRef.current?.hidePopover();
   };
 
   return (
@@ -169,7 +169,9 @@ export function ChanceButton() {
           </p>
         )}
         <div className={styles.actions}>
-          <Button onClick={() => store().setChanceOpen(false)}>Close</Button>
+          <Button popoverTarget={popoverId} popoverTargetAction="hide">
+            Close
+          </Button>
           <Button variant="primary" onClick={draw} disabled={!canDraw}>
             Draw
           </Button>

@@ -107,6 +107,12 @@ export interface TransportController {
   renderStill(options: StillOptions): Promise<string | null>;
 }
 
+/** The Draw by chance popover, which opens and closes itself (the store mirrors it). */
+export interface ChancePopoverHandle {
+  toggle(): void;
+  close(): void;
+}
+
 export interface ChanceOptions {
   /** Eligible materials (ids); all by default. */
   visualPool: string[];
@@ -153,9 +159,11 @@ export interface StudioState {
   quality: Quality | null;
   presentation: boolean;
   renderOpen: boolean;
+  /** Mirrors the Draw by chance popover. */
   chanceOpen: boolean;
   saving: boolean;
   controller: TransportController | null;
+  chancePopover: ChancePopoverHandle | null;
 
   load: (target: StudioTarget) => Promise<void>;
   /** Leaving the Studio: write any pending autosave and close the session. */
@@ -186,7 +194,12 @@ export interface StudioState {
   unlock: (id: string) => void;
   drawChance: () => boolean;
   setChanceOptions: (patch: Partial<ChanceOptions>) => void;
+  /** The popover reports whether it is open. */
   setChanceOpen: (open: boolean) => void;
+  attachChancePopover: (handle: ChancePopoverHandle) => void;
+  detachChancePopover: (handle: ChancePopoverHandle) => void;
+  /** Open or close Draw by chance (the C key). */
+  toggleChance: () => void;
   undo: () => void;
   redo: () => void;
   storeSnapshot: (slot: SnapshotSlot) => void;
@@ -374,6 +387,7 @@ export const useStudioStore = create<StudioState>()((set, get) => {
     chanceOpen: false,
     saving: false,
     controller: null,
+    chancePopover: null,
 
     async load(target) {
       const current = get();
@@ -587,6 +601,11 @@ export const useStudioStore = create<StudioState>()((set, get) => {
     },
     setChanceOptions: (patch) => set((s) => ({ chance: { ...s.chance, ...patch } })),
     setChanceOpen: (chanceOpen) => set({ chanceOpen }),
+    attachChancePopover: (chancePopover) => set({ chancePopover }),
+    detachChancePopover: (handle) => {
+      if (get().chancePopover === handle) set({ chancePopover: null, chanceOpen: false });
+    },
+    toggleChance: () => get().chancePopover?.toggle(),
 
     undo: () => {
       const { composition } = get();
@@ -727,12 +746,16 @@ export const useStudioStore = create<StudioState>()((set, get) => {
 
     setPresentation: (presentation) => {
       if (presentation === get().presentation) return;
-      set({ presentation, chanceOpen: presentation ? false : get().chanceOpen });
+      if (presentation) get().chancePopover?.close();
+      set({ presentation });
       usePresentationStore.getState().setActive(presentation);
     },
     setRenderOpen: (renderOpen) => {
-      if (renderOpen) get().controller?.pause();
-      set({ renderOpen, chanceOpen: false });
+      if (renderOpen) {
+        get().controller?.pause();
+        get().chancePopover?.close();
+      }
+      set({ renderOpen });
     },
   };
 });

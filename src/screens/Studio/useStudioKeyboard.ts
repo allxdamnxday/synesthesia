@@ -26,7 +26,7 @@ function run(command: StudioCommand): void {
       s.storeSnapshot(command.slot);
       break;
     case 'chance':
-      s.setChanceOpen(!s.chanceOpen);
+      s.toggleChance();
       break;
     case 'save':
       void s.save();
