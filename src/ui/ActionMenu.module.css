@@ -1,0 +1,53 @@
+/*
+ * The menu lives in the top layer (popover). ActionMenu names its button as the anchor;
+ * the menu sits below the button's right edge and flips above when there's no room.
+ * Without anchor positioning, ActionMenu sets top/right itself.
+ */
+.menu {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  top: anchor(bottom);
+  right: anchor(right);
+  margin-block: 4px;
+  position-try-fallbacks: flip-block;
+  min-width: 180px;
+  padding: var(--space-1);
+  border: 1px solid color-mix(in srgb, var(--color-pearl) 14%, transparent);
+  border-radius: var(--radius-md);
+  background: var(--color-basin);
+  color: var(--color-pearl);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.45);
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: var(--hit-min);
+  padding: var(--space-1) var(--space-3);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  font-size: var(--font-size-sm);
+  text-align: left;
+  color: var(--color-pearl);
+}
+
+.item:hover:not(:disabled),
+.item:focus-visible {
+  background: var(--color-basin-raised);
+}
+
+.item:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--color-honey);
+}
+
+.item:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.danger {
+  color: var(--color-alert);
+}

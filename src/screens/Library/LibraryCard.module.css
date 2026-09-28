@@ -1,0 +1,75 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.thumb {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--color-deep);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-silt) 35%, transparent);
+  cursor: pointer;
+  transition: box-shadow var(--transition-fast);
+}
+
+.thumb:hover {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-pearl) 35%, transparent);
+}
+
+.image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* The sketch is a small image; keep strokes soft rather than blocky when enlarged. */
+  image-rendering: auto;
+}
+
+.placeholder {
+  display: block;
+  width: 100%;
+  height: 100%;
+  color: color-mix(in srgb, var(--color-silt) 55%, transparent);
+  background: var(--color-basin);
+}
+
+.body {
+  padding: var(--space-3) var(--space-1) 0;
+  min-width: 0;
+}
+
+.name {
+  margin: 0 0 var(--space-1);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-strong);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.detail {
+  margin: 0;
+  color: var(--color-mist);
+  font-size: var(--font-size-sm);
+}
+
+.warning {
+  margin: var(--space-1) 0 0;
+  color: var(--color-alert);
+  font-size: var(--font-size-sm);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.actions > button:first-child {
+  padding-inline: var(--space-1);
+}
