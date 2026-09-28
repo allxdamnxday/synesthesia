@@ -10,19 +10,29 @@
 // Moving shapes carry their own texture, which moves with them. Coordinates are pixels,
 // y down; "clockwise" means clockwise as seen on screen.
 //
-//   dot-right.mp4      textured dot crossing left → right (stays inside the frame)
-//   dot-up.mp4         textured dot rising bottom → top
-//   ring-expand.mp4    concentric rings, still for 0.4 s, then growing outward past the
-//                      frame edges
-//   ring-contract.mp4  the same, shrinking inward from past the frame edges
-//   bar-rotate-cw.mp4  long textured bar through the center, turning clockwise
-//   still.mp4          nothing moves
-//   still-noise.mp4    nothing moves, plus seeded per-frame sensor noise
-//   dot-stop.mp4       dot rests, moves right at constant speed, stops abruptly, rests
+//   dot-right.mp4               textured dot crossing left → right (stays inside the frame)
+//   dot-up.mp4                  textured dot rising bottom → top
+//   ring-expand.mp4             concentric rings, still for 0.4 s, then growing outward
+//                               past the frame edges
+//   ring-contract.mp4           the same, shrinking inward from past the frame edges
+//   ring-expand-inside.mp4      one ring, still for 0.4 s, then growing; always well
+//                               inside the frame
+//   ring-contract-inside.mp4    the same ring shrinking
+//   bar-rotate-cw.mp4           long textured bar through the center, turning clockwise
+//                               (longer than the frame diagonal)
+//   bar-rotate-cw-inside.mp4    short bar turning clockwise, well inside the frame
+//   still.mp4                   nothing moves
+//   still-noise.mp4             nothing moves, plus seeded per-frame sensor noise
+//   dot-stop.mp4                dot rests, moves right at constant speed, stops
+//                               abruptly, rests
+//   pan-right.mp4               the whole picture slides right the whole time, like a
+//                               camera pan (movement that never stops)
 //
-// Why the rings and the bar reach past the frame: SPEC 8.2's divergence and curl are
-// means of spatial derivatives over the whole grid, which add up to the flow across (and
-// around) the frame border. Movement that stays inside the frame reads ≈ 0 on both.
+// Two kinds of rings and bars: SPEC 8.2 first defined divergence and curl as grid means
+// of spatial derivatives, which add up to flow across (and around) the frame border, so
+// the first fixtures reach past the frame. Extraction now fits an affine flow to the
+// moving cells instead (see src/signature/features.ts); the `-inside` fixtures prove
+// that movement that stays inside the frame registers.
 import { spawn } from 'node:child_process';
 import { mkdirSync, statSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -48,23 +58,23 @@ function rng(seed) {
   };
 }
 
-/** Smooth value noise over the frame, 0..1 (two octaves). */
-function valueNoise(seed) {
+/** Smooth value noise, width × height (default: the frame), 0..1 (two octaves). */
+function valueNoise(seed, width = W, height = H) {
   const random = rng(seed);
-  const out = new Float32Array(W * H);
+  const out = new Float32Array(width * height);
   for (const [cell, amp] of [
     [20, 0.6],
     [7, 0.4],
   ]) {
-    const gw = Math.ceil(W / cell) + 2;
-    const gh = Math.ceil(H / cell) + 2;
+    const gw = Math.ceil(width / cell) + 2;
+    const gh = Math.ceil(height / cell) + 2;
     const lattice = Array.from({ length: gw * gh }, () => random());
-    for (let y = 0; y < H; y++) {
+    for (let y = 0; y < height; y++) {
       const fy = (y + 0.5) / cell;
       const y0 = Math.floor(fy);
       const ty = fy - y0;
       const sy = ty * ty * (3 - 2 * ty);
-      for (let x = 0; x < W; x++) {
+      for (let x = 0; x < width; x++) {
         const fx = (x + 0.5) / cell;
         const x0 = Math.floor(fx);
         const tx = fx - x0;
@@ -74,12 +84,16 @@ function valueNoise(seed) {
         const c = lattice[(y0 + 1) * gw + x0];
         const d = lattice[(y0 + 1) * gw + x0 + 1];
         const top = a + (b - a) * sx;
-        out[y * W + x] += amp * (top + (c + (d - c) * sx - top) * sy);
+        out[y * width + x] += amp * (top + (c + (d - c) * sx - top) * sy);
       }
     }
   }
   return out;
 }
+
+/** A wider picture for the pan: 480 px wide, with more contrast than the background. */
+const PAN_WIDTH = 480;
+const PAN_PICTURE = valueNoise(2718, PAN_WIDTH, H).map((n) => 60 + 120 * n);
 
 /** The static background: mid gray with a light texture (≈ 92..128). */
 const BACKGROUND = valueNoise(8519).map((n) => 92 + 36 * n);
@@ -131,6 +145,19 @@ function drawRings(img, offset, spacing, width) {
       const profile = 0.5 * (1 + Math.cos((2 * Math.PI * d) / width));
       const fade = Math.min(1, r / 16);
       over(img, y * W + x, 205, profile * fade);
+    }
+  }
+}
+
+/** One soft bright ring (raised-cosine profile) about the center. */
+function drawRing(img, radius, width) {
+  const cx = W / 2;
+  const cy = H / 2;
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const d = Math.abs(Math.hypot(x + 0.5 - cx, y + 0.5 - cy) - radius);
+      if (d >= width / 2) continue;
+      over(img, y * W + x, 205, 0.5 * (1 + Math.cos((2 * Math.PI * d) / width)));
     }
   }
 }
@@ -261,6 +288,50 @@ const FIXTURES = [
       const img = blank();
       const moving = Math.min(48, Math.max(0, f - 8));
       drawDot(img, 60 + 4 * moving, 90, 22);
+      return img;
+    },
+  },
+  {
+    // Radius 14 px for 12 frames, grows 1.5 px/frame to 72.5 px over 39 frames, then holds.
+    // Its outer edge stays at least 11 px from the frame edge.
+    file: 'ring-expand-inside.mp4',
+    frames: 75,
+    draw: (f) => {
+      const img = blank();
+      drawRing(img, 14 + 1.5 * Math.min(39, Math.max(0, f - 12)), 12);
+      return img;
+    },
+  },
+  {
+    file: 'ring-contract-inside.mp4',
+    frames: 75,
+    draw: (f) => {
+      const img = blank();
+      drawRing(img, 72.5 - 1.5 * Math.min(39, Math.max(0, f - 12)), 12);
+      return img;
+    },
+  },
+  {
+    // 120 × 20 px bar turning clockwise at 60°/s about the center; its corners stay
+    // within 61 px of the center, so at least 29 px from the frame edge.
+    file: 'bar-rotate-cw-inside.mp4',
+    frames: 75,
+    draw: (f) => {
+      const img = blank();
+      drawBar(img, -0.6 + (Math.PI / 3) * (f / FPS), 120, 20);
+      return img;
+    },
+  },
+  {
+    // The whole picture slides right 2 px/frame from the first frame to the last.
+    file: 'pan-right.mp4',
+    frames: 60,
+    draw: (f) => {
+      const img = new Float32Array(W * H);
+      const offset = 140 - 2 * f; // content moves right as the window moves left
+      for (let y = 0; y < H; y++) {
+        for (let x = 0; x < W; x++) img[y * W + x] = PAN_PICTURE[y * PAN_WIDTH + x + offset];
+      }
       return img;
     },
   },
