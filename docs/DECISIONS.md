@@ -99,10 +99,78 @@ Freeman reviews this after handover.
 - **Watch on the Mac:** Chrome on macOS encodes AAC with AudioToolbox, which usually primes
   2112 samples (~44 ms). If spike 3 shows about +44 ms there, the render must compensate.
 
+## 2026-09-28: Extraction runs entirely in one worker; OpenCV loads by fetch + eval
+- **Decision:** OpenCV.js loads inside a module worker by fetching the self-hosted file and
+  evaluating it (classic-worker `importScripts` as fallback). Its Emscripten module is
+  never awaited directly (its `then` resolves to itself). Decoding (Mediabunny) also stays
+  in the worker; one worker lives between jobs; Cancel terminates it.
+- **Why:** spikes 1 and 2 passed in dev and in the build with no special headers. Measured
+  here: OpenCV ready in ~0.5 s warm (0.9 s cold), longest main-thread gap 18 ms, blur +
+  Farneback 18.8 ms per 320×180 frame, heap flat over 200 runs; frame-accurate decode of
+  H.264 MP4/MOV with B-frames, 29.97 fps portrait with rotation metadata, and HEVC; all
+  samples closed. A 10 s landscape clip extracts in ~9 s.
+- **Alternatives:** main-thread decode with worker compute (SPEC 7.4 fallback; also works).
+
+## 2026-09-28: Extraction details
+- Frames are sampled at the middle of each 1/fps interval over the trim (no rounding onto
+  the previous frame; variable-frame-rate clips become constant-rate). Native fps comes
+  from packet statistics.
+- Frames are drawn with Mediabunny's CanvasSink using one combined orientation (container
+  rotation → user rotate → mirror), cropped to the focus area at native resolution, then
+  downscaled (mipmapped) and converted to grayscale (BT.601).
+- The trim is clamped to the clip's first and last frames and stored clamped.
+- Extraction smoothing uses a truncated window at the clip's ends (a shrinking symmetric
+  window left end frames raw and caused false onsets).
+- Error model: format problems show SPEC 8.1's message; over-60-s clips have their own
+  message; other failures show a plain message with technical detail for Diagnostics.
+
+## 2026-09-28: Three corrections to SPEC 8.2's feature definitions
+SPEC 8.2 states the intent of each feature; three formulas didn't deliver it, so the
+implementation follows the intent. To revisit with Freeman only if a material feels wrong.
+- **Divergence and curl** use a magnitude-weighted affine fit of the moving cells (trace
+  for divergence, antisymmetric part for curl) instead of grid means. Why: by the
+  divergence theorem, the grid mean of ∂u/∂x + ∂v/∂y only measures flow crossing the frame
+  border, so a wink inside a focus box read as neither expanding nor contracting.
+- **Onsets** need surge above both 2.5 σ(surge) and 3 × p95(energy) per second, and the
+  frame's peak (not its mean energy) above the noise floor, with the 100 ms refractory
+  period. Why: σ alone made steady movement fire onsets on tiny wobbles, and comparing a
+  whole-frame mean to a per-cell floor could hide small movements entirely.
+- **Analysis width applies to the longer side** of the (oriented, cropped) frame. Why:
+  portrait clips analysed at 320 wide cost 3.3× landscape (~25 s for 10 s here, likely
+  over the 60 s budget on a 2017 MacBook Pro); faces are usually filmed in portrait.
+- The automatic noise floor still assumes some stillness; clips that move the whole time
+  (water, curtains) get a hint on Prepare to raise Sensitivity manually.
+
+## 2026-09-28: Library storage and file handling
+- **Decision:** IndexedDB adds a `signatureMeta` store of lightweight list entries (name,
+  dates, hash, duration, grid, thumbnail) written in the same transaction as the signature,
+  so the Library lists without loading multi-megabyte fields. Persistent storage is
+  requested on the first save, not at startup.
+- **Import rules:** files keep their id unless it's taken; identical movement already in
+  the library is recognised, never duplicated; imports never overwrite. Deleting a
+  signature never deletes compositions: they wait and reconnect (by content hash) when the
+  signature returns. Renaming a signature updates the name stored in its compositions.
+- **Backup:** `.spbackup.zip` holds a manifest plus one file per item; restore checks
+  everything (including hashes) before writing, in one transaction. Settings and the
+  Studio's working state are not backed up.
+- **Thumbnails** draw each cell's speed-weighted axis of motion (a plain time average
+  cancels back-and-forth movement, so a wink drew almost nothing).
+- **Hashing:** −0 hashes as +0, because JSON writes −0 as 0.
+- **Alternatives:** list full signatures; overwrite on import; cascade deletes.
+
+## 2026-09-28: Sampler semantics
+- The tail holds the last frame actually played (frame 0 after a reversed pingpong pass);
+  direction interpolates and smooths on the circle; times before 0 rest on frame 0;
+  normalization is applied after strength, so strong settings saturate. Smoothing repeats
+  edge frames and is cached per window size.
+- **Why:** correct behaviour at ±π, and no jump in pan or position when the tail starts.
+- The synthetic test signatures now run through the real pipeline and sampler.
+
 ## Pending
 - Freeman's MacBook Pro model, year, chip, macOS version (Diagnostics' Copy report now
   records macOS version, CPU architecture and GPU whenever it runs on his Mac).
 - M0 spike outcomes on macOS (AAC encode, float render targets, performance).
 - Chance interpretation (SPEC 12.2), to confirm with Freeman after handover.
+- Dedication splash default: on ("Made for Freeman"), toggle in Settings.
 - Hosting: the plan is a free Vercel Hobby deployment from a private GitHub repo. It
   needs the builder's own Vercel login, so nothing has been deployed yet.
