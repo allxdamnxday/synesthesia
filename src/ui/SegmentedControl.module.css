@@ -21,7 +21,7 @@
 }
 
 .option {
-  min-height: 28px;
+  min-height: var(--hit-min);
   padding: 2px var(--space-3);
   border: 0;
   border-radius: 6px;

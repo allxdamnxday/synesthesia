@@ -84,7 +84,9 @@ export function Introduction() {
     }
   };
 
-  if (!open) return null;
+  // Only over the Library: if something (a dropped clip) takes the person elsewhere, step
+  // aside; it comes back on the Library until finished or skipped.
+  if (!open || path !== '/') return null;
   const current = STEPS[step] ?? STEPS[0];
   const last = step === STEPS.length - 1;
 

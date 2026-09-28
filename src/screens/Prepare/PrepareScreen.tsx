@@ -39,6 +39,7 @@ import styles from './PrepareScreen.module.css';
 import { frameDuration, safeFps, trimTooLong } from './trim';
 import { useObjectUrl } from './useObjectUrl';
 import { MAX_CLIP_SECONDS } from '../../signature/types';
+import { takePendingClip } from '../../state/pendingClip';
 
 const VIDEO_NAME = /\.(mp4|m4v|mov|webm|mkv|avi|3gp)$/i;
 
@@ -179,6 +180,19 @@ export function PrepareScreen(_props: { params?: Record<string, string> }) {
     },
     [openFile],
   );
+
+  // A clip dropped on another screen arrives here once. The ref keeps it across React's
+  // development double-mount, which cancels the first open.
+  const onFilesRef = useRef(onFiles);
+  useEffect(() => {
+    onFilesRef.current = onFiles;
+  }, [onFiles]);
+  const pendingRef = useRef<File | null | undefined>(undefined);
+  useEffect(() => {
+    if (pendingRef.current === undefined) pendingRef.current = takePendingClip();
+    const pending = pendingRef.current;
+    if (pending) onFilesRef.current([pending]);
+  }, []);
 
   // Drop a clip anywhere on the screen (and never let the browser open the file itself).
   useEffect(() => {

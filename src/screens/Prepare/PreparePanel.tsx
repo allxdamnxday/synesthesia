@@ -64,6 +64,7 @@ function SpeedSlider({ disabled }: { disabled?: boolean }) {
     <>
       <Slider
         label="Speed"
+        showValue
         value={speed}
         min={SPEED_RANGE.min}
         max={SPEED_RANGE.max}

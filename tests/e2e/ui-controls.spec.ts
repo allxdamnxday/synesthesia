@@ -78,7 +78,7 @@ test.describe('transport', () => {
     await expect(page.getByTestId('position')).toHaveText('5.5');
     await scrub.press('ArrowRight');
     await expect(page.getByTestId('position')).toHaveText('6.5');
-    await expect(page.getByText('0:06 / 0:11')).toBeVisible();
+    await expect(page.getByText('0:06.5 / 0:11.0')).toBeVisible();
 
     await page.getByRole('button', { name: 'Store snapshot B' }).click();
     const b = page.getByRole('button', { name: /Snapshot B: recall/ });

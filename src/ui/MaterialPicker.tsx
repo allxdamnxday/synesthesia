@@ -27,6 +27,9 @@ export function MaterialPicker({ kind, options, value, onChange, disabled }: Mat
   const [highlight, setHighlight] = useState(0);
   const rootRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
+  // Where the pointer was when the list opened: an option appearing under a still pointer
+  // must not steal the keyboard highlight, only real pointer movement may.
+  const pointerAtOpen = useRef<{ x: number; y: number } | null>(null);
   const current = options.find((o) => o.id === value);
 
   useEffect(() => {
@@ -82,7 +85,11 @@ export function MaterialPicker({ kind, options, value, onChange, disabled }: Mat
         aria-expanded={open}
         aria-controls={`${id}-list`}
         disabled={disabled}
-        onClick={() => (open ? setOpen(false) : openList())}
+        onClick={(e) => {
+          pointerAtOpen.current = { x: e.clientX, y: e.clientY };
+          if (open) setOpen(false);
+          else openList();
+        }}
         title={current?.description}
       >
         <span className={styles.kind}>{kind}</span>
@@ -115,7 +122,12 @@ export function MaterialPicker({ kind, options, value, onChange, disabled }: Mat
               ]
                 .filter(Boolean)
                 .join(' ')}
-              onPointerEnter={() => setHighlight(index)}
+              onPointerMove={(e) => {
+                const start = pointerAtOpen.current;
+                if (start && start.x === e.clientX && start.y === e.clientY) return;
+                pointerAtOpen.current = null;
+                setHighlight(index);
+              }}
               onClick={() => choose(index)}
             >
               <span className={styles.optionName}>{option.name}</span>
