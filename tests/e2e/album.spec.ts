@@ -336,10 +336,14 @@ interface AlbumHarness {
     summary: Record<string, { added: number; replaced: number }>;
   }>;
   restoreDamagedAlbum(): Promise<{ outcome: Outcome<unknown>; unchanged: boolean }>;
-  show(albumId: string, options: { frames: number; frameMs: number; fail: string[] }): void;
+  show(
+    albumId: string,
+    options: { frames: number; frameMs: number; fail: string[]; real?: boolean },
+  ): void;
   calls(): string[];
   recorded(): Array<{ albumId: string; compositionId: string; fileName: string }>;
   folderFiles(): Promise<string[]>;
+  folderFile(name: string): Promise<{ bytes: number; head: string }>;
 }
 
 declare global {
@@ -528,7 +532,7 @@ test('batch render with a stand-in renderer: progress, pause, a failure, a summa
   expect(errors).toEqual([]);
 });
 
-test('batch render explains that MP4 rendering is coming', async ({ page }) => {
+test('batch render starts with the kept tracks chosen', async ({ page }) => {
   await importSample(page);
   await openNewAlbum(page);
   await page.getByRole('spinbutton', { name: 'Tracks' }).fill('4');
@@ -538,7 +542,6 @@ test('batch render explains that MP4 rendering is coming', async ({ page }) => {
 
   await page.getByRole('button', { name: 'Batch render' }).click();
   const panel = page.getByRole('region', { name: 'Batch render' });
-  await expect(panel).toContainText('Rendering to MP4 isn’t part of this version yet.');
   // Kept tracks are chosen to start with; the others are a click away.
   await expect(panel.getByRole('checkbox', { name: 'Render track 03' })).toBeChecked();
   await expect(panel).toContainText('1 of 4 tracks chosen');
@@ -547,7 +550,42 @@ test('batch render explains that MP4 rendering is coming', async ({ page }) => {
   await panel.getByRole('button', { name: 'Select none' }).click();
   await panel.getByRole('button', { name: 'Select kept' }).click();
   await expect(panel).toContainText('1 of 4 tracks chosen');
-  await expect(panel.getByRole('button', { name: /^Render/ })).toBeDisabled();
   await panel.getByRole('button', { name: 'Close' }).click();
   await expect(panel).toBeHidden();
+});
+
+test('batch render makes real MP4s and composition files, recorded in the album', async ({
+  page,
+}) => {
+  test.setTimeout(240_000);
+  const errors = watchErrors(page);
+  const signatureId = await openHarness(page);
+  const album = await page.evaluate(
+    (id) => window.albumLib.createAlbum(id, { trackCount: 2 }),
+    signatureId,
+  );
+  await page.evaluate(
+    (id) => window.albumLib.show(id, { frames: 0, frameMs: 0, fail: [], real: true }),
+    album.id,
+  );
+  const panel = page.getByRole('region', { name: 'Batch render' });
+  await panel.getByRole('button', { name: 'Select all' }).click();
+  await panel.getByRole('button', { name: 'Choose folder…' }).click();
+  await panel.getByRole('button', { name: 'Render 2 tracks' }).click();
+
+  const finished = page.getByRole('region', { name: 'Batch render finished' });
+  await expect(finished).toBeVisible({ timeout: 180_000 });
+  await expect(finished.getByRole('status')).toContainText(/^Rendered 2 of 2 tracks/);
+  const files = await page.evaluate(() => window.albumLib.folderFiles());
+  const videos = files.filter((f) => f.endsWith('.mp4'));
+  expect(videos).toHaveLength(2);
+  expect(files.filter((f) => f.endsWith('.spcomp.json'))).toHaveLength(2);
+  for (const name of videos) {
+    const file = await page.evaluate((n) => window.albumLib.folderFile(n), name);
+    expect(file.bytes).toBeGreaterThan(20_000);
+    expect(file.head.slice(8, 16)).toBe('66747970'); // "ftyp": an MP4
+  }
+  const withRenders = await page.evaluate((id) => window.albumLib.getAlbumWithTracks(id), album.id);
+  expect(Object.values(withRenders?.album.renders ?? {}).sort()).toEqual(videos);
+  expect(errors).toEqual([]);
 });

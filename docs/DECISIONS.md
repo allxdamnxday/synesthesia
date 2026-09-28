@@ -282,6 +282,41 @@ implementation follows the intent. To revisit with Freeman only if a material fe
   whether the site may download multiple files). Album files can be imported from the
   Library.
 
+## 2026-09-28: MP4 render
+- **Fast start everywhere:** Mediabunny `fastStart: 'reserve'`, so even files streamed into a
+  folder have their index at the front.
+- **Sound interleaved with frames:** the rendered sound goes to the encoder in 1 s pieces
+  about a second ahead of the frames (spike 3's finding about streaming), rather than after
+  all frames as SPEC 10.2 words it. Sound length matches the video (N/fps).
+- **Every file has both tracks:** a muted field renders black frames or silence; with no
+  sound codec at all, the file is video only rather than refused.
+- **Never overwrite:** " (2)" etc. (case-insensitive), with the MP4 and sidecar sharing the
+  number; cancel or failure deletes the partial file.
+- **Background tabs:** the frame loop yields with a message channel, not a timer, so Chrome's
+  background-tab throttling can't stall an album render.
+- **Measured here:** 720p30 4.3–5.8 ms per frame, 1080p30 6.3–7.9 ms; a 10 s 1080p track in
+  ~3.5 s, so a 25-track album in ~1.5 minutes (a 2017 Mac is likely 5–10× slower). Repeat
+  renders give identical frames (framemd5) and identical decoded sound. Sound and picture
+  align within one frame at onsets (the picture trails by ≤ 1 frame, from fixed-step timing).
+- **Watch on the Mac:** AudioToolbox's AAC priming (~44 ms); if measured, start the audio at
+  minus the delay (Mediabunny trims it with an edit list).
+
+## 2026-09-28: Honey and Breath sounds
+- **Honey:** a hum at A2 through a resonant low-pass; the stutter is computed per control step
+  (so preview and render stutter at the same moments), its rate following the honey's own
+  slow, lagging motion (2–7 Hz); every onset starts a new syllable with a brief closure
+  (the "B" of "Broo"); the "oot" is a fall below the movement's peak; stacked voices sit on
+  harmonics (unison voices at 110 Hz beat slowly). Stutter depth is primary; Rigidity hidden.
+- **Breath:** seeded pink noise through a band of air; expansion swells the breath and opens
+  the band, contraction closes it; the band follows height; bandwidth follows spread ×
+  Dispersion; Elasticity narrows it and above 0.5 a whistle rises; Density adds a chest layer
+  and a hiss; Formant None / Ah / Oo. Rigidity hidden.
+- **Loudness calibration** by RMS against Water on the wink: Honey ~5 dB above Water (a low hum
+  sounds quieter), Breath ~3 dB below (noise sounds louder).
+- **Mixing rule (determinism):** never feed more than two sounding sources into one audio
+  input; Chrome sums three or more in an order that depends on memory addresses, which makes
+  renders non-bit-identical. Use `mixPairwise`.
+
 ## Pending
 - Freeman's MacBook Pro model, year, chip, macOS version (Diagnostics' Copy report now
   records macOS version, CPU architecture and GPU whenever it runs on his Mac).
