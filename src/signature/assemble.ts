@@ -67,7 +67,10 @@ export interface AssembleInput {
   source: KineticSignature['source'];
   preferredSpeed: number;
   options: Pick<ExtractionOptions, 'noiseFloorMode' | 'farneback'>;
-  /** The analysis width actually used (after clamping). */
+  /**
+   * The analysis size actually used, as its longer side in pixels (the `analysisWidth`
+   * option applies to the longer side of the oriented, cropped frame).
+   */
   analysisWidth: number;
   /** The window actually used (after normalizing). */
   temporalSmoothingFrames: number;
@@ -79,17 +82,47 @@ export interface AssembleInput {
   features: SignatureFeatures;
 }
 
-export async function assembleSignature(input: AssembleInput): Promise<SignatureBody> {
+/** The movement data exactly as it will be stored and hashed. */
+interface Prepared {
+  frameCount: number;
+  frameRate: number;
+  field: Float32Array;
+  features: SignatureFeatures;
+}
+
+function prepare(input: AssembleInput): Prepared {
   const { grid } = input;
   const valuesPerFrame = grid.cols * grid.rows * 2;
   if (valuesPerFrame === 0 || input.field.length % valuesPerFrame !== 0) {
     throw new Error('Field length does not match the grid');
   }
   const frameCount = input.field.length / valuesPerFrame;
-  const field = cleanField(input.field);
-  const features = cleanFeatures(input.features, frameCount);
-  const frameRate = cleanNumber(input.frameRate);
-  const contentHash = await computeContentHash({ frameRate, frameCount, grid, field, features });
+  return {
+    frameCount,
+    frameRate: cleanNumber(input.frameRate),
+    field: cleanField(input.field),
+    features: cleanFeatures(input.features, frameCount),
+  };
+}
+
+/** The signature body with the content hash computed (SPEC 8.1 step 12). */
+export async function assembleSignature(input: AssembleInput): Promise<SignatureBody> {
+  const prepared = prepare(input);
+  const contentHash = await computeContentHash({ ...prepared, grid: input.grid });
+  return bodyOf(input, prepared, contentHash);
+}
+
+/**
+ * The signature body with a given `contentHash`, synchronously. For synthetic
+ * signatures, whose hash is a fixed label; real signatures use assembleSignature().
+ */
+export function buildSignatureBody(input: AssembleInput, contentHash: string): SignatureBody {
+  return bodyOf(input, prepare(input), contentHash);
+}
+
+function bodyOf(input: AssembleInput, prepared: Prepared, contentHash: string): SignatureBody {
+  const { grid } = input;
+  const { frameCount, frameRate, field, features } = prepared;
   const p = input.options.farneback;
   return {
     format: SIGNATURE_FORMAT,

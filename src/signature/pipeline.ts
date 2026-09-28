@@ -1,13 +1,13 @@
 /**
  * The pure second half of extraction (SPEC 8.1 steps 8–12): noise floor → soft threshold
  * → extraction smoothing → features → stats → hash. The worker feeds it the pooled raw
- * field; tests feed it synthetic fields.
+ * field; synthetic signatures and tests feed it analytic fields.
  */
 import { assembleSignature, cleanField, type SignatureBody } from './assemble';
 import { computeFeatures } from './features';
 import { applySoftThreshold, resolveNoiseFloor } from './noiseFloor';
 import { normalizeWindow, smoothOverTime } from './temporalSmoothing';
-import type { ExtractionOptions, KineticSignature } from './types';
+import type { ExtractionOptions, KineticSignature, SignatureFeatures } from './types';
 
 export interface RawField {
   /** frameCount × rows × cols × 2 (u, v), field diagonals per second, before the floor. */
@@ -19,20 +19,23 @@ export interface RawField {
   fps: number;
 }
 
-export interface FinishInput {
-  raw: RawField;
-  options: Pick<
-    ExtractionOptions,
-    'noiseFloorMode' | 'manualNoiseFloor' | 'temporalSmoothingFrames' | 'farneback'
-  >;
-  /** The analysis width actually used. */
-  analysisWidth: number;
-  source: KineticSignature['source'];
-  preferredSpeed: number;
+export type ProcessOptions = Pick<
+  ExtractionOptions,
+  'noiseFloorMode' | 'manualNoiseFloor' | 'temporalSmoothingFrames'
+>;
+
+export interface ProcessedField {
+  /** Final field: after the soft threshold and extraction smoothing. */
+  field: Float32Array;
+  features: SignatureFeatures;
+  /** The noise floor used. */
+  floor: number;
+  /** The smoothing window used (after normalizing). */
+  window: number;
 }
 
-export async function finishSignature(input: FinishInput): Promise<SignatureBody> {
-  const { raw, options } = input;
+/** Floor → soft threshold → smoothing → features, synchronously. The input is not changed. */
+export function processRawField(raw: RawField, options: ProcessOptions): ProcessedField {
   const cells = raw.cols * raw.rows;
   if (raw.frameCount < 1) throw new Error('A signature needs at least one frame of movement');
   if (raw.field.length !== raw.frameCount * cells * 2) {
@@ -58,16 +61,31 @@ export async function finishSignature(input: FinishInput): Promise<SignatureBody
     fps: raw.fps,
     floor,
   });
+  return { field, features, floor, window };
+}
+
+export interface FinishInput {
+  raw: RawField;
+  options: ProcessOptions & Pick<ExtractionOptions, 'farneback'>;
+  /** The analysis size actually used, as its longer side in pixels. */
+  analysisWidth: number;
+  source: KineticSignature['source'];
+  preferredSpeed: number;
+}
+
+export async function finishSignature(input: FinishInput): Promise<SignatureBody> {
+  const { raw, options } = input;
+  const processed = processRawField(raw, options);
   return assembleSignature({
     source: input.source,
     preferredSpeed: input.preferredSpeed,
     options,
     analysisWidth: input.analysisWidth,
-    temporalSmoothingFrames: window,
-    noiseFloor: floor,
+    temporalSmoothingFrames: processed.window,
+    noiseFloor: processed.floor,
     frameRate: raw.fps,
     grid: { cols: raw.cols, rows: raw.rows },
-    field,
-    features,
+    field: processed.field,
+    features: processed.features,
   });
 }
