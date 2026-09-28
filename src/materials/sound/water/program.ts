@@ -29,13 +29,18 @@ import {
   type WaterVariation,
 } from './params';
 
-/** Seconds for the vertical-travel memory to fade (so pitch drifts home between gestures). */
+/**
+ * Seconds for the vertical-travel memory to fade while there is no vertical movement (so the
+ * pitch drifts home between gestures).
+ */
 export const TRAVEL_LEAK_SEC = 1.5;
 /** Travel (normalized flow × seconds) that covers ~76% of the pitch range (tanh(1)). */
 export const TRAVEL_SCALE = 0.2;
 /** Share of the range driven by travel and by the energy lift. */
 const TRAVEL_WEIGHT = 0.85;
 const LIFT_WEIGHT = 0.2;
+const LIFT_RISE_SEC = 0.04;
+const LIFT_RELAX_SEC = 1.0;
 /** Normalized surge that fires the onset buzz, and the level below which it re-arms. */
 const FIRE_SURGE = 0.5;
 const REARM_SURGE = 0.2;
@@ -169,9 +174,15 @@ export class WaterProgram implements ControlProgram<WaterState> {
     const accel = Math.min(1, Math.max(0, n.acceleration));
     const surge = Math.max(0, Math.min(1, n.surge));
 
-    // Pitch: vertical travel plus a little lift from any movement.
-    s.travel += (up - s.travel / TRAVEL_LEAK_SEC) * dt;
-    s.lift += (energy - s.lift) * onePole(energy > s.lift ? 0.04 : 0.5, dt);
+    // Pitch: vertical travel plus a little lift from any movement. Rising movement never
+    // lowers the pitch: the travel only drifts home (leaks) when there is no vertical
+    // movement, and the lift only relaxes when the movement isn't rising.
+    const vertical = smoothstep(0.02, 0.12, Math.abs(up));
+    const rising = smoothstep(0.02, 0.12, up);
+    s.travel += (up - (1 - vertical) * (s.travel / TRAVEL_LEAK_SEC)) * dt;
+    const liftRate =
+      energy > s.lift ? onePole(LIFT_RISE_SEC, dt) : onePole(LIFT_RELAX_SEC, dt) * (1 - rising);
+    s.lift += (energy - s.lift) * liftRate;
     let target =
       p.rangeSt * (TRAVEL_WEIGHT * Math.tanh(s.travel / TRAVEL_SCALE) + LIFT_WEIGHT * s.lift);
     if (p.quantize > 0) target = lerp(target, quantizePentatonic(target), p.quantize);

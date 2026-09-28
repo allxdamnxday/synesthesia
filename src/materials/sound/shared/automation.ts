@@ -14,7 +14,8 @@ export const GRID_EPSILON = 1e-6;
 
 /** First grid index whose time is at or after `t`. */
 export function gridIndexAtOrAfter(t: number, rate: number): number {
-  return Math.ceil(t * rate - GRID_EPSILON);
+  // `|| 0` turns −0 (from ceil of a tiny negative) into 0.
+  return Math.ceil(t * rate - GRID_EPSILON) || 0;
 }
 
 /** Last grid index whose time is at or before `t` (same tolerance as gridIndexAtOrAfter). */
