@@ -275,12 +275,12 @@ describe('Descending bubbles simulation', () => {
       const props: PropertyValues = {};
       for (const def of BUBBLES_PROPERTIES) props[def.id] = value;
       const sim = run('wink', 200, props, 5, 'standard');
-      for (const key of STATE_KEYS) {
-        for (let i = 0; i < sim.count; i++) expect(Number.isFinite(sim[key][i])).toBe(true);
-      }
-      for (let i = 0; i < sim.count; i++) {
-        expect(sim.py[i]).toBeGreaterThan(-EXIT_BELOW - 1);
-      }
+      const finite = STATE_KEYS.every((key) =>
+        Array.from(sim[key].subarray(0, sim.count)).every((v) => Number.isFinite(v)),
+      );
+      expect(finite).toBe(true);
+      const lowest = Math.min(...Array.from(sim.py.subarray(0, sim.count)));
+      expect(lowest).toBeGreaterThan(-EXIT_BELOW - 1);
     }
   });
 });

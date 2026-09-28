@@ -5,7 +5,7 @@
  * | Property    | Simulation parameter                                                  |
  * |-------------|-----------------------------------------------------------------------|
  * | Viscosity   | drag on the pushed motion (1.5/s → 10/s), a slightly weaker push, and |
- * |             | lag (0 → 0.3 s): thin water coasts on, thick water barely moves       |
+ * |             | lag (0 → 0.12 s): thin water coasts on, thick water barely moves      |
  * | Elasticity  | wobble (squash and stretch that rings after a push); spring back to   |
  * |             | the undisturbed path                                                  |
  * | Persistence | lifetime of the bubbles the movement touches (they wear out with the  |
@@ -173,7 +173,8 @@ export function bubbleParams(props: PropertyValues, quality: Quality): BubblePar
       popRate: bubblePopRate(persistence),
       forceGain: bubbleForceGain(viscosity, intensity),
       drag,
-      lagSec: 0.3 * viscosity * viscosity,
+      // Like Water's lag: longer would smear the close into the open and cancel both.
+      lagSec: 0.12 * viscosity * viscosity,
       spring: 40 * elasticity ** 4,
       wobbleFreq: 2.2 + 2.4 * elasticity,
       wobbleDamping: 0.55 - 0.47 * elasticity,
