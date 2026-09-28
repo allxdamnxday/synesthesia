@@ -6,8 +6,9 @@
  *   compositions/<id>.spcomp.json     every composition
  *   albums/<id>.spalbum.json          every album record
  *
- * Restoring validates everything first (formats, and each signature's content hash)
- * and writes nothing if any item is damaged. Then it merges by id in one transaction:
+ * Restoring validates everything first (formats, each signature's content hash, and each
+ * album record; a placeholder album from before albums had a format comes back as it
+ * was) and writes nothing if any item is damaged. Then it merges by id in one transaction:
  * new ids are added, existing ids are replaced by the backed-up version, and nothing
  * else in the library changes. Settings and working state are not part of a backup.
  */
@@ -30,6 +31,7 @@ import {
   type Migration,
 } from '../signature/serialize';
 import type { KineticSignature } from '../signature/types';
+import { albumFromBackupEntry, serializeStoredAlbum } from './albums';
 import { downloadBlob } from './download';
 import { openLibraryDb } from './db';
 import { LibraryError, errorDetail } from './errors';
@@ -138,7 +140,7 @@ export async function createBackup(): Promise<Blob> {
   }
   for (const album of albums) {
     const file = pathFor('albums', album.id, '.spalbum.json');
-    files[file] = strToU8(`${JSON.stringify(album, null, 2)}\n`);
+    files[file] = strToU8(serializeStoredAlbum(album));
     manifest.albums.push({ id: album.id, file });
   }
   files[MANIFEST] = strToU8(formatJson(manifest));
@@ -267,14 +269,14 @@ export async function readBackup(file: Blob): Promise<BackupContents> {
   const albums: StoredAlbum[] = [];
   for (const entry of manifest.albums) {
     const label = `album ${entry.id}`;
-    let raw: unknown;
+    let album: StoredAlbum;
     try {
-      raw = parseJson(entryText(entry.file, label));
+      album = albumFromBackupEntry(parseJson(entryText(entry.file, label)));
     } catch (err) {
       throw err instanceof LibraryError ? err : damaged(label, err);
     }
-    if (!isJsonObject(raw) || raw.id !== entry.id) throw damaged(label, 'id does not match');
-    albums.push(raw as StoredAlbum);
+    if (album.id !== entry.id) throw damaged(label, 'id does not match');
+    albums.push(album);
   }
 
   return { manifest, signatures, compositions, albums };
