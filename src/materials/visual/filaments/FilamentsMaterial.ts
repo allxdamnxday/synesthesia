@@ -129,6 +129,11 @@ interface Programs {
   strand: ShaderProgram;
 }
 
+export interface FilamentsOptions {
+  /** Use the 8-bit ribbon buffer even when float blending works (tests and Diagnostics). */
+  forceLowPrecision?: boolean;
+}
+
 export class FilamentsMaterial implements VisualMaterial {
   readonly id = FILAMENTS_META.id;
   readonly version = FILAMENTS_META.version;
@@ -156,11 +161,13 @@ export class FilamentsMaterial implements VisualMaterial {
   private lastDt = 1 / 60;
   private simParams: FilamentSimParams;
   private display: FilamentDisplayParams;
+  private readonly forceLowPrecision: boolean;
 
-  constructor() {
+  constructor(options: FilamentsOptions = {}) {
     const baseline = filamentParams(baselineValues(FILAMENTS_PROPERTIES), this.quality);
     this.simParams = baseline.sim;
     this.display = baseline.display;
+    this.forceLowPrecision = options.forceLowPrecision ?? false;
   }
 
   /** Builds everything synchronously; the promise only reports the outcome. */
@@ -350,7 +357,7 @@ export class FilamentsMaterial implements VisualMaterial {
   /** Half-float (or float) with blending if the context allows it, else 8-bit. */
   private pickRibbonFormat(gl: WebGL2RenderingContext): TextureFormat {
     const programs = this.programs;
-    const support = detectRenderTargets(gl);
+    const support = this.forceLowPrecision ? null : detectRenderTargets(gl);
     if (support && programs && canBlendInto(gl, support.rgba, programs.fade)) {
       this.lowPrecision = false;
       return support.rgba;
