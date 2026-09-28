@@ -1,0 +1,13 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`prng > matches frozen reference values (cross-machine stability) 1`] = `
+[
+  0.36991024669259787,
+  0.09992390591651201,
+  0.81249920418486,
+]
+`;
+
+exports[`prng > matches frozen reference values (cross-machine stability) 2`] = `2632810142`;
+
+exports[`prng > matches frozen reference values (cross-machine stability) 3`] = `2099601039`;
