@@ -118,27 +118,31 @@ export function focusCropPx(
 
 export const MIN_ANALYSIS_WIDTH = 32;
 export const MAX_ANALYSIS_WIDTH = 1920;
-export const MIN_ANALYSIS_HEIGHT = 16;
+/** Shortest analysis side, so extreme focus boxes stay workable for optical flow. */
+export const MIN_ANALYSIS_SIDE = 16;
 
 /**
- * Analysis frame size: `analysisWidth` wide, height keeping the crop's aspect ratio
- * (SPEC 8.1 step 4). The height is clamped to 16..4 × width so extreme focus boxes stay
- * workable for optical flow.
+ * Analysis frame size (SPEC 8.1 step 4, adjusted; see DECISIONS): the `analysisWidth`
+ * option sets the **longer side** of the oriented, cropped frame, and the other side
+ * keeps the crop's aspect ratio (at least 16 px). Landscape is unchanged (1920×1080 →
+ * 320×180); portrait costs the same (1080×1920 → 180×320) instead of 3× as much.
  */
 export function analysisSize(
   cropWidth: number,
   cropHeight: number,
   analysisWidth: number,
 ): { width: number; height: number } {
-  const w = Math.round(
+  const long = Math.round(
     Math.min(
       MAX_ANALYSIS_WIDTH,
       Math.max(MIN_ANALYSIS_WIDTH, Number.isFinite(analysisWidth) ? analysisWidth : 320),
     ),
   );
-  const aspect = cropWidth > 0 && cropHeight > 0 ? cropHeight / cropWidth : 9 / 16;
-  const h = Math.round(Math.min(4 * w, Math.max(MIN_ANALYSIS_HEIGHT, w * aspect)));
-  return { width: w, height: h };
+  const valid = cropWidth > 0 && cropHeight > 0;
+  const landscape = !valid || cropWidth >= cropHeight;
+  const ratio = valid ? Math.min(cropWidth, cropHeight) / Math.max(cropWidth, cropHeight) : 9 / 16;
+  const short = Math.round(Math.max(MIN_ANALYSIS_SIDE, long * ratio));
+  return landscape ? { width: long, height: short } : { width: short, height: long };
 }
 
 /** Analysis frame rate: the clip's own rate, capped at `maxFps` (SPEC 8.1 step 2). */

@@ -91,16 +91,21 @@ describe('focus area crop', () => {
 });
 
 describe('analysis size and timing', () => {
-  it('is analysisWidth wide and keeps the aspect ratio', () => {
+  it('makes the longer side analysisWidth and keeps the aspect ratio', () => {
     expect(analysisSize(1920, 1080, 320)).toEqual({ width: 320, height: 180 });
-    expect(analysisSize(1080, 1920, 320)).toEqual({ width: 320, height: 569 });
+    // Portrait costs the same as landscape.
+    expect(analysisSize(1080, 1920, 320)).toEqual({ width: 180, height: 320 });
+    expect(analysisSize(1000, 1000, 320)).toEqual({ width: 320, height: 320 });
     expect(analysisSize(200, 150, 320)).toEqual({ width: 320, height: 240 }); // upscales a small box
+    expect(analysisSize(150, 200, 320)).toEqual({ width: 240, height: 320 });
   });
 
   it('clamps extreme shapes', () => {
-    expect(analysisSize(1000, 10, 320).height).toBe(16);
-    expect(analysisSize(10, 1000, 320).height).toBe(1280);
-    expect(analysisSize(1920, 1080, 5).width).toBe(32);
+    expect(analysisSize(1000, 10, 320)).toEqual({ width: 320, height: 16 });
+    expect(analysisSize(10, 1000, 320)).toEqual({ width: 16, height: 320 });
+    expect(analysisSize(1920, 1080, 5)).toEqual({ width: 32, height: 18 });
+    expect(analysisSize(1920, 1080, 99999).width).toBe(1920);
+    expect(analysisSize(0, 0, 320)).toEqual({ width: 320, height: 180 });
   });
 
   it('analysis rate is the native rate capped at 60', () => {
