@@ -27,3 +27,4 @@ Thumbs.db
 
 # agent worktrees (never commit)
 .claude/worktrees/
+.claude/launch.json
