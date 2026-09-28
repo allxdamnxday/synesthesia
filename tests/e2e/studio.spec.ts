@@ -314,6 +314,12 @@ test('play, compare, draw by chance, save and reopen a composition', async ({ pa
   await page.keyboard.press('Escape');
   await expect(page.getByRole('button', { name: 'Save', exact: true })).toBeVisible();
   await expect(page.getByRole('navigation', { name: 'Main' })).toBeVisible();
+  // The Present button does the same.
+  await page.getByRole('button', { name: 'Present' }).click();
+  await expect(page.getByRole('complementary', { name: 'Composition controls' })).toBeHidden();
+  await expect(wake).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('complementary', { name: 'Composition controls' })).toBeVisible();
 
   // The source clip never appears in the Studio.
   await expect(page.locator('video')).toHaveCount(0);

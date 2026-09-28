@@ -70,6 +70,13 @@ export function StudioHeader() {
       </p>
       <div className={styles.headerActions}>
         <Button
+          variant="quiet"
+          onClick={() => store().setPresentation(true)}
+          title="Show only the wake, full screen (F). Esc comes back."
+        >
+          Present
+        </Button>
+        <Button
           variant="primary"
           onClick={() => void store().save()}
           disabled={saving}
