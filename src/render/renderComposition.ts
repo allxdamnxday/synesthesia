@@ -7,8 +7,10 @@
  *    untouched); the visual material created from the registry, `init` at the render
  *    quality (default High), then reset to the composition's visual seed.
  * 2. Sound first: the whole timeline on an OfflineAudioContext at 48 kHz stereo
- *    (`renderSoundOffline`), peak-normalized to −1 dBFS unless turned off. A muted sound
- *    field gives silence; a muted visual field gives black frames.
+ *    (`renderSoundOffline`), peak-normalized to −1 dBFS unless turned off. It lasts exactly
+ *    as long as the frames (N / fps, at most one frame past the timeline's end), so both
+ *    tracks end together. A muted sound field gives silence; a muted visual field gives
+ *    black frames. Both tracks are always present.
  * 3. An MP4 `Output` with a CanvasSource (H.264) and an AudioBufferSource (AAC, or Opus
  *    when AAC isn't available), encoded exactly as Diagnostics tested them.
  * 4. For frame i of N = ceil(duration × fps): t = i / fps; the VisualRunner steps the
@@ -21,11 +23,13 @@
  *
  * The file uses Mediabunny's `fastStart: 'reserve'`: room for the index is reserved at the
  * start and filled in at the end, so the MP4 is "fast start" (plays while downloading, as
- * web players like) even though it streams to disk. Memory and folder renders produce the
- * same bytes layout.
+ * web players like) even though it streams to disk. Memory and folder renders use the same
+ * layout.
  *
  * No clock reads or browser randomness here: the same signature, composition and seed
- * give the same frames and sound on the same machine (SPEC C6).
+ * give the same frames and sound on the same machine (SPEC C6). The files themselves can
+ * differ in a few bytes: Mediabunny stamps the creation time in the header, and audio and
+ * video chunks may interleave in a different order as the encoders finish packets.
  */
 import {
   AudioBufferSource,
