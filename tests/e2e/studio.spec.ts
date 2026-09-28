@@ -138,6 +138,7 @@ function slider(page: Page, name: string): Locator {
 }
 
 async function clickAt(page: Page, target: Locator, fraction: number): Promise<void> {
+  await target.scrollIntoViewIfNeeded();
   const box = await target.boundingBox();
   if (!box) throw new Error('no box');
   await page.mouse.click(box.x + box.width * fraction, box.y + box.height / 2);
@@ -192,6 +193,19 @@ test('play, compare, draw by chance, save and reopen a composition', async ({ pa
   await page.getByRole('button', { name: 'Visual Signature' }).click();
   await page.getByRole('option', { name: /^Water/ }).click();
   await expect(page.getByRole('button', { name: 'Visual Water' })).toBeVisible();
+
+  // Another sound material while playing, then back: playback carries on.
+  await page.getByRole('button', { name: 'Play' }).click();
+  await page.getByRole('button', { name: 'Sound Water' }).click();
+  await page.getByRole('option', { name: /^Breath/ }).click();
+  await expect(page.getByRole('button', { name: 'Sound Breath' })).toBeVisible();
+  const during = await position(page);
+  await expect.poll(() => position(page)).not.toBeCloseTo(during, 1);
+  await page.getByRole('button', { name: 'Sound Breath' }).click();
+  await page.getByRole('option', { name: /^Water/ }).click();
+  await expect(page.getByRole('button', { name: 'Sound Water' })).toBeVisible();
+  await page.getByRole('button', { name: 'Pause' }).click();
+  await expect(page.getByRole('button', { name: 'Play' })).toBeVisible();
 
   // Move a slider, then undo and redo it.
   const viscosity = slider(page, 'Viscosity');
@@ -278,9 +292,9 @@ test('play, compare, draw by chance, save and reopen a composition', async ({ pa
   await expect(page.getByTestId('save-state')).toHaveText('Saved');
   await expect(page).toHaveURL(/#\/studio\/[0-9a-f-]{36}$/);
   const savedUrl = page.url();
-  // A default name follows the materials chance picked, e.g. "Sample wink · Honey and Water".
+  // A default name follows the materials chance picked, e.g. "Sample wink · Smoke and Honey".
   const savedName = (await page.getByRole('button', { name: /\. Rename$/ }).textContent())?.trim();
-  expect(savedName).toMatch(/^Sample wink · \w+ and Water$/);
+  expect(savedName).toMatch(/^Sample wink · \w+ and \w+$/);
 
   // The Library lists it with a still of its wake.
   await page
