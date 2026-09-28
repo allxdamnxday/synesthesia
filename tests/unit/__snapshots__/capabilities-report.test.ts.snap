@@ -1,0 +1,46 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`formatReport > matches the stored layout 1`] = `
+"Synesthesia diagnostics report
+Generated: 2026-09-28T18:00:00.000Z
+App version: 0.0.0 (production)
+
+Environment
+  Browser:               Google Chrome 150.0.7778.12
+  Operating system:      macOS 12.7.6 (Monterey)
+  CPU:                   Intel (x86, 64-bit); 4 logical cores
+  Memory:                8 GB (as reported by the browser, rounded)
+  Screen:                1440 × 900 at 2× (2880 × 1800 device pixels), 30-bit
+  GPU:                   ANGLE (Intel Inc., Intel(R) Iris(TM) Plus Graphics 650, OpenGL 4.1)
+  GPU vendor:            Google Inc. (Intel Inc.) (from WEBGL_debug_renderer_info)
+  Secure context:        yes
+  Cross-origin isolated: no
+  User agent:            Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36
+
+Summary: All required checks passed. 3 passed, 2 warnings, 0 failed.
+
+Graphics
+  [PASS] WebGL2 (required)
+         WebGL2 is available.
+         Version: WebGL 2.0
+         MAX_TEXTURE_SIZE: 16384
+  [PASS] Half-float render targets (required)
+         Half-float render targets work, with smooth (linear) sampling.
+
+Sound
+  [PASS] Web Audio and AudioWorklet (required)
+         Web Audio and AudioWorklet work.
+
+Exporting MP4
+  [WARN] AAC audio export (preferred)
+         AAC isn't available, so renders will use Opus audio. Some players, such as QuickTime, may not play this audio.
+         AAC 192 kbps: failed
+         OPUS 160 kbps: ok, 5 packets, opus
+
+Storage
+  [WARN] Persistent storage (optional)
+         The browser may clear your library.
+
+Benchmark: not yet available
+"
+`;
