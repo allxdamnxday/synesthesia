@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { formatTime, ScrubBar, type ScrubBarProps } from './ScrubBar';
+import { formatTime, ScrubBar, wantsTenths, type ScrubBarProps } from './ScrubBar';
 import styles from './Transport.module.css';
 
 export interface TransportProps extends Pick<ScrubBarProps, 'markers' | 'tailStart'> {
@@ -90,7 +90,8 @@ export function Transport({
         tailStart={tailStart}
       />
       <span className={styles.time} aria-live="off">
-        {formatTime(position)} / {formatTime(duration)}
+        {formatTime(position, wantsTenths(duration))} /{' '}
+        {formatTime(duration, wantsTenths(duration))}
       </span>
       {catchingUp ? (
         <span className={styles.catching} role="status">

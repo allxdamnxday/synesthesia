@@ -33,7 +33,8 @@
 
 .slider:hover .readout,
 .slider:focus-within .readout,
-.active .readout {
+.active .readout,
+.showValue .readout {
   opacity: 1;
 }
 
