@@ -79,6 +79,7 @@ import {
   workingRecord,
   type StudioTarget,
 } from '../studio/working';
+import { recordEdit, type Gesture } from '../studio/undo';
 import type { SliderPhase } from '../ui/Slider';
 import { usePresentationStore } from './presentationStore';
 import { newSeed } from './seed';
@@ -121,11 +122,7 @@ export interface MissingSignature {
   name: string;
 }
 
-/** Undo step grouping: one key per control; the step ends with phase 'end'. */
-export interface Gesture {
-  key: string;
-  phase: SliderPhase;
-}
+export type { Gesture } from '../studio/undo';
 
 export interface StudioState {
   status: StudioStatus;
@@ -161,7 +158,7 @@ export interface StudioState {
   controller: TransportController | null;
 
   load: (target: StudioTarget) => Promise<void>;
-  /** Leaving the Studio: write any pending autosave. */
+  /** Leaving the Studio: write any pending autosave and close the session. */
   leave: () => Promise<void>;
   setQuality: (quality: Quality) => void;
 
@@ -256,18 +253,7 @@ export const useStudioStore = create<StudioState>()((set, get) => {
   const commit = (next: WakeState, gesture?: Gesture): void => {
     const { composition } = get();
     const h = history;
-    if (!composition || !h) return;
-    if (next === h.present) {
-      if (gesture?.phase === 'end') h.endGesture();
-      return;
-    }
-    if (gesture) {
-      h.push(next, gesture.key);
-      if (gesture.phase === 'end') h.endGesture();
-    } else {
-      h.endGesture();
-      h.push(next);
-    }
+    if (!composition || !h || !recordEdit(h, next, gesture)) return;
     set({ composition: withWake(composition, next), canUndo: h.canUndo, canRedo: h.canRedo });
   };
 
@@ -472,7 +458,7 @@ export const useStudioStore = create<StudioState>()((set, get) => {
         const restored = working && compositionsDiffer(working, pointed) ? working : null;
         const composition = restored ?? pointed;
         const notices: StudioNotice[] = [];
-        if (restored) notices.push(notice('info', "Restored changes you hadn't saved.", 'discard'));
+        if (restored) notices.push(notice('info', 'Restored changes you hadn’t saved.', 'discard'));
         const changed = materialVersionChanges(composition, {
           visual: registryCatalog.visual(composition.visual.materialId),
           sound: registryCatalog.sound(composition.sound.materialId),
@@ -487,6 +473,25 @@ export const useStudioStore = create<StudioState>()((set, get) => {
     },
 
     async leave() {
+      // Next time the Studio opens it reads the library again (the composition may have been
+      // renamed or deleted meanwhile); unsaved work comes back from the autosave.
+      loadToken++;
+      history = null;
+      set({
+        status: 'idle',
+        target: null,
+        signature: null,
+        composition: null,
+        baseline: null,
+        snapshots: {},
+        activeSlot: null,
+        notices: [],
+        transport: EMPTY_TRANSPORT,
+        presentation: false,
+        renderOpen: false,
+        chanceOpen: false,
+        controller: null,
+      });
       await autosave.flush();
     },
 

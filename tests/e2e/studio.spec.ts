@@ -6,7 +6,59 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 // chance, saving, the Library, and presentation mode (SPEC 6.3, 13.3, 13.4).
 
 const FIXTURE_PATH = resolve(import.meta.dirname, '../fixtures/sample.sig.json');
-const FIXTURE = JSON.parse(readFileSync(FIXTURE_PATH, 'utf8')) as { id: string; name: string };
+const FIXTURE = JSON.parse(readFileSync(FIXTURE_PATH, 'utf8')) as {
+  id: string;
+  name: string;
+  contentHash: string;
+};
+
+/** A composition file; `signature` defaults to the fixture's. */
+function compositionFile(
+  id: string,
+  name: string,
+  patch: { visualVersion?: number; signature?: { id: string; contentHash: string; name: string } },
+) {
+  const now = '2026-09-28T12:00:00.000Z';
+  const composition = {
+    format: 'sp-composition',
+    version: 1,
+    id,
+    name,
+    createdAt: now,
+    updatedAt: now,
+    signature: patch.signature ?? {
+      id: FIXTURE.id,
+      contentHash: FIXTURE.contentHash,
+      name: FIXTURE.name,
+    },
+    seed: 4217,
+    timeline: {
+      speed: 1,
+      loops: 2,
+      loopMode: 'pingpong',
+      tailSec: 2,
+      smoothing: 0.2,
+      signatureStrength: 1.5,
+    },
+    linked: true,
+    visual: {
+      materialId: 'water',
+      materialVersion: patch.visualVersion ?? 1,
+      properties: { viscosity: 0.3, brightness: 0.8 },
+    },
+    sound: { materialId: 'water', materialVersion: 1, properties: { viscosity: 0.3 } },
+    mute: { visual: false, sound: false },
+    chance: null,
+    render: { width: 1080, height: 1080, fps: 30 },
+    status: 'draft',
+    notes: '',
+  };
+  return {
+    name: `${id}.spcomp.json`,
+    mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify(composition)),
+  };
+}
 
 function watchErrors(page: Page): string[] {
   const errors: string[] = [];
@@ -287,5 +339,78 @@ test('unsaved work comes back after a reload, and can be discarded', async ({ pa
   await expect(page.getByRole('img', { name: 'The wake' })).toBeVisible({ timeout: 30_000 });
   await expect(slider(page, 'Tail')).toHaveAttribute('aria-valuenow', '3');
   await expect(page.getByText('Restored the composition')).toBeHidden();
+  expect(errors).toEqual([]);
+});
+
+test('opening saved compositions: changed materials, unsaved changes, lost graphics, a missing signature', async ({
+  page,
+}) => {
+  const errors = watchErrors(page);
+  await importSignature(page);
+  const chooser = page.waitForEvent('filechooser');
+  await page.getByRole('button', { name: 'Import file' }).click();
+  await (
+    await chooser
+  ).setFiles([
+    compositionFile('e2e-older', 'Older water', { visualVersion: 0 }),
+    compositionFile('e2e-lost', 'Lost signature', {
+      signature: { id: 'no-such-signature', contentHash: 'c'.repeat(64), name: 'Left eye' },
+    }),
+  ]);
+  const compositions = page.getByRole('list', { name: 'Compositions' });
+  await expect(compositions.getByRole('listitem')).toHaveCount(2);
+
+  // A composition saved with an older version of its material: a gentle notice.
+  await page.getByRole('button', { name: 'Open Older water', exact: true }).click();
+  const wake = page.getByRole('img', { name: 'The wake' });
+  await expect(wake).toBeVisible({ timeout: 30_000 });
+  await expect(
+    page.getByText(
+      'This material has changed since this composition was saved; it may look or sound different.',
+    ),
+  ).toBeVisible();
+  // Its settings are as saved: square, back and forth, strength 1.5.
+  await expect(slider(page, 'Signature strength')).toHaveAttribute('aria-valuenow', '1.5');
+  await expect(page.getByRole('radio', { name: 'Back and forth' })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
+  const box = await wake.boundingBox();
+  expect(Math.abs((box?.width ?? 0) - (box?.height ?? 1))).toBeLessThanOrEqual(1);
+
+  // An unsaved change survives a reload.
+  await clickAt(page, slider(page, 'Brightness'), 0.2);
+  await expect(slider(page, 'Brightness')).toHaveAttribute('aria-valuenow', '0.2');
+  await expect(page.getByTestId('save-state')).toHaveText('Unsaved changes');
+  await page.waitForTimeout(1600);
+  await page.reload();
+  await expect(wake).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText('Restored changes you hadn’t saved.')).toBeVisible();
+  await expect(slider(page, 'Brightness')).toHaveAttribute('aria-valuenow', '0.2');
+  await expect(page.getByTestId('save-state')).toHaveText('Unsaved changes');
+
+  // The graphics card resets: the wake comes back by itself.
+  await page.evaluate(() => {
+    const canvas = document.querySelector<HTMLCanvasElement>('canvas[aria-label="The wake"]');
+    const ext = canvas?.getContext('webgl2')?.getExtension('WEBGL_lose_context');
+    if (!ext) throw new Error('no WEBGL_lose_context');
+    ext.loseContext();
+    (window as unknown as { restoreWake: () => void }).restoreWake = () => ext.restoreContext();
+  });
+  await expect(page.getByText('The graphics card was reset.', { exact: false })).toBeVisible();
+  await page.evaluate(() => (window as unknown as { restoreWake: () => void }).restoreWake());
+  await expect(page.getByText('The graphics card was reset.', { exact: false })).toBeHidden();
+  await page.getByRole('button', { name: 'Play' }).click();
+  await waitForPlayhead(page, 1.0, 2.0);
+  expect((await brightness(page, wake)).lit).toBeGreaterThan(0.02);
+
+  // A composition whose signature isn't in the library explains what to do.
+  await page.goto('./#/studio/e2e-lost');
+  await expect(
+    page.getByRole('heading', { name: 'This composition needs its signature' }),
+  ).toBeVisible();
+  await expect(page.getByText('“Left eye”', { exact: false })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Go to the library' })).toBeVisible();
+  await expect(page.locator('video')).toHaveCount(0);
   expect(errors).toEqual([]);
 });

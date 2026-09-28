@@ -22,6 +22,7 @@
  */
 import type { Composition, TimelineSettings } from '../engine/composition';
 import { visualRng, visualSeed } from '../engine/seeds';
+import { snapshotChanges } from '../engine/snapshots';
 import { stepsForTime, VisualRunner } from '../engine/visualRunner';
 import { getVisualMaterial } from '../materials/registry';
 import type { PropertyValues, Quality, VisualMaterial } from '../materials/types';
@@ -103,17 +104,6 @@ export function samplerConfigOf(timeline: TimelineSettings): SamplerConfig {
     smoothing: timeline.smoothing,
     strength: timeline.signatureStrength,
   };
-}
-
-function sameTimeline(a: TimelineSettings, b: TimelineSettings): boolean {
-  return (
-    a.speed === b.speed &&
-    a.loops === b.loops &&
-    a.loopMode === b.loopMode &&
-    a.tailSec === b.tailSec &&
-    a.smoothing === b.smoothing &&
-    a.signatureStrength === b.signatureStrength
-  );
 }
 
 function sameValues(a: PropertyValues, b: PropertyValues): boolean {
@@ -293,7 +283,9 @@ export class StudioRuntime {
     if (this.disposed || prev === next) return;
     this.composition = next;
 
-    const timelineChanged = !sameTimeline(prev.timeline, next.timeline);
+    // Rebuild only what changed (the same comparison snapshot recall relies on).
+    const changes = snapshotChanges(prev, next);
+    const timelineChanged = changes.timeline;
     if (timelineChanged) {
       this.sampler.configure(samplerConfigOf(next.timeline));
       this.sound?.timelineChanged();
@@ -302,11 +294,7 @@ export class StudioRuntime {
     }
     this.sound?.apply(prev, next);
 
-    const rebuild =
-      prev.visual.materialId !== next.visual.materialId ||
-      prev.visual.materialVersion !== next.visual.materialVersion ||
-      prev.seed !== next.seed;
-    if (rebuild) {
+    if (changes.visualMaterial || changes.seed) {
       void this.mountVisual();
     } else {
       if (!sameValues(prev.visual.properties, next.visual.properties)) {
