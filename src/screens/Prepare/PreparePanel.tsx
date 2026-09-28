@@ -296,11 +296,11 @@ export function SetupPanel({
             disabled={locked}
           />
           <SegmentedControl
-            label="Grid columns"
+            label="Grid (cells, longer side)"
             options={GRID_COLUMNS.map(String)}
             value={Math.max(0, (GRID_COLUMNS as readonly number[]).indexOf(settings.gridCols))}
             onChange={(i) => store().setGridCols(GRID_COLUMNS[i] ?? 32)}
-            description="How many columns of cells the movement is gathered into. Rows follow the frame’s shape."
+            description="How many cells the movement is gathered into along the frame’s longer side. The shorter side follows the frame’s shape."
             disabled={locked}
           />
           <SegmentedControl

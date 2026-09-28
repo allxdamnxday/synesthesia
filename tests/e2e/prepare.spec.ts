@@ -179,10 +179,10 @@ test('shape a clip, extract its signature, save it and open it in the Studio', a
   expect(wake.lit).toBeGreaterThan(0.001);
 
   // Show the source beside the wake, then hide it again.
-  await page.getByText('Hide source', { exact: true }).click();
+  await page.getByRole('switch', { name: 'Hide source' }).click();
   await expect(page.getByTestId('clip-pane')).toBeVisible();
   await expect(page.getByText('Clip', { exact: true })).toBeVisible();
-  await page.getByText('Hide source', { exact: true }).click();
+  await page.getByRole('switch', { name: 'Hide source' }).click();
   await expect(page.getByTestId('clip-pane')).toBeHidden();
 
   // Name it and save it.
@@ -250,7 +250,7 @@ test('rotate and mirror are previewed live and carried into the signature', asyn
     'Focus area: 40% wide and 41% tall, 35% from the left and 30% from the top',
   );
 
-  await page.getByText('Mirror', { exact: true }).click();
+  await page.getByRole('switch', { name: 'Mirror' }).click();
   expect(await video.evaluate((v) => v.style.transform)).toBe(
     'translate(-50%, -50%) scaleX(-1) rotate(90deg)',
   );

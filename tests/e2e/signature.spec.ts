@@ -12,6 +12,7 @@ const FIXTURE = JSON.parse(readFileSync(FIXTURE_PATH, 'utf8')) as {
   name: string;
   contentHash: string;
   frameCount: number;
+  source: { fileName: string; focusArea: unknown };
   features: { onsets: number[] };
 };
 
@@ -100,7 +101,9 @@ test('a saved signature plays its wake, with its facts and what to do next', asy
   await expect(about).toContainText('2.2 seconds of movement');
   await expect(about).toContainText('2 moments of sudden movement');
   await expect(about).toContainText('Plays at 1× by default');
-  await expect(about).toContainText('“sample-wink.mp4”, using a focus area');
+  await expect(about).toContainText(
+    `“${FIXTURE.source.fileName}”${FIXTURE.source.focusArea ? ', using a focus area' : ''}`,
+  );
 
   await expect(page.getByTestId('sparklines')).toBeVisible();
   await expect(page.getByTestId('onset-marker')).toHaveCount(FIXTURE.features.onsets.length);
