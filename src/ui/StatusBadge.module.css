@@ -1,0 +1,69 @@
+.badge {
+  --badge-color: var(--color-mist);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 96px;
+  min-height: 28px;
+  padding: 2px var(--space-2);
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--badge-color) 55%, transparent);
+  background: color-mix(in srgb, var(--badge-color) 12%, transparent);
+  color: var(--badge-color);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-strong);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.badge[data-status='pass'] {
+  --badge-color: var(--color-water);
+}
+
+.badge[data-status='warn'] {
+  --badge-color: var(--color-honey);
+}
+
+.badge[data-status='fail'] {
+  --badge-color: var(--color-alert);
+}
+
+.badge[data-status='pending'] {
+  --badge-color: var(--color-mist);
+  border-style: dashed;
+  background: transparent;
+  font-weight: var(--font-weight-regular);
+}
+
+.icon {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.badge[data-status='pending'] .icon {
+  fill: currentColor;
+  stroke: none;
+  animation: breathe 1.6s ease-in-out infinite;
+}
+
+@keyframes breathe {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .badge[data-status='pending'] .icon {
+    animation: none;
+  }
+}

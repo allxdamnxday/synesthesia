@@ -1,0 +1,3 @@
+# Encoded spike output (MP4s and result text) is never committed.
+*
+!.gitignore

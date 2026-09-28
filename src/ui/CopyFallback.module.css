@@ -1,0 +1,30 @@
+.fallback {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.hint {
+  margin: 0;
+  color: var(--color-pearl);
+  font-size: var(--font-size-sm);
+}
+
+.box {
+  width: 100%;
+  min-height: 200px;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid color-mix(in srgb, var(--color-pearl) 18%, transparent);
+  background: var(--color-basin);
+  color: var(--color-pearl);
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.box:focus-visible {
+  box-shadow: var(--focus-ring);
+}
