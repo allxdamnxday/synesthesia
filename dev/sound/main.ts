@@ -12,6 +12,7 @@ import type { PropertyDef, PropertyValues, SoundMaterialEntry } from '../../src/
 import { createSyntheticSampler, type SyntheticKind } from '../../src/signature/synthetic';
 import type { LoopMode, SignatureSampler } from '../../src/signature/types';
 import {
+  beforeLimiter,
   correlation,
   encodeWav,
   envelopes,
@@ -352,6 +353,13 @@ export interface ProbeResult {
     referenceClick: number;
     previewJump: number;
     referenceJump: number;
+    /**
+     * The click check made on the signal going into the output limiter (see
+     * `beforeLimiter` in analysis.ts), for the preview and the references alike. It differs
+     * from the pair above only where the output went past the limiter's knee (0.8).
+     */
+    previewClickBeforeLimiter: number;
+    referenceClickBeforeLimiter: number;
   }[];
   /** How the engine's scheduler kept up (see AudioEngine.schedulerStats). */
   scheduler: SchedulerStats;
@@ -670,6 +678,11 @@ async function previewProbe(opts: ProbeOptions): Promise<ProbeResult> {
   const previewEnv = envelopes([pl, pr], sr, 0.01);
   const fromStart = Math.max(0, startFrame);
   const fullEnv = envelopes([left.slice(fromStart), right.slice(fromStart)], sr, 0.01);
+  const fullEnvBefore = envelopes(
+    beforeLimiter([left.slice(fromStart), right.slice(fromStart)]),
+    sr,
+    0.01,
+  );
   const maxJump = Math.max(0, ...fullEnv.jump);
 
   const offlineBuffer = await render({ ...opts, normalize: false });
@@ -690,13 +703,20 @@ async function previewProbe(opts: ProbeOptions): Promise<ProbeResult> {
     return p;
   };
   const actionResults: ProbeResult['actions'] = [];
-  const refCache = new Map<string, { click: number[]; jump: number[] }>();
-  const refEnvelopes = async (p: PropertyValues): Promise<{ click: number[]; jump: number[] }> => {
+  interface RefEnvelopes {
+    click: number[];
+    jump: number[];
+    clickBeforeLimiter: number[];
+  }
+  const refCache = new Map<string, RefEnvelopes>();
+  const refEnvelopes = async (p: PropertyValues): Promise<RefEnvelopes> => {
     const key = JSON.stringify(p);
     let env = refCache.get(key);
     if (!env) {
-      const ref = await render({ ...opts, props: p, normalize: false });
-      env = envelopes(channelsOf(ref), sr, 0.01);
+      const ref = channelsOf(await render({ ...opts, props: p, normalize: false }));
+      const out = envelopes(ref, sr, 0.01);
+      const unlimited = envelopes(beforeLimiter(ref), sr, 0.01);
+      env = { click: out.click, jump: out.jump, clickBeforeLimiter: unlimited.click };
       refCache.set(key, env);
     }
     return env;
@@ -707,6 +727,11 @@ async function previewProbe(opts: ProbeOptions): Promise<ProbeResult> {
     const recSec = a.ctx - offset;
     const previewClick = clickMax(fullEnv.click, recSec - before, recSec + after);
     const previewJump = clickMax(fullEnv.jump, recSec - before, recSec + after);
+    const previewClickBeforeLimiter = clickMax(
+      fullEnvBefore.click,
+      recSec - before,
+      recSec + after,
+    );
     // Every setting heard inside the window: this action's before and after, plus any later
     // action that lands inside it (a slider drag changes values every ~50 ms).
     const settings = [a.before, a.after];
@@ -721,11 +746,16 @@ async function previewProbe(opts: ProbeOptions): Promise<ProbeResult> {
     ];
     let referenceClick = 0;
     let referenceJump = 0;
+    let referenceClickBeforeLimiter = 0;
     for (const p of settings) {
       const env = await refEnvelopes(p);
       for (const [from, to] of spans) {
         referenceClick = Math.max(referenceClick, clickMax(env.click, from, to));
         referenceJump = Math.max(referenceJump, clickMax(env.jump, from, to));
+        referenceClickBeforeLimiter = Math.max(
+          referenceClickBeforeLimiter,
+          clickMax(env.clickBeforeLimiter, from, to),
+        );
       }
     }
     const half = Math.round(((opts.samplesAroundActions ?? 0) * sr) / 2);
@@ -750,6 +780,8 @@ async function previewProbe(opts: ProbeOptions): Promise<ProbeResult> {
       referenceClick,
       previewJump,
       referenceJump,
+      previewClickBeforeLimiter,
+      referenceClickBeforeLimiter,
     });
   }
 

@@ -2,6 +2,67 @@
  * Measurements for auditioning sound materials without ears: RMS and jump envelopes, a YIN
  * pitch tracker, hashing, and WAV encoding. Harness-only code.
  */
+import { softClipCurve } from '../../src/materials/sound/shared/masterChain';
+
+/**
+ * The output limiter's WaveShaper curve, with the master chain's default options (the preview
+ * engine and the offline render both use them), and its headroom: the chain divides the signal
+ * by this before the curve, which spans −1…1 of the WaveShaper's input.
+ */
+const LIMITER_CURVE = softClipCurve();
+export const LIMITER_HEADROOM = 4;
+
+/**
+ * The samples as they went into the output limiter (the master chain's soft clip,
+ * masterChain.ts), in output units: undoes the WaveShaper exactly as Web Audio applies it
+ * (linear interpolation between curve points). Below the knee (0.8) the curve is the identity
+ * and every sample comes back bit-for-bit. Above an input of about 3× full scale the curve is
+ * flat in float32 and the input can't be recovered: such a sample comes back as the input
+ * nearest zero that gives it. Pure.
+ *
+ * Why: a click check wants the signal the transport and the material made. The limiter is
+ * memoryless and can't turn a smooth signal into a step, but where it rounds off a peak its
+ * curvature shows in a second-difference measure, the more the louder the peak. A preview that
+ * is legitimately louder than its reference (after a jump it still carries the reverb tail of
+ * what played before) then reads as rougher after the limiter, though nothing clicked.
+ */
+export function beforeLimiter(channels: readonly Float32Array[]): Float32Array[] {
+  return channels.map((data) => {
+    const out = new Float32Array(data.length);
+    for (let i = 0; i < data.length; i++) out[i] = limiterInput(data[i] ?? 0);
+    return out;
+  });
+}
+
+/**
+ * The limiter input (output units) that produces output `y`: the inverse of the WaveShaper's
+ * piecewise-linear curve. Every step is exact in float64 where the curve is the identity, so
+ * there `limiterInput(y) === y`. Pure.
+ */
+export function limiterInput(y: number): number {
+  const curve = LIMITER_CURVE;
+  const last = curve.length - 1;
+  const target = Math.min(curve[last] ?? 1, Math.max(curve[0] ?? -1, y));
+  // The curve rises monotonically: the largest k < last with curve[k] ≤ target.
+  let lo = 0;
+  let hi = last;
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >> 1;
+    if ((curve[mid] ?? 0) <= target) lo = mid;
+    else hi = mid;
+  }
+  const c0 = curve[lo] ?? 0;
+  const c1 = curve[lo + 1] ?? c0;
+  let v = lo;
+  if (c1 > c0) {
+    v = lo + (target - c0) / (c1 - c0);
+  } else {
+    // Flat in float32 (far past full scale, only ever at the top: at the bottom the search
+    // already stops at the flat run's end): the input nearest zero giving this output.
+    while (v > 0 && curve[v - 1] === c0) v--;
+  }
+  return ((2 * v) / last - 1) * LIMITER_HEADROOM;
+}
 
 export interface Envelopes {
   hopSec: number;
