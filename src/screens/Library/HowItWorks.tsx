@@ -89,7 +89,7 @@ export function HowItWorks({
         return `Bring in a clip to make ${libraryEmpty ? 'your first' : 'a'} signature. Only its movement is kept, never the picture.`;
       case 'composition':
         return facts.signatures > 1 && signature
-          ? `Play a signature through a visual and a sound material in the Studio, and save what you find. The button starts from “${signature.name}”, the one you worked with last.`
+          ? `Play a signature through a visual and a sound material in the Studio, and save what you find. The button starts from your most recent one, “${signature.name}”.`
           : 'Play the signature through a visual and a sound material in the Studio, and save what you find.';
       case 'share':
         return 'Render MP4 in the Studio makes a video of a composition. New album lets chance draw a set of compositions from a signature.';
@@ -148,12 +148,7 @@ export function HowItWorks({
   };
 
   return (
-    <section
-      ref={rootRef}
-      className={styles.strip}
-      aria-labelledby="how-it-works-title"
-      data-testid="how-it-works"
-    >
+    <section ref={rootRef} className={styles.strip} aria-labelledby="how-it-works-title">
       <div className={styles.head}>
         <h2 id="how-it-works-title" ref={headingRef} tabIndex={-1} className={styles.title}>
           How it works
