@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createRng } from '../../src/chance/prng';
 import { normalizePeakInPlace, peakOf } from '../../src/engine/audio/normalize';
 import { windowEdges } from '../../src/engine/audio/offline';
-import { PlaybackMap } from '../../src/engine/audio/playbackMap';
+import { awayFromControlPoint, PlaybackMap } from '../../src/engine/audio/playbackMap';
 import { generateImpulseResponse, impulseLength } from '../../src/materials/sound/shared/impulse';
 import {
   brightnessCutoffHz,
@@ -238,5 +238,23 @@ describe('playback map (context time ↔ composition time)', () => {
     map.prune(12.1);
     expect(map.segments()).toHaveLength(1);
     expect(map.firstCtx).toBe(12);
+  });
+
+  it('starts a live edit clear of the control points', () => {
+    const rate = 200;
+    const guard = 4 / 48000;
+    // Off the grid: unchanged.
+    expect(awayFromControlPoint(3.0213, 1.0023, rate, guard)).toBe(3.0213);
+    // On a point, or a few ulps either side of it (as a window offset rounds): moved on, and
+    // then clear of the point by at least the guard.
+    for (const t of [1.0, 1.0000000000000002, 0.9999999999999998, 1.005 + guard / 2]) {
+      const at = 2 + t;
+      const moved = awayFromControlPoint(at, t, rate, guard);
+      expect(moved).toBeGreaterThan(at);
+      const tMoved = t + (moved - at);
+      const k = Math.round(tMoved * rate);
+      expect(Math.abs(tMoved - k / rate)).toBeGreaterThanOrEqual(guard * 0.999);
+      expect(moved - at).toBeLessThan(0.001); // imperceptible
+    }
   });
 });

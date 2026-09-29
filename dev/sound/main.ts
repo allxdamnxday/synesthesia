@@ -3,7 +3,7 @@
  * live through the preview engine and offline through the render path, and expose
  * `window.spSound` for the Playwright tests (tests/e2e/sound.spec.ts).
  */
-import { AudioEngine } from '../../src/engine/audio/AudioEngine';
+import { AudioEngine, type SchedulerStats } from '../../src/engine/audio/AudioEngine';
 import { renderSoundOffline } from '../../src/engine/audio/offline';
 import { baselineValues } from '../../src/materials/properties';
 import { getSoundMaterial, listSoundMaterials } from '../../src/materials/registry';
@@ -249,11 +249,31 @@ export interface ProbeOptions extends RenderOptions {
   /** Wall seconds after start to seek, and the composition time to seek to. */
   seekAt?: number;
   seekTo?: number;
-  /** Drag a property slider: set `prop` from `from` to `to` in steps over `seconds`. */
-  drag?: { prop: string; from: number; to: number; startAt: number; seconds: number };
+  /**
+   * Drag a property slider: set `prop` from `from` to `to` in `steps` steps (default 10) over
+   * `seconds`. Without `steps` it moves one step per ~50 ms poll; with `steps` it has its own
+   * timer, like a slider's input events.
+   */
+  drag?: {
+    prop: string;
+    from: number;
+    to: number;
+    startAt: number;
+    seconds: number;
+    steps?: number;
+  };
   /** Wall seconds after start to pause, and milliseconds until playing on from there. */
   pauseAt?: number;
   resumeAfterMs?: number;
+  /**
+   * Block the main thread (a busy page) `at` wall seconds after start for `ms` milliseconds.
+   * Longer than the scheduler's slack, the scheduled sound runs out and playback resyncs.
+   */
+  stall?: { at: number; ms: number };
+  /** Return the raw left-channel samples of this many seconds around each action (debugging). */
+  samplesAroundActions?: number;
+  /** Return the raw samples (both channels) of this many seconds around the largest click. */
+  samplesAroundMaxClick?: number;
   /** Transport loop on. */
   loop?: boolean;
   /** Stop after this many wall seconds (default: when playback ends). */
@@ -287,16 +307,47 @@ export interface ProbeResult {
    * Click check around each live action (edit, seek): the preview's largest second
    * difference just after the action, and the largest in offline renders of the settings
    * before and after it at the same composition times. A click makes the first far larger.
+   * The same for the largest sample-to-sample jump (a snap).
    */
   actions: {
     kind: ActionKind;
     recSec: number;
+    /** Composition times before and after the action. */
+    compFrom: number;
+    compTo: number;
+    /** With `samplesAroundActions`: raw left-channel samples centred on the action. */
+    samples?: number[];
+    /** Peak level 40–12 ms before the action (before any dip). */
+    levelBefore: number;
+    /**
+     * Longest stretch, in milliseconds, within 12 ms before to 30 ms after the action where
+     * every 1 ms window peaks below 3% of `levelBefore`: a jump there is not heard.
+     */
+    quietMs: number;
     previewClick: number;
     referenceClick: number;
+    previewJump: number;
+    referenceJump: number;
   }[];
+  /** How the engine's scheduler kept up (see AudioEngine.schedulerStats). */
+  scheduler: SchedulerStats;
+  /** Milliseconds each setProps call took (edits and drag steps), in order. */
+  setPropsMs: number[];
+  /** Largest gap between the probe's ~50 ms polls: how long the main thread was busy. */
+  maxPollGapMs: number;
+  /** With `samplesAroundMaxClick`: where the largest click is and the samples around it. */
+  maxClick?: { recSec: number; value: number; left: number[]; right: number[] };
+  /**
+   * Where the audio thread ran late and caught up by rendering several quanta back to back
+   * (seconds into the recording, quanta in the burst): a sign of the main thread holding up
+   * the audio thread. Harmless to the recording.
+   */
+  bursts: { recSec: number; quanta: number }[];
+  /** Render quanta that never reached the recorder (seconds into the recording, frames). */
+  skips: { recSec: number; frames: number }[];
 }
 
-type ActionKind = 'edit' | 'seek' | 'pause' | 'play' | 'drag';
+type ActionKind = 'edit' | 'seek' | 'pause' | 'play' | 'drag' | 'stall';
 
 /**
  * Play through the preview engine in real time, record its output, and compare it with the
@@ -316,11 +367,15 @@ async function previewProbe(opts: ProbeOptions): Promise<ProbeResult> {
   });
   recorder.connect(ctx.destination);
   const batches: { frame: number; left: Float32Array; right: Float32Array }[] = [];
+  const bursts: { frame: number; quanta: number }[] = [];
+  const skips: { frame: number; to: number }[] = [];
   let onFlushed: (() => void) | null = null;
   recorder.port.onmessage = (
     event: MessageEvent<{
       type: string;
       frame?: number;
+      quanta?: number;
+      to?: number;
       left?: Float32Array;
       right?: Float32Array;
     }>,
@@ -328,6 +383,10 @@ async function previewProbe(opts: ProbeOptions): Promise<ProbeResult> {
     const msg = event.data;
     if (msg.type === 'batch' && msg.left && msg.right && msg.frame !== undefined) {
       batches.push({ frame: msg.frame, left: msg.left, right: msg.right });
+    } else if (msg.type === 'burst' && msg.frame !== undefined && msg.quanta !== undefined) {
+      bursts.push({ frame: msg.frame, quanta: msg.quanta });
+    } else if (msg.type === 'skip' && msg.frame !== undefined && msg.to !== undefined) {
+      skips.push({ frame: msg.frame, to: msg.to });
     } else if (msg.type === 'flushed') onFlushed?.();
   };
 
@@ -344,6 +403,7 @@ async function previewProbe(opts: ProbeOptions): Promise<ProbeResult> {
     wraps++;
   };
   engine.setLoop(opts.loop ?? false);
+  engine.resetSchedulerStats();
   await engine.play(0);
   const probeCtx = ctx.currentTime + 0.05;
   const offset = probeCtx - engine.timeAtContextTime(probeCtx);
@@ -354,61 +414,109 @@ async function previewProbe(opts: ProbeOptions): Promise<ProbeResult> {
   let edited = false;
   let sought = false;
   let paused = false;
+  let stalled = false;
   let dragStep = -1;
+  let dragTimer: ReturnType<typeof setInterval> | null = null;
   let currentProps = props;
+  let stallInfo: { startCtx: number; comp: number } | null = null;
+  let lastPoll = startWall;
+  let maxPollGapMs = 0;
+  const setPropsMs: number[] = [];
   const actions: {
     kind: ActionKind;
     ctx: number;
     compFrom: number;
+    /** Composition span heard before the action (default compFrom − 0.05 … + 0.2). */
+    fromSpan?: [number, number];
     compTo: number;
     before: PropertyValues;
     after: PropertyValues;
   }[] = [];
   const soon = (): number => ctx.currentTime + 0.03;
   const limit = (opts.playSeconds ?? sampler.duration + 1) * 1000;
+  // The main thread's cost of a property change, including work it leaves for right after
+  // (microtasks and queued tasks): time until a message posted now comes back.
+  const channel = new MessageChannel();
+  const pendingTimings: (() => void)[] = [];
+  channel.port1.onmessage = () => pendingTimings.shift()?.();
+  const setPropsTimed = (next: PropertyValues): void => {
+    const t0 = performance.now();
+    engine.setProps(next);
+    pendingTimings.push(() => setPropsMs.push(performance.now() - t0));
+    channel.port2.postMessage(null);
+  };
+  const dragTo = (kind: ActionKind, next: PropertyValues): void => {
+    const at = soon();
+    const comp = engine.timeAtContextTime(at);
+    actions.push({
+      kind,
+      ctx: at,
+      compFrom: comp,
+      compTo: comp,
+      before: currentProps,
+      after: next,
+    });
+    currentProps = next;
+    setPropsTimed(next);
+  };
   await new Promise<void>((resolve) => {
     const poll = setInterval(() => {
       const now = performance.now();
+      maxPollGapMs = Math.max(maxPollGapMs, now - lastPoll);
+      lastPoll = now;
       const elapsed = (now - startWall) / 1000;
       times.push(engine.compositionTimeAt(now));
       wallTimes.push(now);
       if (!edited && opts.editAt !== undefined && elapsed >= opts.editAt) {
         edited = true;
-        const next = { ...props, ...opts.editProps };
-        const at = soon();
-        const comp = engine.timeAtContextTime(at);
-        actions.push({
-          kind: 'edit',
-          ctx: at,
-          compFrom: comp,
-          compTo: comp,
-          before: currentProps,
-          after: next,
-        });
-        currentProps = next;
-        engine.setProps(next);
+        dragTo('edit', { ...props, ...opts.editProps });
       }
       const drag = opts.drag;
-      if (drag && elapsed >= drag.startAt && dragStep < 10) {
+      if (drag && elapsed >= drag.startAt && drag.steps === undefined && dragStep < 10) {
         // One slider step per poll (~50 ms), like a hand dragging a slider.
         const step = Math.min(10, Math.floor(((elapsed - drag.startAt) / drag.seconds) * 10));
         if (step > dragStep) {
           dragStep = step;
           const value = drag.from + ((drag.to - drag.from) * step) / 10;
-          const next = { ...currentProps, [drag.prop]: value };
-          const at = soon();
-          const comp = engine.timeAtContextTime(at);
-          actions.push({
-            kind: 'drag',
-            ctx: at,
-            compFrom: comp,
-            compTo: comp,
-            before: currentProps,
-            after: next,
-          });
-          currentProps = next;
-          engine.setProps(next);
+          dragTo('drag', { ...currentProps, [drag.prop]: value });
         }
+      }
+      if (drag?.steps !== undefined && elapsed >= drag.startAt && dragTimer === null) {
+        // Many small steps on their own timer, like a slider's input events.
+        const steps = Math.max(1, Math.round(drag.steps));
+        const stepOnce = (): void => {
+          dragStep++;
+          const value = drag.from + ((drag.to - drag.from) * Math.min(dragStep, steps)) / steps;
+          dragTo('drag', { ...currentProps, [drag.prop]: value });
+          if (dragStep >= steps && dragTimer !== null) clearInterval(dragTimer);
+        };
+        dragTimer = setInterval(stepOnce, (drag.seconds * 1000) / steps);
+        stepOnce();
+      }
+      if (!stalled && opts.stall && elapsed >= opts.stall.at) {
+        stalled = true;
+        const startCtx = ctx.currentTime;
+        const comp = engine.timeAtContextTime(startCtx);
+        // Where the scheduled sound runs out (the map clamps to the end of the schedule).
+        const frozenAt = engine.timeAtContextTime(Number.MAX_VALUE);
+        const until = performance.now() + opts.stall.ms;
+        while (performance.now() < until) {
+          // Busy: nothing else on the main thread runs, the scheduler included.
+        }
+        // Checked like a seek at the resync (placed once the engine reports it): from the
+        // sound as it froze where the schedule ran out to where playback would have been had
+        // nothing stalled. Nothing after the freeze point was heard, so the reference for
+        // that side stops just after it.
+        stallInfo = { startCtx, comp };
+        actions.push({
+          kind: 'stall',
+          ctx: ctx.currentTime,
+          compFrom: frozenAt,
+          fromSpan: [frozenAt - 0.05, frozenAt + 0.02],
+          compTo: comp + (ctx.currentTime - startCtx),
+          before: currentProps,
+          after: currentProps,
+        });
       }
       if (!paused && opts.pauseAt !== undefined && elapsed >= opts.pauseAt) {
         paused = true;
@@ -439,10 +547,19 @@ async function previewProbe(opts: ProbeOptions): Promise<ProbeResult> {
       }
       if (ended || now - startWall > limit) {
         clearInterval(poll);
+        if (dragTimer !== null) clearInterval(dragTimer);
         resolve();
       }
     }, 50);
   });
+  const scheduler = engine.schedulerStats;
+  const stallAction = actions.find((a) => a.kind === 'stall');
+  // Assigned inside the poll callback; TypeScript can't see that.
+  const stalledAt = stallInfo as { startCtx: number; comp: number } | null;
+  if (stallAction && stalledAt && Number.isFinite(scheduler.lastResyncAt)) {
+    stallAction.ctx = scheduler.lastResyncAt;
+    stallAction.compTo = stalledAt.comp + (scheduler.lastResyncAt - stalledAt.startCtx);
+  }
   engine.pause();
   await new Promise((resolve) => setTimeout(resolve, 100));
   await new Promise<void>((resolve) => {
@@ -471,6 +588,7 @@ async function previewProbe(opts: ProbeOptions): Promise<ProbeResult> {
       opts.seconds,
       opts.editAt ?? Number.POSITIVE_INFINITY,
       opts.seekAt ?? Number.POSITIVE_INFINITY,
+      opts.stall?.at ?? Number.POSITIVE_INFINITY,
     ) - 0.05;
   const n = Math.max(0, Math.floor(compareSec * sr));
   const pl = left.slice(Math.max(0, startFrame), Math.max(0, startFrame) + n);
@@ -488,14 +606,23 @@ async function previewProbe(opts: ProbeOptions): Promise<ProbeResult> {
   // Click check around each action.
   const clickMax = (env: number[], fromSec: number, toSec: number): number =>
     Math.max(0, ...env.slice(Math.max(0, Math.floor(fromSec / 0.01)), Math.ceil(toSec / 0.01)));
+  /** Peak absolute sample (either channel) between two recording times, seconds. */
+  const peakIn = (fromSec: number, toSec: number): number => {
+    let p = 0;
+    const i1 = Math.min(left.length, fromStart + Math.round(toSec * sr));
+    for (let i = Math.max(0, fromStart + Math.round(fromSec * sr)); i < i1; i++) {
+      p = Math.max(p, Math.abs(left[i] ?? 0), Math.abs(right[i] ?? 0));
+    }
+    return p;
+  };
   const actionResults: ProbeResult['actions'] = [];
-  const refCache = new Map<string, number[]>();
-  const refClicks = async (p: PropertyValues): Promise<number[]> => {
+  const refCache = new Map<string, { click: number[]; jump: number[] }>();
+  const refEnvelopes = async (p: PropertyValues): Promise<{ click: number[]; jump: number[] }> => {
     const key = JSON.stringify(p);
     let env = refCache.get(key);
     if (!env) {
       const ref = await render({ ...opts, props: p, normalize: false });
-      env = envelopes(channelsOf(ref), sr, 0.01).click;
+      env = envelopes(channelsOf(ref), sr, 0.01);
       refCache.set(key, env);
     }
     return env;
@@ -505,6 +632,7 @@ async function previewProbe(opts: ProbeOptions): Promise<ProbeResult> {
   for (const a of actions) {
     const recSec = a.ctx - offset;
     const previewClick = clickMax(fullEnv.click, recSec - before, recSec + after);
+    const previewJump = clickMax(fullEnv.jump, recSec - before, recSec + after);
     // Every setting heard inside the window: this action's before and after, plus any later
     // action that lands inside it (a slider drag changes values every ~50 ms).
     const settings = [a.before, a.after];
@@ -512,14 +640,65 @@ async function previewProbe(opts: ProbeOptions): Promise<ProbeResult> {
       const t = b.ctx - offset;
       if (b !== a && t > recSec && t < recSec + after) settings.push(b.after);
     }
+    // The material's own content around the composition times on both sides of the action.
+    const spans: [number, number][] = [
+      a.fromSpan ?? [a.compFrom - 0.05, a.compFrom + 0.2],
+      [a.compTo - 0.05, a.compTo + 0.2],
+    ];
     let referenceClick = 0;
+    let referenceJump = 0;
     for (const p of settings) {
-      const env = await refClicks(p);
-      for (const comp of [a.compFrom, a.compTo]) {
-        referenceClick = Math.max(referenceClick, clickMax(env, comp - 0.05, comp + 0.2));
+      const env = await refEnvelopes(p);
+      for (const [from, to] of spans) {
+        referenceClick = Math.max(referenceClick, clickMax(env.click, from, to));
+        referenceJump = Math.max(referenceJump, clickMax(env.jump, from, to));
       }
     }
-    actionResults.push({ kind: a.kind, recSec, previewClick, referenceClick });
+    const half = Math.round(((opts.samplesAroundActions ?? 0) * sr) / 2);
+    const centre = fromStart + Math.round(recSec * sr);
+    const levelBefore = peakIn(recSec - 0.04, recSec - 0.012);
+    let quietMs = 0;
+    let run = 0;
+    for (let ms = -12; ms < 30; ms++) {
+      const w = recSec + ms / 1000;
+      run = peakIn(w, w + 0.001) <= 0.03 * levelBefore ? run + 1 : 0;
+      quietMs = Math.max(quietMs, run);
+    }
+    actionResults.push({
+      kind: a.kind,
+      recSec,
+      compFrom: a.compFrom,
+      compTo: a.compTo,
+      samples: half > 0 ? Array.from(left.slice(centre - half, centre + half)) : undefined,
+      levelBefore,
+      quietMs,
+      previewClick,
+      referenceClick,
+      previewJump,
+      referenceJump,
+    });
+  }
+
+  let maxClick: ProbeResult['maxClick'];
+  if (opts.samplesAroundMaxClick) {
+    let value = 0;
+    let at = fromStart;
+    for (let i = fromStart + 2; i < left.length; i++) {
+      for (const data of [left, right]) {
+        const c = Math.abs((data[i] ?? 0) - 2 * (data[i - 1] ?? 0) + (data[i - 2] ?? 0));
+        if (c > value) {
+          value = c;
+          at = i;
+        }
+      }
+    }
+    const half = Math.round((opts.samplesAroundMaxClick * sr) / 2);
+    maxClick = {
+      recSec: (at - fromStart) / sr,
+      value,
+      left: Array.from(left.slice(at - half, at + half)),
+      right: Array.from(right.slice(at - half, at + half)),
+    };
   }
 
   const sumP = previewEnv.rms.reduce((s, x) => s + x, 0);
@@ -542,6 +721,15 @@ async function previewProbe(opts: ProbeOptions): Promise<ProbeResult> {
     times,
     contextState,
     actions: actionResults,
+    scheduler,
+    setPropsMs,
+    maxPollGapMs,
+    maxClick,
+    bursts: bursts.map((b) => ({ recSec: (b.frame - first - fromStart) / sr, quanta: b.quanta })),
+    skips: skips.map((s) => ({
+      recSec: (s.frame - first - fromStart) / sr,
+      frames: s.to - s.frame,
+    })),
   };
 }
 

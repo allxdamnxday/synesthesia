@@ -12,6 +12,21 @@ export interface PlaybackSegment {
   t: number;
 }
 
+/**
+ * Where a live edit should start: `at` (context time, at composition time `t`), or, if that is
+ * within `guardSec` of a control point (a multiple of 1 / `rate` in composition time), a little
+ * later, `2 × guardSec` further on, clear of the point. Pure.
+ */
+export function awayFromControlPoint(
+  at: number,
+  t: number,
+  rate: number,
+  guardSec: number,
+): number {
+  const k = Math.round(t * rate);
+  return Math.abs(t - k / rate) < guardSec ? at + 2 * guardSec : at;
+}
+
 export class PlaybackMap {
   private segs: PlaybackSegment[] = [];
 
