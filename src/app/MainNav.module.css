@@ -1,0 +1,94 @@
+/* Wide windows: the links in a row at the right of the header. */
+.nav {
+  display: flex;
+}
+
+.menuButton {
+  display: none;
+}
+
+.list {
+  display: flex;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: flex;
+}
+
+.list a {
+  color: var(--color-mist);
+  text-decoration: none;
+  font-size: var(--font-size-sm);
+  padding: var(--space-1) var(--space-3);
+  min-height: var(--hit-min);
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--radius-md);
+}
+
+.list a:hover {
+  color: var(--color-pearl);
+}
+
+.list a[aria-current='page'] {
+  color: var(--color-pearl);
+  background: var(--color-basin);
+}
+
+/*
+ * Narrow windows (phones): a Menu button; the links open as a list under the header.
+ * Keep the width in step with COMPACT_NAV_QUERY in MainNav.tsx.
+ */
+@media (max-width: 720px) {
+  .menuButton {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: var(--hit-min);
+    padding: var(--space-1) var(--space-3);
+    border: 1px solid color-mix(in srgb, var(--color-pearl) 18%, transparent);
+    border-radius: var(--radius-md);
+    background: transparent;
+    color: var(--color-pearl);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-strong);
+  }
+
+  .menuButton[aria-expanded='true'] {
+    background: var(--color-basin);
+    border-color: color-mix(in srgb, var(--color-pearl) 35%, transparent);
+  }
+
+  .list {
+    display: none;
+  }
+
+  .list[data-open] {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 50;
+    max-height: calc(100vh - 64px);
+    max-height: calc(100dvh - 64px);
+    overflow-y: auto;
+    padding: var(--space-2) var(--space-4) var(--space-4);
+    background: var(--color-deep);
+    border-bottom: 1px solid color-mix(in srgb, var(--color-silt) 45%, transparent);
+    box-shadow: 0 16px 32px rgb(0 0 0 / 0.45);
+  }
+
+  .list a {
+    flex: 1;
+    min-height: 44px;
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--font-size-md);
+  }
+}

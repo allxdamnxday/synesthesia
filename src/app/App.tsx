@@ -13,6 +13,7 @@ import styles from './App.module.css';
 import { DedicationSplash } from './DedicationSplash';
 import { FileDropGuard } from './FileDropGuard';
 import { Introduction } from './Introduction';
+import { MainNav, type NavItem } from './MainNav';
 import { href, matchPath, useHashPath } from './router';
 import { StartupGate } from './StartupGate';
 
@@ -58,7 +59,8 @@ function NotFound() {
   );
 }
 
-const NAV = [
+/** The main navigation, in the header (or its Menu on phones). */
+const NAV: NavItem[] = [
   { path: '/', label: 'Library' },
   { path: '/settings', label: 'Settings' },
   { path: '/help', label: 'Help' },
@@ -77,17 +79,7 @@ export function App() {
             <a className={styles.wordmark} href={href('/')}>
               Synesthesia
             </a>
-            <nav className={styles.nav} aria-label="Main">
-              {NAV.map((item) => (
-                <a
-                  key={item.path}
-                  href={href(item.path)}
-                  aria-current={path === item.path ? 'page' : undefined}
-                >
-                  {item.label}
-                </a>
-              ))}
-            </nav>
+            <MainNav items={NAV} current={path} />
           </header>
         )}
         <main className={styles.main}>{resolve(path)}</main>
