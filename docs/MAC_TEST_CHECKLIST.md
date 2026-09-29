@@ -136,6 +136,20 @@ into a chat with Claude. Each page below has a **Copy report** or **Copy results
 1. Visit the app once online, then turn Wi-Fi off and reload: the Library, Help, the Studio
    and extraction still work (the offline cache includes everything, OpenCV included).
 
+## 12. Where to go next
+
+1. In a fresh Chrome profile (or after clearing the site's data), the Library's **How it
+   works** steps show; **Try the sample wink** adds it and lights **Start a composition**.
+   Walk the three steps and check each gets its tick, then **Hide** it and bring it back from
+   Settings.
+2. On a signature card, **Start a composition** fits on one line (Mac fonts are a little
+   wider than Windows'); if it wraps to two lines, note the window width.
+3. The first Studio visit shows the tip about **Play** after "Getting to know this
+   computer…", and it goes when playback starts; a new composition's first save shows the note
+   with **Render MP4** and **New album**.
+4. Each screen's **Guide** link opens the guide at its section, and Back returns to the
+   screen.
+
 ## Windows (Braden's machine)
 
 - Play `spikes/03-encode/` MP4s in **Windows Media Player** (the "Media Player" app) and

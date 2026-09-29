@@ -25,6 +25,20 @@ test('after the first visit, the instrument works offline, extraction included',
   await page.goto('./#/help');
   await expect(page.getByRole('heading', { name: 'The idea' })).toBeVisible();
 
+  // The guide and every one of its pictures (lazy-loaded, never seen online) come from the cache.
+  await page.goto('./#/guide/albums');
+  await expect(page.getByRole('heading', { level: 2, name: 'Albums' })).toBeInViewport();
+  const pictures = page.locator('article img');
+  const count = await pictures.count();
+  expect(count).toBeGreaterThan(10);
+  for (let i = 0; i < count; i++) {
+    const picture = pictures.nth(i);
+    await picture.scrollIntoViewIfNeeded();
+    await expect
+      .poll(() => picture.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth))
+      .toBeGreaterThan(0);
+  }
+
   // Extract a signature with the network off: OpenCV.js and the worker come from the cache.
   await page.goto('./#/prepare');
   const chooser = page.waitForEvent('filechooser');

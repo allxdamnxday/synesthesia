@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { AlbumScreen } from '../screens/Album/AlbumScreen';
 import { NewAlbumScreen } from '../screens/Album/NewAlbumScreen';
 import { DiagnosticsScreen } from '../screens/Diagnostics/DiagnosticsScreen';
+import { GuideScreen } from '../screens/Guide/GuideScreen';
 import { HelpScreen } from '../screens/Help/HelpScreen';
 import { LibraryScreen } from '../screens/Library/LibraryScreen';
 import { PrepareScreen } from '../screens/Prepare/PrepareScreen';
@@ -10,9 +11,11 @@ import { SignatureScreen } from '../screens/Signature/SignatureScreen';
 import { StudioScreen } from '../screens/Studio/StudioScreen';
 import { usePresentationStore } from '../state/presentationStore';
 import styles from './App.module.css';
+import { useScrollToTopOnArrival } from './arrival';
 import { DedicationSplash } from './DedicationSplash';
 import { FileDropGuard } from './FileDropGuard';
 import { Introduction } from './Introduction';
+import { MainNav, type NavItem } from './MainNav';
 import { href, matchPath, useHashPath } from './router';
 import { StartupGate } from './StartupGate';
 
@@ -36,6 +39,8 @@ const ROUTES: RouteDef[] = [
   { pattern: '/album/:albumId', render: (params) => <AlbumScreen params={params} /> },
   { pattern: '/settings', render: () => <SettingsScreen /> },
   { pattern: '/help', render: () => <HelpScreen /> },
+  { pattern: '/guide', render: () => <GuideScreen /> },
+  { pattern: '/guide/:section', render: (params) => <GuideScreen section={params.section} /> },
   { pattern: '/diagnostics', render: () => <DiagnosticsScreen /> },
 ];
 
@@ -58,15 +63,18 @@ function NotFound() {
   );
 }
 
-const NAV = [
+/** The main navigation, in the header (or its Menu on phones). */
+const NAV: NavItem[] = [
   { path: '/', label: 'Library' },
-  { path: '/settings', label: 'Settings' },
+  { path: '/guide', label: 'Guide' },
   { path: '/help', label: 'Help' },
+  { path: '/settings', label: 'Settings' },
   { path: '/diagnostics', label: 'Diagnostics' },
 ];
 
 export function App() {
   const path = useHashPath();
+  useScrollToTopOnArrival(path);
   // Presentation mode shows only the wake (Studio, SPEC 6.3).
   const presenting = usePresentationStore((s) => s.active);
   return (
@@ -77,17 +85,7 @@ export function App() {
             <a className={styles.wordmark} href={href('/')}>
               Synesthesia
             </a>
-            <nav className={styles.nav} aria-label="Main">
-              {NAV.map((item) => (
-                <a
-                  key={item.path}
-                  href={href(item.path)}
-                  aria-current={path === item.path ? 'page' : undefined}
-                >
-                  {item.label}
-                </a>
-              ))}
-            </nav>
+            <MainNav items={NAV} current={path} />
           </header>
         )}
         <main className={styles.main}>{resolve(path)}</main>

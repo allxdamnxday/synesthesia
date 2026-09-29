@@ -8,6 +8,15 @@
   gap: var(--space-4);
 }
 
+/* The breadcrumb, with the guide link at the other end. */
+.topRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-block: calc(-1 * var(--space-2));
+}
+
 .crumbs {
   font-size: var(--font-size-sm);
   color: var(--color-mist);
@@ -170,6 +179,37 @@
   display: flex;
   align-items: center;
   gap: var(--space-3);
+}
+
+@media (pointer: coarse) {
+  .crumbs a {
+    display: inline-flex;
+    align-items: center;
+    min-width: var(--hit-min);
+    min-height: var(--hit-min);
+  }
+}
+
+@media (max-width: 600px) {
+  .page {
+    padding: var(--space-4) var(--space-4) var(--space-7);
+  }
+
+  .thumb {
+    width: 96px;
+  }
+
+  .row {
+    gap: var(--space-4) var(--space-5);
+  }
+
+  .pools {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .actions {
+    flex-wrap: wrap;
+  }
 }
 
 /* Only appears if opening takes a moment, so quick loads don't flash. */

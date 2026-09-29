@@ -2,6 +2,16 @@
   display: inline-flex;
 }
 
+/* The smallest phones: the label may take two lines so the transport keeps two rows. */
+@media (max-width: 359px) {
+  .anchor > button {
+    min-width: 0;
+    padding-inline: var(--space-3);
+    text-align: center;
+    line-height: 1.1;
+  }
+}
+
 /* The button remembers that this composition was drawn by chance. */
 .drawn {
   border-color: color-mix(in srgb, var(--color-honey) 55%, transparent);
@@ -73,4 +83,28 @@
   display: flex;
   justify-content: flex-end;
   gap: var(--space-2);
+}
+
+/* The guide link sits apart from the buttons, on the left. */
+.guide {
+  margin-right: auto;
+  margin-left: calc(-1 * var(--space-2));
+}
+
+/*
+ * Phones and tablets: a sheet along the bottom of the screen, whatever the button's place
+ * (the transport may sit anywhere), scrolling inside when the screen is short. Keep the
+ * query in step with SHEET_QUERY in ChancePopover.tsx.
+ */
+@media (max-width: 900px),
+  (orientation: landscape) and (max-height: 500px) and (max-width: 1023.98px) {
+  .popover {
+    inset: auto var(--space-2) var(--space-2) var(--space-2);
+    translate: none;
+    width: auto;
+    max-width: 480px;
+    margin-inline: auto;
+    max-height: calc(100vh - 2 * var(--space-2));
+    max-height: calc(100dvh - 2 * var(--space-2));
+  }
 }

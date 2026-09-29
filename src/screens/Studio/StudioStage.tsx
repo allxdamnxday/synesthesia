@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState, type Ref } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type Ref } from 'react';
+import { overlayAllowed } from '../../app/firstRun';
 import { href } from '../../app/router';
 import { useStudioStore, type TransportController } from '../../state/studioStore';
 import { measureThisComputer } from '../../studio/measure';
 import { FALLBACK_QUALITY } from '../../studio/quality';
 import { StudioRuntime, type PictureProblem } from '../../studio/runtime';
-import { ConfirmDialog } from '../../ui/ConfirmDialog';
-import { Notice } from '../../ui/Notice';
+import { CloseIcon } from '../../ui/icons';
 import styles from './Studio.module.css';
 
 /** Hide the pointer after this long without movement in presentation mode. */
@@ -50,11 +50,8 @@ export function StudioStage({ ref }: { ref?: Ref<HTMLDivElement> }) {
   const quality = useStudioStore((s) => s.quality);
   const composition = useStudioStore((s) => s.composition);
   const picture = useStudioStore((s) => s.picture);
-  const notices = useStudioStore((s) => s.notices);
   const presentation = useStudioStore((s) => s.presentation);
-  const isNew = useStudioStore((s) => s.isNew);
   const [cursorHidden, setCursorHidden] = useState(false);
-  const [confirmDiscard, setConfirmDiscard] = useState(false);
   const measuring = quality === null;
 
   // First visit: measure this computer, then remember the tier (SPEC 14.2).
@@ -112,11 +109,20 @@ export function StudioStage({ ref }: { ref?: Ref<HTMLDivElement> }) {
     if (quality) runtimeRef.current?.setQuality(quality);
   }, [quality]);
 
+  // The very first visit, once this computer has been measured: a tip to press Play (the
+  // stage is dark until then). Like the introduction, it stays out of automated browsers
+  // unless asked for with `?studiotip=1`.
+  useEffect(() => {
+    if (measuring || !overlayAllowed('studiotip')) return;
+    void useStudioStore.getState().showFirstVisitTip();
+  }, [measuring, session]);
+
   useEffect(() => {
     if (composition) runtimeRef.current?.setComposition(composition);
   }, [composition]);
 
-  // Presentation mode: the pointer fades away when it rests.
+  // Presentation mode: the pointer (and, on touch screens, the Close button) fades away
+  // when it rests; a touch brings the button back.
   useEffect(() => {
     if (!presentation) {
       setCursorHidden(false);
@@ -129,18 +135,35 @@ export function StudioStage({ ref }: { ref?: Ref<HTMLDivElement> }) {
       timer = window.setTimeout(() => setCursorHidden(true), CURSOR_IDLE_MS);
     };
     window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerdown', onMove);
     return () => {
       window.clearTimeout(timer);
       window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerdown', onMove);
     };
   }, [presentation]);
 
   const store = useStudioStore.getState;
   const classes = [styles.stage, cursorHidden ? styles.cursorHidden : ''].filter(Boolean).join(' ');
+  // On phones the stage takes the composition's shape (Studio.module.css).
+  const aspect = composition
+    ? ({
+        '--stage-aspect': `${composition.render.width} / ${composition.render.height}`,
+      } as CSSProperties)
+    : undefined;
   return (
-    <div ref={ref} className={classes}>
+    <div ref={ref} className={classes} style={aspect}>
       <div ref={hostRef} className={styles.canvasHost} />
-      {presentation ? null : (
+      {presentation ? (
+        <button
+          type="button"
+          className={styles.leave}
+          onClick={() => store().setPresentation(false)}
+        >
+          <CloseIcon />
+          Close
+        </button>
+      ) : (
         <>
           {measuring ? (
             <p className={styles.measuring} role="status">
@@ -153,49 +176,8 @@ export function StudioStage({ ref }: { ref?: Ref<HTMLDivElement> }) {
             </p>
           ) : null}
           {composition?.mute.visual ? <p className={styles.mutedLabel}>Visual muted</p> : null}
-          <div className={styles.notices} role="status" aria-live="polite">
-            {notices.map((n) => (
-              <Notice
-                key={n.id}
-                tone={n.tone}
-                onDismiss={() => store().dismissNotice(n.id)}
-                actions={
-                  n.action === 'discard' ? (
-                    <button
-                      type="button"
-                      className={styles.noticeAction}
-                      onClick={() => setConfirmDiscard(true)}
-                    >
-                      Discard changes
-                    </button>
-                  ) : undefined
-                }
-              >
-                {n.text}
-              </Notice>
-            ))}
-          </div>
         </>
       )}
-      <ConfirmDialog
-        open={confirmDiscard}
-        title="Discard the unsaved changes?"
-        confirmLabel="Discard changes"
-        cancelLabel="Keep them"
-        tone="danger"
-        onCancel={() => setConfirmDiscard(false)}
-        onConfirm={() => {
-          setConfirmDiscard(false);
-          void store().discardChanges();
-        }}
-      >
-        <p>
-          {isNew
-            ? 'The composition starts again from its materials’ baselines.'
-            : 'The composition goes back to how it was last saved.'}{' '}
-          This can’t be undone.
-        </p>
-      </ConfirmDialog>
     </div>
   );
 }

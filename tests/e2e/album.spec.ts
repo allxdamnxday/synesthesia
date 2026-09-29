@@ -27,9 +27,12 @@ async function importSample(page: Page) {
   await expect(page.getByText('Added the signature “Sample wink”.')).toBeVisible();
 }
 
+/** New album is on the signature's card in the Library. */
 async function openNewAlbum(page: Page) {
-  await page.getByRole('button', { name: 'More actions for Sample wink', exact: true }).click();
-  await page.getByRole('menuitem', { name: 'New album' }).click();
+  await page
+    .getByRole('list', { name: 'Signatures' })
+    .getByRole('button', { name: 'New album from Sample wink', exact: true })
+    .click();
   await expect(page.getByRole('heading', { name: 'New album', level: 1 })).toBeVisible();
 }
 

@@ -28,6 +28,15 @@ export interface AppSettings {
   /** The optional "Made for Freeman" dedication splash (M8). */
   dedicationSplash: boolean;
   onboardingDone: boolean;
+  /**
+   * Where-to-go-next guidance: the "How it works" steps on the Library, the Studio's first-visit
+   * tip and its note after a new composition's first save. Hide (or Settings) turns it off.
+   */
+  showGuidance: boolean;
+  /** A render has finished in the Studio at least once (the Library's third step is done). */
+  videoRendered: boolean;
+  /** The Studio's first-visit tip has been shown. */
+  studioTipSeen: boolean;
   /** Name of the folder renders were last saved to ('' if none), shown as a reminder. */
   renderFolderHint: string;
   persistence: PersistenceState;
@@ -41,6 +50,9 @@ export const DEFAULT_SETTINGS: Readonly<AppSettings> = {
   renderFps: 30,
   dedicationSplash: true,
   onboardingDone: false,
+  showGuidance: true,
+  videoRendered: false,
+  studioTipSeen: false,
   renderFolderHint: '',
   persistence: 'not-asked',
   benchmark: null,
@@ -83,6 +95,9 @@ const VALID: { [K in keyof AppSettings]: (v: unknown) => v is AppSettings[K] } =
   renderFps: oneOf<30 | 60>(30, 60),
   dedicationSplash: isBoolean,
   onboardingDone: isBoolean,
+  showGuidance: isBoolean,
+  videoRendered: isBoolean,
+  studioTipSeen: isBoolean,
   renderFolderHint: isShortText,
   persistence: oneOf<PersistenceState>('not-asked', 'granted', 'denied', 'unavailable'),
   benchmark: isBenchmark,

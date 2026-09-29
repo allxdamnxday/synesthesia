@@ -3,6 +3,7 @@ import { useStudioStore, type ChancePopoverHandle } from '../../state/studioStor
 import { chanceSoundMetas, chanceVisualMetas } from '../../studio/catalog';
 import { Button } from '../../ui/Button';
 import { Checkbox } from '../../ui/Checkbox';
+import { GuideLink } from '../../ui/GuideLink';
 import { SegmentedControl } from '../../ui/SegmentedControl';
 import { Toggle } from '../../ui/Toggle';
 import styles from './ChancePopover.module.css';
@@ -12,6 +13,10 @@ const supportsAnchors =
   typeof CSS !== 'undefined' &&
   typeof CSS.supports === 'function' &&
   CSS.supports('anchor-name', '--a');
+
+/** Where the popover is a sheet along the bottom instead (ChancePopover.module.css). */
+const SHEET_QUERY =
+  '(max-width: 900px), (orientation: landscape) and (max-height: 500px) and (max-width: 1023.98px)';
 
 /**
  * Draw by chance (SPEC 12.2): chance picks one visual and one sound material from the
@@ -59,7 +64,11 @@ export function ChanceButton() {
     const onBeforeToggle = (event: Event) => {
       if ((event as ToggleEvent).newState !== 'open' || supportsAnchors) return;
       const r = anchorRef.current?.getBoundingClientRect();
-      if (!r) return;
+      if (!r || window.matchMedia(SHEET_QUERY).matches) {
+        popover.style.right = '';
+        popover.style.bottom = '';
+        return;
+      }
       popover.style.right = `${Math.round(document.documentElement.clientWidth - r.right)}px`;
       popover.style.bottom = `${Math.round(window.innerHeight - r.top + 8)}px`;
     };
@@ -164,6 +173,7 @@ export function ChanceButton() {
           </p>
         )}
         <div className={styles.actions}>
+          <GuideLink section="chance" className={styles.guide} />
           <Button popoverTarget={popoverId} popoverTargetAction="hide">
             Close
           </Button>

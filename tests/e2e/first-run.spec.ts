@@ -9,8 +9,10 @@ test('the introduction walks through three steps and opens the sample wink', asy
   await page.getByRole('button', { name: 'Next' }).click();
   await expect(page.getByRole('dialog', { name: 'How it goes' })).toBeVisible();
   await page.getByRole('button', { name: 'Next' }).click();
-  await expect(page.getByRole('dialog', { name: 'Begin' })).toBeVisible();
-  await page.getByRole('button', { name: 'Try the sample wink' }).click();
+  const begin = page.getByRole('dialog', { name: 'Begin' });
+  await expect(begin).toBeVisible();
+  // (The Library behind it offers the sample wink too, in its How it works steps.)
+  await begin.getByRole('button', { name: 'Try the sample wink' }).click();
   await expect(page).toHaveURL(/#\/studio\/new\//);
 
   // Finished: it doesn't come back, and the sample is in the library.

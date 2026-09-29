@@ -5,12 +5,14 @@
  *   node scripts/capture-guide.mjs      # or: node scripts/capture-guide.mjs http://localhost:5173/
  *
  * Uses a fresh browser profile (empty library), the fixture clips in tests/fixtures/ and the
- * bundled sample wink. Writes PNGs to docs/images/guide/.
+ * bundled sample wink. Writes PNGs to docs/images/guide/, then the web-sized copies the in-app
+ * guide shows (scripts/guide-images.mjs).
  */
 import { mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from '@playwright/test';
+import { makeGuideImages } from './guide-images.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const base = process.argv[2] ?? 'http://localhost:5173/';
@@ -164,5 +166,8 @@ await shot('help');
 await go('#/diagnostics');
 await page.waitForTimeout(4000);
 await shot('diagnostics');
+
+// The web-sized copies the in-app guide shows.
+await makeGuideImages(browser);
 
 await browser.close();

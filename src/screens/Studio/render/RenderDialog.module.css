@@ -1,6 +1,7 @@
 .dialog {
   width: min(520px, calc(100vw - 2 * var(--space-5)));
   max-height: calc(100vh - 2 * var(--space-5));
+  max-height: calc(100dvh - 2 * var(--space-5));
   overflow: auto;
   padding: var(--space-5);
   border: 1px solid color-mix(in srgb, var(--color-pearl) 14%, transparent);
@@ -256,7 +257,30 @@
 
 .buttons {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: var(--space-3);
   margin-top: var(--space-5);
+}
+
+/* The guide link sits apart from the buttons, on the left. */
+.guide {
+  margin-right: auto;
+  margin-left: calc(-1 * var(--space-2));
+}
+
+@media (pointer: coarse) {
+  .option {
+    min-width: var(--hit-min);
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .dialog {
+    width: calc(100vw - 2 * var(--space-4));
+    max-height: calc(100vh - 2 * var(--space-4));
+    max-height: calc(100dvh - 2 * var(--space-4));
+    padding: var(--space-4);
+  }
 }

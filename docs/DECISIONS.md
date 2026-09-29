@@ -455,6 +455,166 @@ implementation follows the intent. To revisit with Freeman only if a material fe
   before the limiter (broader than the one affected case); lowering the harness's master gain
   (changes the signal path under test).
 
+## 2026-09-29: The user guide inside the app
+- **Decision:** a Guide page (`#/guide`, and `#/guide/<section>` for each section) renders
+  `docs/USER_GUIDE.md` itself, bundled with Vite's `?raw`, so the document and the page can't
+  drift. A small in-house parser (`src/guide/markdown.ts`, unit-tested) turns it into a plain
+  tree that `src/guide/MarkdownView.tsx` renders as React elements. Help points newcomers to it
+  ("New here? Read the guide") and links each step of "How a session goes" to its section;
+  Help stays the reference for words, materials, properties and shortcuts.
+- **Why no Markdown library:** none is on the approved list (SPEC 7.2), and the guide uses a
+  small subset: headings, emphasis, code, links, pictures, nested lists, tables. The parser
+  follows CommonMark for what it covers; anything else, HTML included, shows as text. Every
+  word becomes a React text node, so markup in the file can never run.
+- **Links and addresses:** section addresses are stable slugs in `GUIDE_SECTIONS`
+  (`src/guide/sections.ts`) for deep links from other screens; a unit test fails when a heading
+  changes without the list. GitHub-style anchors (`#keeping-your-work-safe`) go to sections
+  through the hash router, so the same file works on GitHub; links to other repository files
+  or web addresses show as plain text (the site has neither and makes no network requests).
+  The guide's two quoted cross-references to "Keeping your work safe" became links (same words).
+- **Pictures:** the 12 screenshots the guide shows (1440 px PNG, 2.5 MB) are re-encoded by
+  Chrome (canvas to WebP, no image dependency) at 1280 px wide and quality 0.85: 466 KiB in
+  all. At 2× zoom 0.85 keeps small interface text as crisp as 0.9 (+23%); 0.7 starts to blur
+  it; JPEG at the same setting was ~75% larger. `scripts/guide-images.mjs` makes them (and
+  `capture-guide.mjs` runs it after new screenshots); their sizes are recorded, so the page
+  reserves their space. They load lazily and open full size in a viewer.
+- **Offline cost:** the service worker precaches them with the rest (`.webp` added to its
+  patterns; only pictures the guide uses are bundled): 22 → 34 entries, 12,641 → 13,146 KiB
+  (+505 KiB: pictures 466, JavaScript 32 including the guide's text, CSS 8). The offline test
+  opens the guide and every picture with the network cut.
+- **Alternatives:** a Markdown dependency (not approved, and far more than needed); rewriting
+  the guide as components (two copies that drift); the original PNGs (5× the size); loading the
+  page as its own chunk (32 KB didn't justify a loading state).
+
+## 2026-09-29: Phones and tablets
+- **Why:** on a phone every screen was wider than the screen (the header's links alone made a
+  375 px page 460 px wide) and the Studio squeezed the wake into a strip beside its controls.
+  The Mac in Chrome stays the design target: at 1024 px and wider nothing changes.
+- **Breakpoints** (CSS can't share them, so they are repeated per module; `tokens.css` lists them):
+  - **900 px and narrower, upright** (portrait, or taller than 500 px): Studio, Prepare and
+    Signature become one column and the page scrolls. The stage takes the shape of what it
+    shows (the composition's render size, the clip as turned, the signature's field), at most
+    55–60% of the screen's height and at least 180 px tall.
+  - **A phone on its side** (landscape, 500 px tall or less, narrower than 1024 px): the Studio
+    keeps the wake at full height on the left, its header above the scrolling controls on the
+    right and the transport along the bottom; the page doesn't scroll. Prepare keeps the clip
+    beside its settings.
+  - **720 px and narrower:** the header's links fold into a Menu (a disclosure: Esc returns focus
+    to it; a tap elsewhere, Tab leaving it or arriving on a screen closes it), and the
+    transport puts its snapshots and Draw by chance on a second row.
+  - **600 px and narrower:** the Studio's name gets a line of its own (cut short with an
+    ellipsis) above the save state, Save and a More menu with Save as new, Render MP4 and
+    Present; 16 px page gutters; two library cards abreast where they fit.
+  - **Under 360 px:** the transport shows only the playhead's time, and Draw by chance may wrap
+    its label, so the transport keeps two rows.
+- **The Studio's transport is docked to the bottom of the screen** on phones and upright
+  tablets (sticky), not placed between the wake and the controls: Play and the scrub bar stay in
+  reach while the controls scroll. Draw by chance opens as a sheet along the bottom there.
+  Alternatives: the transport under the wake (scrolls away with it); the wake sticky too, so it
+  stays in view while adjusting (better for playing, but a square composition would hold half
+  a phone's screen, and with the keyboard up for notes almost nothing would be left; worth
+  revisiting once Freeman has tried it on a phone).
+- **Touch:** on touch screens (`pointer: coarse`) `--hit-min` is 44 px, and handle hit areas
+  grow to match. Sliders, the signature's lines and the picture around a focus box use
+  `touch-action: pan-y`: a sideways drag moves them, while an up or down swipe that starts on
+  them still scrolls the page (otherwise a panel full of sliders barely scrolls under a finger).
+  A tap jumps like a click; a double-tap resets a slider to its baseline (double-click on the
+  Mac is unchanged); a tap on a slider's or line's name shows the description a tooltip shows
+  with a mouse; values are always shown. The scrub bar, the trim bar, the focus box itself and
+  its handles never scroll the page. Holding a full snapshot replaces it (Shift-click with a
+  mouse). A touch the browser cancels keeps what it had reached. Pull-to-refresh can't reload
+  the page mid-gesture (it would lose a clip). Presentation on a touch screen gets a Close
+  button (there's no Esc key, and iPhones don't allow element full screen, so the wake just
+  covers the window). Alternatives: `touch-action: none` everywhere (simplest, but the panel
+  stops scrolling); long-press for descriptions; separate reset buttons.
+- **Also fixed on the desktop:** the Studio page scrolled 424 px into empty space at 1440×900
+  (a screen-reader-only label at the bottom of the scrolling controls escaped them); the panel
+  is now positioned. Before/after captures at 1440×900 of Library, Prepare (empty, with a clip,
+  extracted), Signature, Studio, New album, Album, Settings, Help and Diagnostics are
+  pixel-identical apart from that (and a 1/255 shade in the scrub bar's hatching that comes with
+  the shorter capture).
+- **Not done:** Shift-drag fine control has no touch equivalent (drag slowly, or use a keyboard);
+  titles on buttons (tooltips) don't show on touch screens, but their actions are labelled.
+- **Tests:** `tests/e2e/responsive.spec.ts` checks every screen at 320×640, 375×812, 812×375 and
+  768×1024 as a touch device, and drives sliders, the scrub bar, trim handles, the focus box and
+  snapshots with real touch input (CDP).
+
+## 2026-09-29: Where to go next
+- **Why:** using the live site, Braden sometimes couldn't tell where to go next. The journey
+  (clip → signature → composition → video or album) was there, but its next steps were hidden:
+  a signature card's only visible action was Open (a detail view), Start a composition and New
+  album sat in its "…" menu, and nothing after Prepare or a first save said what comes next.
+- **How it works (Library):** three steps (make a signature from a clip, start a
+  composition, render a video or make an album) at the top of the Library. The current step
+  (the first not done) is lit in Honey with its action and a Guide link to its section; done
+  steps get a tick and drop their description. Done means: a signature exists; a composition
+  exists (album tracks count); an album exists or a render has finished. Single renders leave
+  no record in the library, so the Studio sets a `videoRendered` setting when one finishes (a
+  flag in this browser, nothing sent anywhere). With nothing in the library the steps replace
+  the empty Library's invitation and offer **Try the sample wink** (the introduction's loader,
+  now `importSampleWink()` in `src/library/sample.ts`), which adds it and moves focus to the
+  next step's button rather than jumping into the Studio, so the person sees where the
+  signature went. When every step is done the steps stay, compact, with a line saying so:
+  predictable rather than vanishing on their own. **Hide** (and **Show how it works** in
+  Settings, setting `showGuidance`) puts them away; a notice says where to bring them back.
+- **Signature cards** show **Start a composition** (a button across the card) and **New
+  album** beside the "…" menu, which keeps Rename, Duplicate, Export file and Delete. The
+  picture is now a real button ("Open *name*") that opens the signature's page; composition
+  and album cards keep their Open button. Each button's name includes the signature's
+  ("Start a composition from Wink"), because cards repeat. At 375 px two cards still sit
+  abreast (the label fits on one line; it may wrap to two at larger text sizes).
+- **The Signature page** shows the two ways forward together under "Use this signature", one
+  plain line each: **Start a composition** ("Shape one piece by hand in the Studio.") and **New
+  album** ("Let chance draw a set of compositions from this signature."). On the Mac they head
+  the right-hand column, where the facts had room to spare, so the wake keeps its size; on a
+  phone they come first, above the wake; on an upright tablet they sit side by side.
+- **Prepare:** **Save and open in Studio** is the main button (Save beside it), with "Not saved
+  yet. Next comes the Studio, where it moves through a visual and a sound material." Enter in
+  the name still just saves. The faint-signature note now says to turn on **Set sensitivity by
+  hand** before raising Sensitivity.
+- **The Studio:** after a new composition's first save, a note: "Saved in your Library. Next,
+  make a video of it, or let chance draw an album of compositions from “*signature*”." with
+  **Render MP4** and **New album** (a first save happens once per composition, so it never
+  repeats; it goes when dismissed or when the render dialog opens). New album rather than a
+  Library link: one step instead of two, and the breadcrumb already leads to the Library. The
+  first visit also gets one tip, "Press Play (or Space) to see and hear the signature move
+  through the materials…", because the wake is dark until Play; it goes once playback starts
+  and is recorded as seen (`studioTipSeen`). Like the introduction it stays out of automated
+  browsers unless forced with `?studiotip=1`. Both follow `showGuidance`. The Studio's notices
+  now float over the top of the wake only on wide screens; on phones they sit between the
+  header and the wake (with two buttons, the note would have hidden most of a phone's wake).
+- **Album:** the review loop at the top as three short steps (Open in Studio and play; mark
+  Kept or Set aside; Batch render and Export album log).
+- **Guide links:** one small component, `GuideLink` (`src/ui/GuideLink.tsx`: a question mark
+  and "Guide", named "Guide: *section*"), on the Library (The Library), Prepare and Signature
+  (Making a signature: the bare wake and its lines are explained there), the Studio header
+  (icon only on phones), Draw by chance, Render MP4 (not while rendering: leaving would cancel
+  it), New album and Album (Albums), Settings, and Diagnostics (If something goes wrong). Same
+  tab, like the header's Guide, so Back returns. Caveat: leaving Prepare with an unsaved
+  signature or an open clip loses it, as the header's links always have; a leave-screen
+  prompt would be a separate change.
+- **A new screen starts at the top.** The window kept its scroll position across hash
+  changes, so a screen could open halfway down. `useScrollToTopOnArrival()`
+  (`src/app/arrival.ts`) scrolls to the top in a layout effect when the *screen* changes; the
+  Studio after a first save or Save as new (a new address, the same screen) and moves between
+  guide sections (the guide positions itself) keep their place.
+- **The guide** was brought up to date (the steps, the cards, each item's menu as it is, undo
+  and redo as keys, press and hold for snapshots, Also choose values, Diagnostics under Menu
+  on a phone, no file path an in-app reader can't open) and its screenshots recaptured: 12
+  pictures, 498 KiB (from 466).
+- **Tests:** `tests/e2e/workflow-guidance.spec.ts` (the steps through the whole journey,
+  Hide and Settings, cards, the Signature page, Prepare's main button, the Studio's note and
+  tip, every guide link, arrival at the top); `responsive.spec.ts` checks the steps, cards and
+  guide links at every size; unit tests for the steps (`journey.test.ts`) and for which
+  addresses are the same screen (`arrival.test.ts`).
+- **Alternatives:** a guided tour or coach marks (gamified, and they cover what they explain);
+  auto-hiding the steps once all are done (surprising; the Settings switch would then seem not
+  to work); counting only albums for the last step (the steps would nag someone who only makes
+  videos); jumping into the Studio after the sample wink (as the introduction does; here the
+  point is to show the Library filling up); keeping the ways forward in the menu with a hint
+  (the problem was that they were hidden); Library in the Studio's note (one more step to New
+  album); new tabs for guide links (a second copy of the app, with its own dedication splash).
+
 ## Pending
 - **Freeman's MacBook Pro:** model, year, chip, macOS and Chrome versions. Diagnostics' Copy
   report records the macOS version, CPU type (Intel or Apple Silicon), GPU and Chrome
@@ -463,8 +623,11 @@ implementation follows the intent. To revisit with Freeman only if a material fe
   (renders may need a small audio offset), float render targets, preview frame rate on a
   Retina screen, extraction time, QuickTime playback, the offline cache.
 - **A real wink clip** with a focus area (M1 acceptance).
-- **Hosting:** the plan is a free Vercel Hobby deployment from a private GitHub repository
-  (`docs/DEPLOY.md`); it needs the builder's own accounts, so nothing has been deployed.
+- **Phones and tablets on real devices:** the layouts and touch handling were checked in Chrome's
+  mobile emulation only. Worth a try on an iPhone (Safari: no element full screen, its own
+  toolbar and keyboard behaviour) and an Android phone in Chrome.
+- **Hosting:** done 2026-09-29: a free Vercel Hobby project deploying from the private
+  GitHub repository `allxdamnxday/synesthesia` on every push to `main` (`docs/DEPLOY.md`).
 - **To confirm with Freeman after handover** (SPEC 18): the chance interpretation (open
   properties drawn from the shared properties the two materials use; the rest locked at
   baseline), which materials reveal or obscure the signature, the dedication splash (on by

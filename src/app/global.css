@@ -33,6 +33,15 @@ body,
   margin: 0;
 }
 
+/* Touch screens: a downward drag at the top of a screen must not reload the page (and lose
+   an unsaved clip) through the browser's pull-to-refresh. */
+@media (pointer: coarse) {
+  html,
+  body {
+    overscroll-behavior-y: contain;
+  }
+}
+
 body {
   background: var(--color-deep);
   color: var(--color-pearl);

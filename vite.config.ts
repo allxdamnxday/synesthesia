@@ -34,8 +34,9 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     // Offline after the first visit (SPEC C5, M8): precache the whole instrument, including
-    // OpenCV.js, fonts, worklets and the sample signature. Spike and harness pages are
-    // development tools and stay out of the cache.
+    // OpenCV.js, fonts, worklets, the sample signature and the guide's pictures (WebP, bundled
+    // only when the guide shows them). Spike and harness pages are development tools and stay
+    // out of the cache.
     VitePWA({
       registerType: 'autoUpdate',
       injectRegister: false,
@@ -52,7 +53,7 @@ export default defineConfig(({ mode }) => ({
         icons: [{ src: 'favicon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' }],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,woff2,json,wasm,png}'],
+        globPatterns: ['**/*.{js,css,html,svg,woff2,json,wasm,png,webp}'],
         globIgnores: ['spikes/**', 'dev/**', '**/fixtures/**'],
         // OpenCV.js is ~11 MB (wasm embedded); the default limit is 2 MB.
         maximumFileSizeToCacheInBytes: 16 * 1024 * 1024,
@@ -85,5 +86,8 @@ export default defineConfig(({ mode }) => ({
   test: {
     include: ['tests/unit/**/*.test.ts', 'src/**/*.test.ts'],
     environment: 'node',
+    // The simulation and sound-program tests take 1–3 s on an idle computer; with the machine
+    // busy (a game running, a slower Mac) the default 5 s timed them out though nothing failed.
+    testTimeout: 20_000,
   },
 }));

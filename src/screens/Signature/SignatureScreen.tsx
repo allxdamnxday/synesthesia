@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { href, navigate } from '../../app/router';
 import { errorDetail, getSignature, userMessage } from '../../library';
 import type { KineticSignature } from '../../signature/types';
 import { useLibraryStore } from '../../state/libraryStore';
 import { Button } from '../../ui/Button';
+import { GuideLink } from '../../ui/GuideLink';
 import { InlineRename } from '../../ui/InlineRename';
 import { Notice, type NoticeTone } from '../../ui/Notice';
 import { useKeyShortcuts } from '../../ui/useKeyShortcuts';
@@ -22,7 +23,8 @@ type Loaded =
 
 /**
  * A saved signature (#/signature/:signatureId): its bare wake looping, its movement
- * features over time, a few facts in plain words, and what to do next.
+ * features over time, a few facts in plain words, and the two ways forward (a composition
+ * by hand, or an album by chance).
  */
 export function SignatureScreen({ params }: { params?: Record<string, string> }) {
   const id = params?.signatureId ?? '';
@@ -174,70 +176,97 @@ function SignatureView({ signature }: { signature: KineticSignature }) {
             )}
           </div>
           <div className={styles.actions}>
+            <GuideLink section="prepare" />
             <Button onClick={() => void exportFile()}>Export file</Button>
-            <Button
-              variant="primary"
-              onClick={() => navigate(`/studio/new/${encodeURIComponent(signature.id)}`)}
-            >
-              Start a composition
-            </Button>
           </div>
         </header>
 
-        <div className={styles.body}>
-          <div className={styles.work}>
-            <div className={styles.stage}>
-              <WakeCanvas
-                playback={playback}
-                label={`The wake of “${name}”: a short stroke for each part of the movement, pointing the way it moves`}
-              />
+        {/* The two ways forward, side by side (stacked where the column is narrow). */}
+        <section className={styles.next} aria-labelledby="signature-next-title">
+          <h2 id="signature-next-title" className={styles.panelTitle}>
+            Use this signature
+          </h2>
+          <div className={styles.ways}>
+            <div className={styles.way}>
+              <Button
+                variant="primary"
+                onClick={() => navigate(`/studio/new/${encodeURIComponent(signature.id)}`)}
+              >
+                Start a composition
+              </Button>
+              <p className={styles.wayText}>Shape one piece by hand in the Studio.</p>
             </div>
-            <SignatureTransport playback={playback} />
-            <SignatureSparklines signature={signature} playback={playback} />
+            <div className={styles.way}>
+              <Button onClick={() => navigate(`/album/new/${encodeURIComponent(signature.id)}`)}>
+                New album
+              </Button>
+              <p className={styles.wayText}>
+                Let chance draw a set of compositions from this signature.
+              </p>
+            </div>
           </div>
+        </section>
 
-          <aside className={styles.panel} aria-label="About this signature">
-            <h2 className={styles.panelTitle}>About this signature</h2>
-            <dl className={styles.facts}>
-              <div>
-                <dt>Length</dt>
-                <dd>{formatDuration(seconds)} of movement</dd>
-              </div>
-              <div>
-                <dt>Sudden movement</dt>
-                <dd>{describeOnsets(onsets)}</dd>
-              </div>
-              <div>
-                <dt>Created</dt>
-                <dd>{formatChanged(signature.createdAt) || 'Unknown'}</dd>
-              </div>
-              <div>
-                <dt>Speed</dt>
-                <dd>Plays at {formatSpeed(signature.preferredSpeed)} by default</dd>
-              </div>
-              <div>
-                <dt>Made from</dt>
-                <dd>
-                  “{signature.source.fileName || 'a clip'}”
-                  {signature.source.focusArea ? ', using a focus area' : ''}
-                </dd>
-              </div>
-            </dl>
-            <p className={styles.note}>
-              Only the movement is kept. The clip it came from isn’t stored here.
-            </p>
-            <div className={styles.notices} role="status" aria-live="polite">
-              {notice ? (
-                <Notice tone={notice.tone} onDismiss={() => setNotice(null)}>
-                  {notice.text}
-                </Notice>
-              ) : null}
-            </div>
-            <a className={styles.back} href={href('/')}>
-              Back to library
-            </a>
-          </aside>
+        <div className={styles.work}>
+          {/* On phones the stage takes the field's shape (SignatureScreen.module.css). */}
+          <div
+            className={styles.stage}
+            style={
+              {
+                '--stage-aspect': `${signature.grid.cols} / ${signature.grid.rows}`,
+              } as CSSProperties
+            }
+          >
+            <WakeCanvas
+              playback={playback}
+              label={`The wake of “${name}”: a short stroke for each part of the movement, pointing the way it moves`}
+            />
+          </div>
+          <SignatureTransport playback={playback} />
+          <SignatureSparklines signature={signature} playback={playback} />
         </div>
+
+        <aside className={styles.panel} aria-label="About this signature">
+          <h2 className={styles.panelTitle}>About this signature</h2>
+          <dl className={styles.facts}>
+            <div>
+              <dt>Length</dt>
+              <dd>{formatDuration(seconds)} of movement</dd>
+            </div>
+            <div>
+              <dt>Sudden movement</dt>
+              <dd>{describeOnsets(onsets)}</dd>
+            </div>
+            <div>
+              <dt>Created</dt>
+              <dd>{formatChanged(signature.createdAt) || 'Unknown'}</dd>
+            </div>
+            <div>
+              <dt>Speed</dt>
+              <dd>Plays at {formatSpeed(signature.preferredSpeed)} by default</dd>
+            </div>
+            <div>
+              <dt>Made from</dt>
+              <dd>
+                “{signature.source.fileName || 'a clip'}”
+                {signature.source.focusArea ? ', using a focus area' : ''}
+              </dd>
+            </div>
+          </dl>
+          <p className={styles.note}>
+            Only the movement is kept. The clip it came from isn’t stored here.
+          </p>
+          <div className={styles.notices} role="status" aria-live="polite">
+            {notice ? (
+              <Notice tone={notice.tone} onDismiss={() => setNotice(null)}>
+                {notice.text}
+              </Notice>
+            ) : null}
+          </div>
+          <a className={styles.back} href={href('/')}>
+            Back to library
+          </a>
+        </aside>
       </div>
     </section>
   );

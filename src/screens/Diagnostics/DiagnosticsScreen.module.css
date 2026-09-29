@@ -5,6 +5,17 @@
   margin: 0 auto;
 }
 
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.titleRow h1 {
+  margin: 0;
+}
+
 .intro {
   color: var(--color-mist);
   max-width: 64ch;
@@ -158,5 +169,11 @@
   .environmentRow {
     grid-template-columns: 1fr;
     gap: var(--space-1);
+  }
+}
+
+@media (max-width: 600px) {
+  .page {
+    padding: var(--space-5) var(--space-4) var(--space-7);
   }
 }

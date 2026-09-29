@@ -3,6 +3,7 @@ import { useStudioStore } from '../../state/studioStore';
 import { RenderDialog } from './render/RenderDialog';
 import styles from './Studio.module.css';
 import { StudioHeader } from './StudioHeader';
+import { StudioNotices } from './StudioNotices';
 import { StudioPanel } from './StudioPanel';
 import { StudioStage } from './StudioStage';
 import { StudioTransport } from './StudioTransport';
@@ -28,6 +29,7 @@ export function StudioWorkspace() {
       <div className={styles.grid}>
         {presentation ? null : <StudioHeader />}
         <StudioStage ref={stageRef} />
+        {presentation ? null : <StudioNotices />}
         {presentation ? null : <StudioPanel />}
         {presentation ? null : <StudioTransport />}
       </div>

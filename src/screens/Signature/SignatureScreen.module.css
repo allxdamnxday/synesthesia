@@ -1,6 +1,7 @@
 /*
  * The screen fills the space under the app header: `.screen` takes the remaining height
- * and `.layout` is pinned inside it, so the wake gets whatever room is left.
+ * and `.layout` is pinned inside it, so the wake gets whatever room is left. The ways forward
+ * head the right-hand column, above the facts.
  */
 .screen {
   flex: 1;
@@ -12,10 +13,16 @@
   position: absolute;
   inset: 0;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) 300px;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-areas:
+    'bar bar'
+    'work next'
+    'work panel';
 }
 
 .bar {
+  grid-area: bar;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -65,17 +72,45 @@
 
 .actions {
   display: flex;
+  align-items: center;
   gap: var(--space-2);
   flex-wrap: wrap;
 }
 
-.body {
+/* The two ways forward: a composition by hand, or an album by chance. */
+.next {
+  grid-area: next;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5) var(--space-5) var(--space-4);
+  background: var(--color-basin);
+  border-left: 1px solid color-mix(in srgb, var(--color-silt) 45%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-silt) 35%, transparent);
+}
+
+.ways {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 300px;
-  min-height: 0;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-4) var(--space-5);
+}
+
+.way {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.wayText {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-mist);
 }
 
 .work {
+  grid-area: work;
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -90,6 +125,7 @@
 }
 
 .panel {
+  grid-area: panel;
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
@@ -168,13 +204,61 @@
   }
 }
 
-@media (max-width: 900px) {
-  .body {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: minmax(0, 1fr) auto;
+/*
+ * Phones and tablets upright (900 px and narrower, not short landscape): one column that
+ * scrolls. The ways forward come first, then the wake at the field's shape, the transport,
+ * the lines and the facts. A phone on its side keeps the desktop layout (the page scrolls a
+ * little).
+ */
+@media (max-width: 900px) and (orientation: portrait), (max-width: 900px) and (min-height: 501px) {
+  .screen {
+    min-height: 0;
   }
+
+  .layout {
+    position: static;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .next {
+    padding: var(--space-4) var(--space-5);
+    border-left: 0;
+  }
+
+  .stage {
+    flex: none;
+    width: 100%;
+    aspect-ratio: var(--stage-aspect, 16 / 9);
+    min-height: 180px;
+    max-height: 60vh;
+    max-height: 60svh;
+  }
+
   .panel {
+    overflow: visible;
     border-left: 0;
     border-top: 1px solid color-mix(in srgb, var(--color-silt) 45%, transparent);
+  }
+}
+
+@media (pointer: coarse) {
+  .crumb,
+  .back {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--hit-min);
+  }
+}
+
+@media (max-width: 600px) {
+  .bar,
+  .next,
+  .panel {
+    padding-inline: var(--space-4);
+  }
+
+  .message {
+    padding: var(--space-6) var(--space-4);
   }
 }

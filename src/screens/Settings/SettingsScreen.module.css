@@ -5,6 +5,24 @@
   margin: 0 auto;
 }
 
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.titleRow h1 {
+  margin: 0;
+}
+
+/* A switch with a line under it saying what it does. */
+.setting {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
 .group {
   padding: var(--space-5) 0;
   border-top: 1px solid color-mix(in srgb, var(--color-silt) 45%, transparent);
@@ -53,4 +71,14 @@
   border-radius: var(--radius-md);
   border-left: 3px solid var(--color-water);
   font-size: var(--font-size-sm);
+}
+
+@media (max-width: 600px) {
+  .page {
+    padding: var(--space-5) var(--space-4) var(--space-7);
+  }
+
+  .row {
+    gap: var(--space-4);
+  }
 }

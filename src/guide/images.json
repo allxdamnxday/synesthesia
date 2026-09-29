@@ -1,0 +1,62 @@
+{
+  "images/guide/studio.png": {
+    "file": "studio.webp",
+    "width": 1280,
+    "height": 800
+  },
+  "images/guide/introduction.png": {
+    "file": "introduction.webp",
+    "width": 1280,
+    "height": 800
+  },
+  "images/guide/library.png": {
+    "file": "library.webp",
+    "width": 1280,
+    "height": 800
+  },
+  "images/guide/prepare-focus.png": {
+    "file": "prepare-focus.webp",
+    "width": 1280,
+    "height": 800
+  },
+  "images/guide/prepare-signature.png": {
+    "file": "prepare-signature.webp",
+    "width": 1280,
+    "height": 800
+  },
+  "images/guide/studio-materials.png": {
+    "file": "studio-materials.webp",
+    "width": 1280,
+    "height": 800
+  },
+  "images/guide/studio-chance.png": {
+    "file": "studio-chance.webp",
+    "width": 1280,
+    "height": 800
+  },
+  "images/guide/render.png": {
+    "file": "render.webp",
+    "width": 1280,
+    "height": 800
+  },
+  "images/guide/album-new.png": {
+    "file": "album-new.webp",
+    "width": 1280,
+    "height": 1389
+  },
+  "images/guide/album.png": {
+    "file": "album.webp",
+    "width": 1280,
+    "height": 800
+  },
+  "images/guide/settings.png": {
+    "file": "settings.webp",
+    "width": 1280,
+    "height": 800
+  },
+  "images/guide/diagnostics.png": {
+    "file": "diagnostics.webp",
+    "width": 1280,
+    "height": 800
+  }
+}

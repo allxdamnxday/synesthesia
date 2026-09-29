@@ -43,6 +43,7 @@ import {
 } from '../../../state/renderFolder';
 import type { KineticSignature } from '../../../signature/types';
 import { Button } from '../../../ui/Button';
+import { GuideLink } from '../../../ui/GuideLink';
 import { Toggle } from '../../../ui/Toggle';
 import styles from './RenderDialog.module.css';
 import {
@@ -167,6 +168,9 @@ export function RenderDialog({ composition, signature, onClose }: RenderDialogPr
     const dialog = dialogRef.current;
     if (dialog && !dialog.open) dialog.showModal();
     dialog?.focus();
+    // Opening focused a button at the bottom first; on a short screen that scrolled the
+    // dialog past its title.
+    if (dialog) dialog.scrollTop = 0;
     let live = true;
     void loadRenderFolderHint();
     void (async () => {
@@ -472,6 +476,8 @@ export function RenderDialog({ composition, signature, onClose }: RenderDialogPr
       <div className={styles.buttons}>
         {mode === 'setup' ? (
           <>
+            {/* Not while rendering: leaving the Studio would cancel the render. */}
+            <GuideLink section="render" className={styles.guide} />
             <Button onClick={close}>{COPY.cancel}</Button>
             <Button
               data-focus-first

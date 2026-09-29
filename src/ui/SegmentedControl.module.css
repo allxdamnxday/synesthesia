@@ -44,3 +44,9 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+@media (pointer: coarse) {
+  .option {
+    min-width: var(--hit-min);
+  }
+}

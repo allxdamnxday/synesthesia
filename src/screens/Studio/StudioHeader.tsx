@@ -2,7 +2,9 @@ import { useMemo, useState } from 'react';
 import { href } from '../../app/router';
 import { useStudioStore } from '../../state/studioStore';
 import { compositionsDiffer } from '../../studio/edits';
+import { ActionMenu } from '../../ui/ActionMenu';
 import { Button } from '../../ui/Button';
+import { GuideLink } from '../../ui/GuideLink';
 import { InlineRename } from '../../ui/InlineRename';
 import styles from './Studio.module.css';
 
@@ -82,19 +84,44 @@ export function StudioHeader() {
         >
           Save
         </Button>
-        <Button onClick={() => void store().saveAsNew()} disabled={saving || isNew}>
+        <Button
+          className={styles.wideOnly}
+          onClick={() => void store().saveAsNew()}
+          disabled={saving || isNew}
+        >
           Save as new
         </Button>
-        <Button onClick={() => store().setRenderOpen(true)} title="Render MP4 (R)">
+        <Button
+          className={styles.wideOnly}
+          onClick={() => store().setRenderOpen(true)}
+          title="Render MP4 (R)"
+        >
           Render MP4
         </Button>
         <Button
           variant="quiet"
+          className={styles.wideOnly}
           onClick={() => store().setPresentation(true)}
           title="Show only the wake, full screen (F). Esc comes back."
         >
           Present
         </Button>
+        {/* Phones and tablets: the three above, folded into one menu. */}
+        <span className={styles.moreMenu}>
+          <ActionMenu
+            label="More actions"
+            items={[
+              {
+                label: 'Save as new',
+                onSelect: () => void store().saveAsNew(),
+                disabled: saving || isNew,
+              },
+              { label: 'Render MP4', onSelect: () => store().setRenderOpen(true) },
+              { label: 'Present', onSelect: () => store().setPresentation(true) },
+            ]}
+          />
+        </span>
+        <GuideLink section="studio" compact />
       </div>
     </header>
   );

@@ -36,6 +36,7 @@ See SPEC 7.3. Key contracts, written first and shared by everyone:
 | `src/chance/prng.ts` | `createRng(seed)`, `hash32(...)`, shuffles. The only randomness allowed in output code |
 | `src/lib/math.ts` | clamp, lerp, smoothstep, percentile, … |
 | `src/app/router.ts` | Hash router: `navigate()`, `href()`, `matchPath()`; routes in `src/app/App.tsx` |
+| `src/guide/sections.ts` | `GUIDE_SECTIONS`: stable slugs for deep links into the guide, `href(guidePath('studio'))` |
 
 Change a shared contract only when necessary, additively, and say so in your report.
 
@@ -80,10 +81,19 @@ Change a shared contract only when necessary, additively, and say so in your rep
   in Advanced panels and Diagnostics.
 - Errors say what happened and what to do next; they don't apologise.
 - Plain CSS Modules with the tokens in `src/app/tokens.css`. No UI kit. Reuse `src/ui/`
-  components (add new shared ones there). Minimum 14 px text, 32 px hit targets, visible
-  keyboard focus, `prefers-reduced-motion` respected, WCAG AA contrast (secondary text
-  uses `--color-mist`, not Silt).
+  components (add new shared ones there). Minimum 14 px text, 32 px hit targets (use
+  `var(--hit-min)`: it becomes 44 px on touch screens), visible keyboard focus,
+  `prefers-reduced-motion` respected, WCAG AA contrast (secondary text uses `--color-mist`,
+  not Silt).
+- Phones and tablets: every screen fits from 320 px wide; the breakpoints are listed in
+  `tokens.css` and the desktop (1024 px and wider) must not change. Drag controls take
+  pointer events with capture and a `touch-action` (see DECISIONS 2026-09-29), and anything
+  shown on hover or done with a modifier key needs a touch equivalent.
+  `tests/e2e/responsive.spec.ts` covers new screens.
 - The canvas surround is true black. The source clip never appears outside Prepare.
+- Each screen (and each dialog or popover the guide explains) links to its guide section
+  with `<GuideLink section="…" />` from `src/ui/GuideLink.tsx`; when a heading changes,
+  update `GUIDE_SECTIONS`. Where to go next should be visible, not in a menu.
 
 ## Dependencies
 

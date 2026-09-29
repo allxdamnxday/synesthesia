@@ -19,6 +19,12 @@
   box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
 }
 
+@media (max-width: 480px), (max-height: 500px) and (max-width: 1023.98px) {
+  .card {
+    padding: var(--space-5) var(--space-4);
+  }
+}
+
 .progress {
   display: flex;
   gap: 6px;

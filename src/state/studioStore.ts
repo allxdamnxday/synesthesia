@@ -19,6 +19,7 @@ import {
   findSignatureForComposition,
   getAlbum,
   getComposition,
+  getSetting,
   getSettings,
   getSignature,
   loadWorkingState,
@@ -26,6 +27,7 @@ import {
   saveComposition,
   saveWorkingState,
   setAlbumRender,
+  setSetting,
   userMessage,
 } from '../library';
 import {
@@ -90,7 +92,12 @@ import { newSeed } from './seed';
 export type StudioStatus =
   'idle' | 'loading' | 'ready' | 'missing-composition' | 'missing-signature' | 'failed';
 
-export type StudioNoticeAction = 'discard';
+/**
+ * What a notice offers besides Dismiss: 'discard' unsaved changes; 'next' (after a new
+ * composition's first save) Render MP4 and New album; 'tip' has none (the first-visit tip,
+ * which goes when playback starts).
+ */
+export type StudioNoticeAction = 'discard' | 'next' | 'tip';
 
 export interface StudioNotice {
   id: number;
@@ -222,10 +229,36 @@ export interface StudioState {
   setRenderOpen: (open: boolean) => void;
   /** The Render dialog closed; `fileName` is the MP4 made, if any. */
   renderClosed: (fileName: string | null) => void;
+  /**
+   * The first time the Studio opens (and guidance is on): a tip to press Play. The caller
+   * decides whether first-visit hints may show at all (not in automated browsers).
+   */
+  showFirstVisitTip: () => Promise<void>;
 }
 
 const MATERIAL_CHANGED =
   'This material has changed since this composition was saved; it may look or sound different.';
+
+/** After a new composition's first save: where to go next (with Render MP4 and New album). */
+export function nextStepsText(signatureName: string): string {
+  return `Saved in your Library. Next, make a video of it, or let chance draw an album of compositions from “${signatureName}”.`;
+}
+
+/** The first time the Studio opens: the stage is dark until Play. */
+export const FIRST_VISIT_TIP =
+  'Press Play (or Space) to see and hear the signature move through the materials. While it plays, try another material or move a slider.';
+
+/** Where-next guidance is on unless the person turned it off (Hide, or Settings). */
+async function guidanceOn(): Promise<boolean> {
+  try {
+    return await getSetting('showGuidance');
+  } catch {
+    return false;
+  }
+}
+
+/** The first-visit tip is offered once per page, even if the Studio is opened twice at once. */
+let tipOffered = false;
 
 const EMPTY_TRANSPORT: RuntimeTransport = {
   playing: false,
@@ -554,7 +587,13 @@ export const useStudioStore = create<StudioState>()((set, get) => {
       if (get().controller === controller) set({ controller: null });
     },
     runtimeEvents: {
-      transport: (transport) => set({ transport }),
+      // The first-visit tip says to press Play: once it plays, the tip has done its work.
+      transport: (transport) =>
+        set((s) =>
+          transport.playing && s.notices.some((n) => n.action === 'tip')
+            ? { transport, notices: s.notices.filter((n) => n.action !== 'tip') }
+            : { transport },
+        ),
       timeline: (timeline) => set({ timeline }),
       picture: (picture) => set({ picture }),
       sound: (sound) => set({ sound }),
@@ -699,7 +738,19 @@ export const useStudioStore = create<StudioState>()((set, get) => {
           target: nextTarget,
           saving: false,
         });
-        if (isNew) navigate(`/studio/${encodeURIComponent(saved.id)}`, { replace: true });
+        if (isNew) {
+          navigate(`/studio/${encodeURIComponent(saved.id)}`, { replace: true });
+          // Its first save: say where it went and what could come next (a new composition
+          // is saved for the first time only once, so this never repeats for it).
+          if (await guidanceOn()) {
+            const next = notice('success', nextStepsText(saved.signature.name), 'next');
+            set((s) =>
+              s.composition?.id === saved.id
+                ? { notices: [...s.notices.filter((n) => n.action !== 'tip'), next] }
+                : {},
+            );
+          }
+        }
         return true;
       } catch (error) {
         console.error('Save failed:', errorDetail(error));
@@ -782,6 +833,12 @@ export const useStudioStore = create<StudioState>()((set, get) => {
     },
     renderClosed: (fileName) => {
       set({ renderOpen: false });
+      // The Library's "How it works" counts a finished render as its last step.
+      if (fileName) {
+        setSetting('videoRendered', true).catch((error: unknown) => {
+          console.warn('Could not note the render for the Library:', errorDetail(error));
+        });
+      }
       const composition = get().composition;
       const albumId = composition?.chance?.albumId;
       if (!fileName || !composition || !albumId) return;
@@ -800,8 +857,26 @@ export const useStudioStore = create<StudioState>()((set, get) => {
       if (renderOpen) {
         get().controller?.pause();
         get().chancePopover?.close();
+        // Rendering is the next step the after-save note suggests: it can go.
+        set((s) => ({ notices: s.notices.filter((n) => n.action !== 'next') }));
       }
       set({ renderOpen });
+    },
+
+    async showFirstVisitTip() {
+      if (tipOffered) return;
+      tipOffered = true;
+      try {
+        const [show, seen] = await Promise.all([guidanceOn(), getSetting('studioTipSeen')]);
+        if (!show || seen) return;
+        await setSetting('studioTipSeen', true);
+      } catch (error) {
+        console.warn('The Studio tip could not check its setting:', errorDetail(error));
+        return;
+      }
+      const s = get();
+      if (s.status !== 'ready' || s.transport.playing) return;
+      set({ notices: [...s.notices, notice('info', FIRST_VISIT_TIP, 'tip')] });
     },
   };
 });

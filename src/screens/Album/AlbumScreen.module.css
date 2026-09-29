@@ -8,9 +8,40 @@
   gap: var(--space-4);
 }
 
+/* The breadcrumb, with the guide link at the other end. */
+.topRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-block: calc(-1 * var(--space-2));
+}
+
 .crumbs {
   font-size: var(--font-size-sm);
   color: var(--color-mist);
+}
+
+/* How to work through an album: play, mark, render or export. */
+.loop {
+  margin: 0;
+  padding-left: 1.4em;
+  max-width: 76ch;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--font-size-sm);
+  color: var(--color-mist);
+}
+
+.loop strong {
+  color: var(--color-pearl);
+  font-weight: var(--font-weight-strong);
+}
+
+.loop li::marker {
+  color: var(--color-mist);
+  font-variant-numeric: tabular-nums;
 }
 
 .crumbs a {
@@ -108,6 +139,25 @@
   margin: 0;
   padding: 0;
   border-bottom: 1px solid color-mix(in srgb, var(--color-silt) 35%, transparent);
+}
+
+@media (pointer: coarse) {
+  .crumbs a {
+    display: inline-flex;
+    align-items: center;
+    min-width: var(--hit-min);
+    min-height: var(--hit-min);
+  }
+}
+
+@media (max-width: 600px) {
+  .page {
+    padding: var(--space-4) var(--space-4) var(--space-7);
+  }
+
+  .heading {
+    flex-basis: 100%;
+  }
 }
 
 /* Only appears if opening takes a moment, so quick loads don't flash. */

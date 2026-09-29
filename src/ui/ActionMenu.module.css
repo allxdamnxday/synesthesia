@@ -10,8 +10,17 @@
   top: anchor(bottom);
   right: anchor(right);
   margin-block: 4px;
-  position-try-fallbacks: flip-block;
+  /* Near the left edge (a phone), it lines up with the button's left side instead. */
+  position-try-fallbacks:
+    flip-block,
+    flip-inline,
+    flip-block flip-inline;
   min-width: 180px;
+  /* Never wider or taller than a phone's screen. */
+  max-width: calc(100vw - 16px);
+  max-height: calc(100vh - 16px);
+  max-height: calc(100dvh - 16px);
+  overflow-y: auto;
   padding: var(--space-1);
   border: 1px solid color-mix(in srgb, var(--color-pearl) 14%, transparent);
   border-radius: var(--radius-md);

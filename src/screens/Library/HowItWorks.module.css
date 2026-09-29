@@ -1,0 +1,135 @@
+/* The Library's "How it works" steps: a quiet panel, the current step lit in Honey. */
+.strip {
+  margin-top: var(--space-5);
+  padding: var(--space-4) var(--space-5) var(--space-5);
+  border-radius: var(--radius-lg);
+  background: var(--color-basin);
+  border: 1px solid color-mix(in srgb, var(--color-silt) 35%, transparent);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-strong);
+}
+
+.steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-5);
+}
+
+/* The current step gets a little more room for its buttons. */
+.steps[data-current='signature'] {
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.steps[data-current='composition'] {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) minmax(0, 1fr);
+}
+
+.steps[data-current='share'] {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.3fr);
+}
+
+.step {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.marker {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1.5px solid color-mix(in srgb, var(--color-silt) 90%, transparent);
+  color: var(--color-mist);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+.step[data-state='current'] .marker {
+  background: var(--color-honey);
+  border-color: var(--color-honey);
+  color: var(--color-deep);
+}
+
+.step[data-state='done'] .marker {
+  border-color: var(--color-water);
+  color: var(--color-water);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+  padding-top: 3px;
+}
+
+.stepTitle {
+  margin: 0;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-strong);
+  line-height: 1.3;
+}
+
+.step[data-state='done'] .stepTitle {
+  color: var(--color-mist);
+  font-weight: var(--font-weight-regular);
+}
+
+.text,
+.aside {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-mist);
+}
+
+.step[data-state='current'] .text {
+  color: var(--color-pearl);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+
+.strip > .aside {
+  margin-top: var(--space-4);
+}
+
+/* Tablets upright and phones: the steps one under another. */
+@media (max-width: 900px) {
+  .steps,
+  .steps[data-current] {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-4);
+  }
+}
+
+@media (max-width: 600px) {
+  .strip {
+    padding: var(--space-3) var(--space-4) var(--space-4);
+  }
+}

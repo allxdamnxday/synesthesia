@@ -63,6 +63,47 @@
   color: var(--color-mist);
 }
 
+.guideCallout {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-4);
+  margin: var(--space-4) 0 var(--space-5);
+  padding: var(--space-4);
+  border: 1px solid color-mix(in srgb, var(--color-silt) 45%, transparent);
+  border-radius: var(--radius-md);
+  background: var(--color-basin);
+}
+
+.guideCallout p {
+  margin: 0;
+  flex: 1 1 18rem;
+}
+
+.guideButton {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--hit-min);
+  padding: var(--space-1) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid color-mix(in srgb, var(--color-pearl) 18%, transparent);
+  background: var(--color-basin-raised);
+  color: var(--color-pearl);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-strong);
+  text-decoration: none;
+  transition: border-color var(--transition-fast);
+}
+
+.guideButton:hover {
+  border-color: color-mix(in srgb, var(--color-pearl) 40%, transparent);
+}
+
+.guideLinks {
+  color: var(--color-mist);
+}
+
 .steps,
 .bullets {
   padding-left: var(--space-5);

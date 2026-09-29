@@ -129,6 +129,11 @@
   gap: var(--space-2);
 }
 
+/* Phones and tablets fold Save as new, Render MP4 and Present into this menu (see below). */
+.moreMenu {
+  display: none;
+}
+
 /* Stage -------------------------------------------------------------------------------- */
 
 .stage {
@@ -184,15 +189,18 @@
   color: var(--color-mist);
 }
 
+/* Over the top of the wake (the same grid area, painted after it); on phones, above it. */
 .notices {
-  position: absolute;
-  top: var(--space-3);
-  left: var(--space-3);
-  right: var(--space-3);
+  grid-area: stage;
+  align-self: start;
+  position: relative;
+  z-index: 1;
+  margin: var(--space-3);
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
   max-width: 640px;
+  min-width: 0;
   pointer-events: none;
 }
 
@@ -218,8 +226,10 @@
 
 /* Panel -------------------------------------------------------------------------------- */
 
+/* Positioned, so screen-reader-only text inside stays in its scroll box, not the page's. */
 .panel {
   grid-area: panel;
+  position: relative;
   overflow-y: auto;
   background: var(--color-basin);
   border-left: 1px solid color-mix(in srgb, var(--color-silt) 45%, transparent);
@@ -331,4 +341,215 @@
 .transport {
   grid-area: transport;
   min-width: 0;
+}
+
+/* Presentation on a touch screen ------------------------------------------------------- */
+
+/*
+ * Without a keyboard there is no Esc, and phones may refuse full screen, so touch screens
+ * get a Close button. It shows on entering and after each touch, and fades with the pointer.
+ */
+.leave {
+  display: none;
+}
+
+@media (hover: none) {
+  .leave {
+    position: absolute;
+    top: var(--space-4);
+    right: var(--space-4);
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: var(--hit-min);
+    padding: var(--space-1) var(--space-4);
+    border: 1px solid color-mix(in srgb, var(--color-pearl) 30%, transparent);
+    border-radius: var(--radius-md);
+    background: color-mix(in srgb, var(--color-deep) 70%, transparent);
+    color: var(--color-pearl);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-strong);
+    transition: opacity 300ms ease;
+  }
+
+  .cursorHidden .leave {
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+
+/* Phones and tablets upright (900 px and narrower, not short landscape) -------------------
+ * Everything stacks and the page scrolls: the header, the wake at its composition's shape,
+ * then the controls; the transport stays docked at the bottom of the screen, as on the
+ * desktop, so Play and the scrub bar are always at hand while the controls scroll.
+ */
+@media (max-width: 900px) and (orientation: portrait), (max-width: 900px) and (min-height: 501px) {
+  .studio {
+    flex: 1 0 auto;
+  }
+
+  .grid {
+    position: static;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    grid-template-areas:
+      'header'
+      'notices'
+      'stage'
+      'panel'
+      'transport';
+  }
+
+  .header {
+    padding: var(--space-1) var(--space-4);
+  }
+
+  /* Notices sit between the header and the wake, never over it. */
+  .notices {
+    grid-area: notices;
+    margin: 0;
+    padding: var(--space-3) var(--space-4);
+    max-width: none;
+  }
+
+  .notices:empty {
+    padding: 0;
+  }
+
+  .crumbs a {
+    max-width: 14ch;
+  }
+
+  .studio:not(.presenting) .stage {
+    width: 100%;
+    aspect-ratio: var(--stage-aspect, 16 / 9);
+    min-height: 180px;
+    max-height: 55vh;
+    max-height: 55svh;
+  }
+
+  .panel {
+    overflow: visible;
+    border-left: 0;
+    padding: var(--space-4) var(--space-4) var(--space-6);
+  }
+
+  .transport {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+  }
+
+  /* Focus moved by keyboard never hides behind the docked transport. */
+  :global(html):has(.grid > .transport) {
+    scroll-padding-bottom: 136px;
+  }
+
+  .headerActions .wideOnly {
+    display: none;
+  }
+
+  .moreMenu {
+    display: inline-flex;
+  }
+}
+
+/* Phones upright: the name gets its own line; the save state and actions sit under it. */
+@media (max-width: 600px) {
+  .header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      'crumbs crumbs'
+      'state actions';
+    align-items: center;
+    gap: 0 var(--space-3);
+    padding: var(--space-1) var(--space-4) var(--space-2);
+  }
+
+  .crumbs {
+    grid-area: crumbs;
+  }
+
+  .crumbs a {
+    max-width: 11ch;
+  }
+
+  .saveState {
+    grid-area: state;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .headerActions {
+    grid-area: actions;
+  }
+
+  .renameField {
+    min-width: 0;
+  }
+}
+
+/* A phone on its side (short landscape) ------------------------------------------------
+ * The wake keeps the left and the full height; the header sits above the controls on the
+ * right, which scroll; the transport runs along the bottom. Nothing scrolls the page.
+ */
+@media (orientation: landscape) and (max-height: 500px) and (max-width: 1023.98px) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 300px);
+    grid-template-areas:
+      'stage header'
+      'stage panel'
+      'transport transport';
+  }
+
+  .header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      'crumbs crumbs'
+      'state actions';
+    align-items: center;
+    gap: 0 var(--space-2);
+    min-height: 0;
+    padding: var(--space-1) var(--space-3) var(--space-2);
+    background: var(--color-basin);
+    border-left: 1px solid color-mix(in srgb, var(--color-silt) 45%, transparent);
+  }
+
+  .crumbs {
+    grid-area: crumbs;
+  }
+
+  .crumbs a {
+    max-width: 9ch;
+  }
+
+  .saveState {
+    grid-area: state;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .headerActions {
+    grid-area: actions;
+  }
+
+  .headerActions .wideOnly {
+    display: none;
+  }
+
+  .moreMenu {
+    display: inline-flex;
+  }
+
+  .renameField {
+    min-width: 0;
+  }
+
+  .panel {
+    padding: var(--space-3) var(--space-3) var(--space-5);
+  }
 }

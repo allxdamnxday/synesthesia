@@ -4,7 +4,9 @@
   flex: 1;
   min-width: 120px;
   cursor: pointer;
+  /* A finger drags the playhead; the page neither scrolls nor zooms from here. */
   touch-action: none;
+  -webkit-tap-highlight-color: transparent;
   border-radius: var(--radius-sm);
 }
 
@@ -67,4 +69,10 @@
 
 .dragging .head {
   height: 24px;
+}
+
+@media (max-width: 480px) {
+  .scrub {
+    min-width: 72px;
+  }
 }
