@@ -77,7 +77,7 @@ src/materials/sound/<id>/
 
 - The control logic runs on a 200 Hz grid of composition time through
   `ControlTimeline` (`src/materials/sound/shared/controlTimeline.ts`). It makes the preview
-  scheduler (50 ms, 200 ms ahead) and the single offline call produce identical automation,
+  scheduler (every 50 ms, 350 ms ahead) and the single offline call produce identical automation,
   and handles live edits, seeks and loop wraps. Write per-point curves through
   `ControlBus`; property-only values through `StaticParam` in `begin`.
 - Discrete events (onsets): `events: (a, b) => win.sampler.onsetsBetween(a, b)`; create
