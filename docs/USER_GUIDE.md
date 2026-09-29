@@ -84,8 +84,8 @@ Name the signature and choose **Save**, or **Save and open in Studio**. The clip
 stays on this screen and is never kept.
 
 **If it looks faint:** a clip that moves the whole time (water, a curtain) can fool the
-automatic sensitivity. Prepare says so; open **Advanced** and raise **Sensitivity**, then
-**Extract again**.
+automatic sensitivity. Prepare says so; choose **Extract again**, open **Advanced**, turn on
+**Set sensitivity by hand** and raise **Sensitivity**, then **Extract signature**.
 
 ## The Studio
 
