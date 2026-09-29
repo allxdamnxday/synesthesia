@@ -95,7 +95,13 @@
   font-weight: var(--font-weight-light);
 }
 
-@media (max-width: 900px) {
+/*
+ * Phones and tablets upright (900 px and narrower, not short landscape): one column that
+ * scrolls. The stage takes the shape of the clip (or the field), the clip above the wake
+ * when both show, and Extract stays docked at the bottom of the screen while the settings
+ * scroll.
+ */
+@media (max-width: 900px) and (orientation: portrait), (max-width: 900px) and (min-height: 501px) {
   .layout {
     position: static;
     grid-template-columns: minmax(0, 1fr);
@@ -104,10 +110,56 @@
     min-height: 0;
   }
   .stage {
-    min-height: 50vh;
+    flex: none;
+    min-height: 260px;
+  }
+  .stage[data-shaped] {
+    aspect-ratio: var(--stage-aspect);
+    min-height: 180px;
+    max-height: 60vh;
+    max-height: 60svh;
+  }
+  .stage[data-shaped][data-layout='split'] {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+    aspect-ratio: calc(var(--stage-aspect) / 2);
+    min-height: 320px;
+    max-height: 80vh;
+    max-height: 80svh;
   }
   .panel {
+    overflow: visible;
     border-left: 0;
     border-top: 1px solid color-mix(in srgb, var(--color-silt) 45%, transparent);
+  }
+}
+
+/*
+ * A phone on its side: the clip beside the settings (which scroll), filling the window so
+ * the clip and its trim bar show together. With a signature the page may scroll a little
+ * to give the wake room above its lines.
+ */
+@media (orientation: landscape) and (max-height: 500px) and (max-width: 1023.98px) {
+  .screen {
+    min-height: 0;
+  }
+  .screen[data-mode='signature'] {
+    min-height: 560px;
+  }
+  .layout {
+    grid-template-columns: minmax(0, 1fr) 320px;
+  }
+  .stage {
+    min-height: 160px;
+  }
+  .title {
+    padding-top: var(--space-3);
+    font-size: var(--font-size-lg);
+  }
+}
+
+@media (max-width: 600px) {
+  .title {
+    padding-inline: var(--space-4);
   }
 }

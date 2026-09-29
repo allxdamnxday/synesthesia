@@ -168,13 +168,59 @@
   }
 }
 
-@media (max-width: 900px) {
-  .body {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: minmax(0, 1fr) auto;
+/*
+ * Phones and tablets upright (900 px and narrower, not short landscape): one column that
+ * scrolls. The wake takes the field's shape, then the transport, the lines and the facts.
+ * A phone on its side keeps the desktop layout (the page scrolls a little).
+ */
+@media (max-width: 900px) and (orientation: portrait), (max-width: 900px) and (min-height: 501px) {
+  .screen {
+    min-height: 0;
   }
+
+  .layout {
+    position: static;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .body {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .stage {
+    flex: none;
+    width: 100%;
+    aspect-ratio: var(--stage-aspect, 16 / 9);
+    min-height: 180px;
+    max-height: 60vh;
+    max-height: 60svh;
+  }
+
   .panel {
+    overflow: visible;
     border-left: 0;
     border-top: 1px solid color-mix(in srgb, var(--color-silt) 45%, transparent);
+  }
+}
+
+@media (pointer: coarse) {
+  .crumb,
+  .back {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--hit-min);
+  }
+}
+
+@media (max-width: 600px) {
+  .bar,
+  .panel {
+    padding-inline: var(--space-4);
+  }
+
+  .message {
+    padding: var(--space-6) var(--space-4);
   }
 }

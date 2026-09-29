@@ -39,3 +39,10 @@
 .error {
   border-left-color: var(--color-alert);
 }
+
+/* Phones: the text keeps the dismiss button beside it rather than on a line of its own. */
+@media (max-width: 600px) {
+  .text {
+    flex-basis: 160px;
+  }
+}

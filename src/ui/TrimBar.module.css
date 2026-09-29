@@ -4,11 +4,13 @@
   user-select: none;
 }
 
+/* Fingers drag the handles and the playhead; the page neither scrolls nor zooms from here. */
 .track {
   position: relative;
   height: 44px;
   cursor: pointer;
   touch-action: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .rail,
@@ -150,4 +152,25 @@
 .disabled .selection {
   opacity: 0.45;
   cursor: default;
+}
+
+/* Touch screens: 44 px to a finger, still reaching only outward from the selection (the
+   wider padding keeps the outer hit areas inside the bar). */
+@media (pointer: coarse) {
+  .trim {
+    padding: 0 44px;
+  }
+
+  .head::before {
+    left: -21px;
+    right: -21px;
+  }
+
+  .startHandle::before {
+    left: -30px;
+  }
+
+  .endHandle::before {
+    right: -30px;
+  }
 }

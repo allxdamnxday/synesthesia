@@ -60,3 +60,17 @@
 .total {
   color: var(--color-mist);
 }
+
+@media (pointer: coarse) {
+  .round,
+  .play {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+@media (max-width: 480px) {
+  .controls {
+    padding: 0 var(--space-2);
+  }
+}

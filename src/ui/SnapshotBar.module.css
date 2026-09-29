@@ -3,9 +3,14 @@
   gap: var(--space-1);
 }
 
+/* No text selection or callout under a finger held on a slot (holding replaces it). */
 .slot {
   width: var(--hit-min);
   height: var(--hit-min);
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
   border-radius: var(--radius-md);
   border: 1px dashed color-mix(in srgb, var(--color-mist) 55%, transparent);
   background: transparent;

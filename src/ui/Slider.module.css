@@ -54,11 +54,13 @@
   background: var(--color-basin-raised);
 }
 
+/* A finger dragging sideways moves the slider; one swiping up or down scrolls the page. */
 .track {
   position: relative;
   height: var(--hit-min);
   cursor: pointer;
-  touch-action: none;
+  touch-action: pan-y;
+  -webkit-tap-highlight-color: transparent;
   border-radius: var(--radius-sm);
 }
 
@@ -123,4 +125,32 @@
 .inert .thumb,
 .inert .label {
   opacity: 0.45;
+}
+
+/* A description opened by tapping the name (touch screens). */
+.note {
+  margin: 0 0 var(--space-1);
+  font-size: var(--font-size-sm);
+  color: var(--color-mist);
+}
+
+/* Touch screens: values always show (no hover), and a dotted name opens its description. */
+@media (hover: none) {
+  .readout {
+    opacity: 1;
+  }
+
+  .described {
+    text-decoration: underline dotted color-mix(in srgb, var(--color-mist) 70%, transparent);
+    text-underline-offset: 4px;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+@media (pointer: coarse) {
+  .lock {
+    width: 44px;
+    height: 44px;
+    margin-block: -11px;
+  }
 }

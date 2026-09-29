@@ -486,6 +486,59 @@ implementation follows the intent. To revisit with Freeman only if a material fe
   the guide as components (two copies that drift); the original PNGs (5× the size); loading the
   page as its own chunk (32 KB didn't justify a loading state).
 
+## 2026-09-29: Phones and tablets
+- **Why:** on a phone every screen was wider than the screen (the header's links alone made a
+  375 px page 460 px wide) and the Studio squeezed the wake into a strip beside its controls.
+  The Mac in Chrome stays the design target: at 1024 px and wider nothing changes.
+- **Breakpoints** (CSS can't share them, so they are repeated per module; `tokens.css` lists them):
+  - **900 px and narrower, upright** (portrait, or taller than 500 px): Studio, Prepare and
+    Signature become one column and the page scrolls. The stage takes the shape of what it
+    shows (the composition's render size, the clip as turned, the signature's field), at most
+    55–60% of the screen's height and at least 180 px tall.
+  - **A phone on its side** (landscape, 500 px tall or less, narrower than 1024 px): the Studio
+    keeps the wake at full height on the left, its header above the scrolling controls on the
+    right and the transport along the bottom; the page doesn't scroll. Prepare keeps the clip
+    beside its settings.
+  - **720 px and narrower:** the header's links fold into a Menu (a disclosure: Esc returns focus
+    to it; a tap elsewhere, Tab leaving it or arriving on a screen closes it), and the
+    transport puts its snapshots and Draw by chance on a second row.
+  - **600 px and narrower:** the Studio's name gets a line of its own (cut short with an
+    ellipsis) above the save state, Save and a More menu with Save as new, Render MP4 and
+    Present; 16 px page gutters; two library cards abreast where they fit.
+  - **Under 360 px:** the transport shows only the playhead's time, and Draw by chance may wrap
+    its label, so the transport keeps two rows.
+- **The Studio's transport is docked to the bottom of the screen** on phones and upright
+  tablets (sticky), not placed between the wake and the controls: Play and the scrub bar stay in
+  reach while the controls scroll. Draw by chance opens as a sheet along the bottom there.
+  Alternatives: the transport under the wake (scrolls away with it); the wake sticky too, so it
+  stays in view while adjusting (better for playing, but a square composition would hold half
+  a phone's screen, and with the keyboard up for notes almost nothing would be left; worth
+  revisiting once Freeman has tried it on a phone).
+- **Touch:** on touch screens (`pointer: coarse`) `--hit-min` is 44 px, and handle hit areas
+  grow to match. Sliders, the signature's lines and the picture around a focus box use
+  `touch-action: pan-y`: a sideways drag moves them, while an up or down swipe that starts on
+  them still scrolls the page (otherwise a panel full of sliders barely scrolls under a finger).
+  A tap jumps like a click; a double-tap resets a slider to its baseline (double-click on the
+  Mac is unchanged); a tap on a slider's or line's name shows the description a tooltip shows
+  with a mouse; values are always shown. The scrub bar, the trim bar, the focus box itself and
+  its handles never scroll the page. Holding a full snapshot replaces it (Shift-click with a
+  mouse). A touch the browser cancels keeps what it had reached. Pull-to-refresh can't reload
+  the page mid-gesture (it would lose a clip). Presentation on a touch screen gets a Close
+  button (there's no Esc key, and iPhones don't allow element full screen, so the wake just
+  covers the window). Alternatives: `touch-action: none` everywhere (simplest, but the panel
+  stops scrolling); long-press for descriptions; separate reset buttons.
+- **Also fixed on the desktop:** the Studio page scrolled 424 px into empty space at 1440×900
+  (a screen-reader-only label at the bottom of the scrolling controls escaped them); the panel
+  is now positioned. Before/after captures at 1440×900 of Library, Prepare (empty, with a clip,
+  extracted), Signature, Studio, New album, Album, Settings, Help and Diagnostics are
+  pixel-identical apart from that (and a 1/255 shade in the scrub bar's hatching that comes with
+  the shorter capture).
+- **Not done:** Shift-drag fine control has no touch equivalent (drag slowly, or use a keyboard);
+  titles on buttons (tooltips) don't show on touch screens, but their actions are labelled.
+- **Tests:** `tests/e2e/responsive.spec.ts` checks every screen at 320×640, 375×812, 812×375 and
+  768×1024 as a touch device, and drives sliders, the scrub bar, trim handles, the focus box and
+  snapshots with real touch input (CDP).
+
 ## Pending
 - **Freeman's MacBook Pro:** model, year, chip, macOS and Chrome versions. Diagnostics' Copy
   report records the macOS version, CPU type (Intel or Apple Silicon), GPU and Chrome
@@ -494,6 +547,9 @@ implementation follows the intent. To revisit with Freeman only if a material fe
   (renders may need a small audio offset), float render targets, preview frame rate on a
   Retina screen, extraction time, QuickTime playback, the offline cache.
 - **A real wink clip** with a focus area (M1 acceptance).
+- **Phones and tablets on real devices:** the layouts and touch handling were checked in Chrome's
+  mobile emulation only. Worth a try on an iPhone (Safari: no element full screen, its own
+  toolbar and keyboard behaviour) and an Android phone in Chrome.
 - **Hosting:** done 2026-09-29: a free Vercel Hobby project deploying from the private
   GitHub repository `allxdamnxday/synesthesia` on every push to `main` (`docs/DEPLOY.md`).
 - **To confirm with Freeman after handover** (SPEC 18): the chance interpretation (open

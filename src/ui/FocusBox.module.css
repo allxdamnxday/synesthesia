@@ -1,9 +1,16 @@
+/*
+ * Touch: an up or down swipe on the picture scrolls the page; a sideways drag draws a box.
+ * The box and its handles take every touch, so moving and resizing never scroll.
+ */
 .layer {
   position: absolute;
   inset: 0;
   overflow: hidden;
   cursor: crosshair;
-  touch-action: none;
+  touch-action: pan-y;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
   user-select: none;
 }
 
@@ -17,6 +24,7 @@
   border: 2px solid var(--color-honey);
   border-radius: 0;
   cursor: move;
+  touch-action: none;
   /* Dim everything outside the box. */
   box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.45);
 }
@@ -35,6 +43,11 @@
   box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.3);
 }
 
+.readOnly .box,
+.disabled .box {
+  touch-action: auto;
+}
+
 .handle {
   position: absolute;
   width: 10px;
@@ -44,11 +57,17 @@
   border-radius: 2px;
 }
 
-/* 24 px hit area around each small handle. */
+/* 24 px hit area around each small handle (44 px to a finger). */
 .handle::before {
   content: '';
   position: absolute;
   inset: -8px;
+}
+
+@media (pointer: coarse) {
+  .handle::before {
+    inset: -17px;
+  }
 }
 
 .nw,

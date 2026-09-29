@@ -48,6 +48,8 @@ export function ScrubBar({
   label = 'Playhead',
 }: ScrubBarProps) {
   const ref = useRef<HTMLDivElement>(null);
+  /** The pointer scrubbing (one finger at a time) and where it last put the playhead. */
+  const drag = useRef<{ pointerId: number; time: number } | null>(null);
   const [dragging, setDragging] = useState(false);
 
   const timeAt = (clientX: number): number => {
@@ -57,20 +59,28 @@ export function ScrubBar({
   };
 
   const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
-    if (e.button !== 0 || duration <= 0) return;
+    if (e.button !== 0 || duration <= 0 || drag.current) return;
     e.preventDefault();
     ref.current?.setPointerCapture(e.pointerId);
-    ref.current?.focus();
+    ref.current?.focus({ preventScroll: true });
+    const t = timeAt(e.clientX);
+    drag.current = { pointerId: e.pointerId, time: t };
     setDragging(true);
-    onSeek(timeAt(e.clientX), 'start');
+    onSeek(t, 'start');
   };
   const onPointerMove = (e: PointerEvent<HTMLDivElement>) => {
-    if (dragging) onSeek(timeAt(e.clientX), 'change');
+    const d = drag.current;
+    if (!d || d.pointerId !== e.pointerId) return;
+    d.time = timeAt(e.clientX);
+    onSeek(d.time, 'change');
   };
   const onPointerUp = (e: PointerEvent<HTMLDivElement>) => {
-    if (!dragging) return;
+    const d = drag.current;
+    if (!d || d.pointerId !== e.pointerId) return;
+    drag.current = null;
     setDragging(false);
-    onSeek(timeAt(e.clientX), 'end');
+    // A cancelled touch (the system took the gesture) keeps the last place it reached.
+    onSeek(e.type === 'pointerup' ? timeAt(e.clientX) : d.time, 'end');
   };
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     const stepSec = e.shiftKey ? 5 : 1;
@@ -103,6 +113,7 @@ export function ScrubBar({
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
+      onLostPointerCapture={onPointerUp}
       onKeyDown={onKeyDown}
     >
       <div className={styles.rail}>

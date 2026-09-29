@@ -58,9 +58,93 @@
   white-space: nowrap;
 }
 
+.timeShort {
+  display: none;
+}
+
 .extra {
   display: flex;
   align-items: center;
   gap: var(--space-3);
   margin-left: var(--space-2);
+}
+
+@media (pointer: coarse) {
+  .round,
+  .play {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+/*
+ * Below the desktop, the extras (snapshots, Draw by chance) drop to a second row whenever the
+ * first has no room, and "Catching up…" floats above the bar instead of pushing things around.
+ */
+@media (max-width: 1023.98px) {
+  .transport {
+    position: relative;
+    flex-wrap: wrap;
+    row-gap: var(--space-2);
+  }
+
+  .catching {
+    position: absolute;
+    right: var(--space-4);
+    bottom: 100%;
+    margin-bottom: var(--space-2);
+    padding: 2px var(--space-2);
+    border-radius: var(--radius-sm);
+    background: color-mix(in srgb, var(--color-deep) 85%, transparent);
+    pointer-events: none;
+  }
+}
+
+/* Narrow screens: play, loop, the scrub bar and the time keep the first row; the extras
+   always take the next, spread across it. */
+@media (max-width: 720px) {
+  .extra {
+    flex: 1 0 100%;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    row-gap: var(--space-2);
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .transport {
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+  }
+
+  .time {
+    min-width: 0;
+  }
+
+  .extra {
+    column-gap: var(--space-2);
+  }
+}
+
+/*
+ * The smallest phones show just the playhead's time (the scrub bar shows the length), and
+ * the extras stay on one row: the last of them may wrap its label onto two lines.
+ */
+@media (max-width: 359px) {
+  .time {
+    display: none;
+  }
+
+  .timeShort {
+    display: inline;
+    font-size: var(--font-size-sm);
+    color: var(--color-mist);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .extra {
+    flex-wrap: nowrap;
+  }
 }

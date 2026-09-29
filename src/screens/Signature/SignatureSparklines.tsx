@@ -1,12 +1,15 @@
-import { useEffect, useRef } from 'react';
-import type { PointerEvent } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import type { MouseEvent, PointerEvent } from 'react';
 import type { SignatureBody } from '../../signature/extractClient';
 import { DirectionSparkline, Sparkline } from '../../ui/Sparkline';
 import type { ValueRange } from '../../ui/sparklineMath';
+import { touchIntent } from '../../ui/touchMath';
 import type { SignaturePlayback } from './SignaturePreview';
 import styles from './SignatureSparklines.module.css';
 
 const UNIT: ValueRange = { min: 0, max: 1 };
+/** Sideways travel (px) that turns a touch on the lines into a scrub. */
+const TOUCH_SLOP_PX = 6;
 
 const ROWS = [
   { id: 'energy', label: 'Energy', hint: 'How much is moving.' },
@@ -32,7 +35,8 @@ export interface SignatureSparklinesProps {
 /**
  * Energy, direction, expansion/contraction, continuity and density across the whole
  * signature, with its moments of sudden movement marked and a playhead that follows the
- * wake. Click or drag across the lines to move the playhead.
+ * wake. Click or drag across the lines to move the playhead. A finger taps or drags sideways
+ * to do the same (an up or down swipe scrolls the page), and taps a row's name for its hint.
  */
 export function SignatureSparklines({ signature, playback }: SignatureSparklinesProps) {
   const { features, frameCount } = signature;
@@ -40,6 +44,13 @@ export function SignatureSparklines({ signature, playback }: SignatureSparklines
   const plotsRef = useRef<HTMLDivElement>(null);
   const headRef = useRef<HTMLDivElement>(null);
   const drag = useRef<{ pointerId: number; resume: boolean } | null>(null);
+  const press = useRef<{ pointerId: number; x: number; y: number; scrolling: boolean } | null>(
+    null,
+  );
+  const lastPointer = useRef('mouse');
+  const touchDragged = useRef(false);
+  /** Touch screens have no tooltips: a tap on a row's name shows its hint. */
+  const [hint, setHint] = useState<string | null>(null);
 
   // The playhead moves every frame, so it is positioned directly rather than re-rendered.
   useEffect(() => {
@@ -59,22 +70,54 @@ export function SignatureSparklines({ signature, playback }: SignatureSparklines
     clock.seek(fraction * clock.getDuration());
   };
 
-  const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
-    if (e.button !== 0) return;
-    e.preventDefault();
+  const startDrag = (e: PointerEvent<HTMLDivElement>) => {
     e.currentTarget.setPointerCapture(e.pointerId);
     drag.current = { pointerId: e.pointerId, resume: clock.isPlaying() };
     clock.pause();
     seekTo(e.clientX);
   };
+
+  const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
+    lastPointer.current = e.pointerType;
+    touchDragged.current = false;
+    if (e.button !== 0) return;
+    if (e.pointerType === 'mouse') {
+      e.preventDefault();
+      startDrag(e);
+      return;
+    }
+    // A finger: sideways moves the playhead; up or down scrolls the page (pan-y).
+    press.current = { pointerId: e.pointerId, x: e.clientX, y: e.clientY, scrolling: false };
+  };
   const onPointerMove = (e: PointerEvent<HTMLDivElement>) => {
+    const p = press.current;
+    if (p && p.pointerId === e.pointerId) {
+      if (p.scrolling) return;
+      const intent = touchIntent(e.clientX - p.x, e.clientY - p.y, TOUCH_SLOP_PX);
+      if (intent === 'scroll') p.scrolling = true;
+      if (intent !== 'drag') return;
+      press.current = null;
+      touchDragged.current = true;
+      startDrag(e);
+      return;
+    }
     if (drag.current?.pointerId === e.pointerId) seekTo(e.clientX);
   };
   const onPointerUp = (e: PointerEvent<HTMLDivElement>) => {
+    if (press.current?.pointerId === e.pointerId) press.current = null;
     const d = drag.current;
     if (!d || d.pointerId !== e.pointerId) return;
     drag.current = null;
     if (d.resume) clock.play();
+  };
+  /** A tap by finger moves the playhead there (a mouse already did on press). */
+  const onClick = (e: MouseEvent<HTMLDivElement>) => {
+    if (lastPointer.current === 'mouse') return;
+    if (touchDragged.current) {
+      touchDragged.current = false;
+      return;
+    }
+    seekTo(e.clientX);
   };
 
   const onsets = features.onsets
@@ -82,10 +125,24 @@ export function SignatureSparklines({ signature, playback }: SignatureSparklines
     .map((i) => (frameCount > 0 ? i / frameCount : 0));
 
   return (
-    <div className={styles.sparklines} data-testid="sparklines">
+    <div
+      className={styles.sparklines}
+      data-testid="sparklines"
+      onPointerDownCapture={(e) => {
+        lastPointer.current = e.pointerType;
+      }}
+    >
       <div className={styles.labels}>
         {ROWS.map((row) => (
-          <span key={row.id} className={styles.label} title={row.hint}>
+          <span
+            key={row.id}
+            className={styles.label}
+            title={row.hint}
+            onClick={() => {
+              if (lastPointer.current !== 'mouse')
+                setHint((h) => (h === row.hint ? null : row.hint));
+            }}
+          >
             {row.label}
           </span>
         ))}
@@ -99,6 +156,7 @@ export function SignatureSparklines({ signature, playback }: SignatureSparklines
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
+        onClick={onClick}
       >
         <div className={styles.row}>
           <Sparkline values={features.energy} label="Energy: how much is moving, over time" />
@@ -142,6 +200,11 @@ export function SignatureSparklines({ signature, playback }: SignatureSparklines
         ))}
         <div ref={headRef} className={styles.playhead} />
       </div>
+      {hint ? (
+        <p className={styles.hint} aria-hidden="true">
+          {hint}
+        </p>
+      ) : null}
       {onsets.length > 0 ? (
         <p className={styles.legend}>
           <span className={styles.swatch} aria-hidden="true" />
