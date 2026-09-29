@@ -1,4 +1,6 @@
+import { Fragment } from 'react';
 import { href } from '../../app/router';
+import { GUIDE_SECTIONS, guidePath, type GuideSectionSlug } from '../../guide/sections';
 import { SHARED_PROPERTIES, SHARED_PROPERTY_IDS } from '../../materials/properties';
 import { listSoundMaterials, listVisualMaterials } from '../../materials/registry';
 import type { MaterialMeta } from '../../materials/types';
@@ -18,6 +20,15 @@ const SECTIONS = [
   { id: 'materials', title: 'Materials' },
   { id: 'shortcuts', title: 'Keyboard shortcuts' },
   { id: 'trouble', title: 'If something goes wrong' },
+];
+
+/** The guide's sections for "How a session goes", in the order a session uses them. */
+const SESSION_GUIDE: readonly GuideSectionSlug[] = [
+  'library',
+  'prepare',
+  'studio',
+  'render',
+  'albums',
 ];
 
 const WORDS: Array<[string, string]> = [
@@ -138,6 +149,15 @@ export function HelpScreen() {
             Picture lying at the bottom of a bowl of colored water, looking up. A finger traces a
             path through the water above. You never see the finger, only its wake.
           </p>
+          <div className={styles.guideCallout}>
+            <p>
+              <strong>New here?</strong> The guide goes through every screen, step by step, with
+              pictures.
+            </p>
+            <a className={styles.guideButton} href={href(guidePath())}>
+              Read the guide
+            </a>
+          </div>
           <p>
             Synesthesia keeps the movement from a short clip as a <strong>signature</strong>: where
             things moved, how fast, in which direction, and when. The clip itself disappears. The
@@ -180,6 +200,16 @@ export function HelpScreen() {
               an MP4 video. An album gathers many compositions from one signature.
             </li>
           </ol>
+          <p className={styles.guideLinks}>
+            Each step in more detail, with pictures, in the guide:{' '}
+            {SESSION_GUIDE.map((slug, i) => (
+              <Fragment key={slug}>
+                {i === 0 ? null : i === SESSION_GUIDE.length - 1 ? ' and ' : ', '}
+                <a href={href(guidePath(slug))}>{GUIDE_SECTIONS[slug]}</a>
+              </Fragment>
+            ))}
+            .
+          </p>
         </section>
 
         <section id="words">
