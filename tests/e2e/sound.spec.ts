@@ -8,6 +8,7 @@ interface PropertyInfo {
   id: string;
   kind: 'continuous' | 'choice';
   primary: boolean;
+  choices?: string[];
 }
 
 interface MaterialInfo {
@@ -154,6 +155,40 @@ test.describe('sound materials', () => {
       expect(windowed, `${m.id}: windowed scheduling`).toBe(first);
       const other = await sp(page, 'renderHash', { ...opts, seed: 2 });
       expect(other, `${m.id}: another seed`).not.toBe(first);
+    }
+  });
+
+  test('offline renders are bitwise identical at every setting (SPEC C6)', async ({ page }) => {
+    test.setTimeout(300_000);
+    // Chrome adds up an audio input's connections in an order that depends on memory
+    // addresses, so three or more sounding sources on one input change the last bits from
+    // one render to the next. Settings that add voices (Density), open or lengthen sounds
+    // (every primary property at both ends) or overlap one-shots (a burst of onsets) must
+    // still render the same bits every time.
+    for (const m of await materials(page)) {
+      const wink: RenderOptions = { materialId: m.id, kind: 'wink', seconds: 2 };
+      const has = (id: string) => m.properties.some((p) => p.id === id);
+      const configs: [string, RenderOptions][] = [['baseline', wink]];
+      if (has('density')) configs.push(['density 1', { ...wink, props: { density: 1 } }]);
+      for (const p of m.properties.filter((q) => q.primary)) {
+        const top = p.kind === 'choice' ? Math.max(1, (p.choices?.length ?? 2) - 1) : 1;
+        configs.push([`${p.id} 0`, { ...wink, props: { [p.id]: 0 } }]);
+        configs.push([`${p.id} ${top}`, { ...wink, props: { [p.id]: top } }]);
+      }
+      // An onset every 0.25 s (the wink's close, looped) with long, dense sounds: several
+      // one-shots (e.g. Water's droplets) overlap all the time.
+      const dense: Record<string, number> = {};
+      if (has('persistence')) dense.persistence = 1;
+      if (has('density')) dense.density = 1;
+      configs.push([
+        'overlapping onsets',
+        { ...wink, seconds: 2.5, loops: 8, excerpt: [0.6, 0.85], tailSec: 0.5, props: dense },
+      ]);
+      for (const [label, opts] of configs) {
+        const a = await sp(page, 'renderHash', opts);
+        const b = await sp(page, 'renderHash', opts);
+        expect(b, `${m.id}: ${label}`).toBe(a);
+      }
     }
   });
 
