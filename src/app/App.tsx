@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { AlbumScreen } from '../screens/Album/AlbumScreen';
 import { NewAlbumScreen } from '../screens/Album/NewAlbumScreen';
 import { DiagnosticsScreen } from '../screens/Diagnostics/DiagnosticsScreen';
+import { GuideScreen } from '../screens/Guide/GuideScreen';
 import { HelpScreen } from '../screens/Help/HelpScreen';
 import { LibraryScreen } from '../screens/Library/LibraryScreen';
 import { PrepareScreen } from '../screens/Prepare/PrepareScreen';
@@ -36,6 +37,8 @@ const ROUTES: RouteDef[] = [
   { pattern: '/album/:albumId', render: (params) => <AlbumScreen params={params} /> },
   { pattern: '/settings', render: () => <SettingsScreen /> },
   { pattern: '/help', render: () => <HelpScreen /> },
+  { pattern: '/guide', render: () => <GuideScreen /> },
+  { pattern: '/guide/:section', render: (params) => <GuideScreen section={params.section} /> },
   { pattern: '/diagnostics', render: () => <DiagnosticsScreen /> },
 ];
 

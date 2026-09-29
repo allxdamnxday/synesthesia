@@ -1,0 +1,204 @@
+/* Reading styles for Markdown rendered by MarkdownView.tsx (the guide). */
+
+.h1 {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-light);
+  letter-spacing: 0.01em;
+  margin-bottom: var(--space-2);
+}
+
+.h2 {
+  font-size: var(--font-size-lg);
+  margin-top: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.h3 {
+  font-size: var(--font-size-md);
+  margin-top: var(--space-6);
+  margin-bottom: var(--space-3);
+}
+
+.h4 {
+  font-size: var(--font-size-md);
+  color: var(--color-mist);
+  margin-top: var(--space-5);
+}
+
+.h1,
+.h2,
+.h3,
+.h4 {
+  scroll-margin-top: var(--space-5);
+}
+
+/* Headings take focus when the reader jumps to them; the jump itself shows where they are. */
+.h1:focus-visible,
+.h2:focus-visible,
+.h3:focus-visible,
+.h4:focus-visible {
+  box-shadow: none;
+}
+
+.list {
+  padding-left: var(--space-5);
+  margin: 0 0 var(--space-4);
+}
+
+.list li {
+  margin-bottom: var(--space-2);
+}
+
+.list li > .list {
+  margin: var(--space-2) 0 0;
+}
+
+.list li::marker {
+  color: var(--color-mist);
+}
+
+.code {
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 0.875em;
+  padding: 1px var(--space-1);
+  border-radius: var(--radius-sm);
+  background: var(--color-basin-raised);
+}
+
+.pre {
+  margin: 0 0 var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  overflow-x: auto;
+  border-radius: var(--radius-md);
+  background: var(--color-basin);
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: var(--font-size-sm);
+}
+
+.quote {
+  margin: 0 0 var(--space-4);
+  padding: var(--space-1) 0 var(--space-1) var(--space-4);
+  border-left: 3px solid color-mix(in srgb, var(--color-silt) 70%, transparent);
+  color: var(--color-mist);
+}
+
+.rule {
+  border: 0;
+  border-top: 1px solid color-mix(in srgb, var(--color-silt) 45%, transparent);
+  margin: var(--space-6) 0;
+}
+
+/* Pictures: space is reserved from their width and height, so nothing jumps as they load. */
+.figure {
+  margin: var(--space-4) 0 var(--space-5);
+}
+
+.picture,
+.inlinePicture {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius-md);
+  border: 1px solid color-mix(in srgb, var(--color-silt) 45%, transparent);
+  background: var(--color-basin);
+}
+
+.picture {
+  width: 100%;
+}
+
+.zoom {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: none;
+  cursor: zoom-in;
+}
+
+.zoom:hover .picture {
+  border-color: color-mix(in srgb, var(--color-pearl) 35%, transparent);
+}
+
+.missingPicture {
+  padding: var(--space-3) var(--space-4);
+  border: 1px dashed color-mix(in srgb, var(--color-silt) 70%, transparent);
+  border-radius: var(--radius-md);
+  color: var(--color-mist);
+  font-style: italic;
+}
+
+/* A table never widens the page: at worst it scrolls inside its own box. */
+.tableWrap {
+  overflow-x: auto;
+  margin: 0 0 var(--space-5);
+}
+
+/* Two columns read best at the text's width (the page sets --measure). */
+.narrowTableWrap {
+  max-width: var(--measure, none);
+  margin-inline: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+
+.wideTable {
+  min-width: 34rem;
+}
+
+.table th,
+.table td {
+  text-align: left;
+  vertical-align: top;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-silt) 35%, transparent);
+}
+
+.table thead th {
+  color: var(--color-mist);
+  font-weight: var(--font-weight-regular);
+}
+
+.table tbody th {
+  font-weight: var(--font-weight-strong);
+}
+
+/* On a phone, a row of a wide table becomes a block: its name, then each column, labelled. */
+@media (max-width: 600px) {
+  .wideTable,
+  .wideTable tbody,
+  .wideTable tr,
+  .wideTable th,
+  .wideTable td {
+    display: block;
+  }
+
+  .wideTable {
+    min-width: 0;
+  }
+
+  .wideTable thead {
+    display: none;
+  }
+
+  .wideTable tr {
+    padding: var(--space-3) 0;
+    border-bottom: 1px solid color-mix(in srgb, var(--color-silt) 35%, transparent);
+  }
+
+  .wideTable tbody th,
+  .wideTable td {
+    padding: var(--space-1) 0;
+    border: 0;
+  }
+
+  .wideTable td::before {
+    content: attr(data-label) ': ';
+    color: var(--color-mist);
+  }
+}
