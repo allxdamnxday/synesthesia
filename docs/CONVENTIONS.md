@@ -80,9 +80,15 @@ Change a shared contract only when necessary, additively, and say so in your rep
   in Advanced panels and Diagnostics.
 - Errors say what happened and what to do next; they don't apologise.
 - Plain CSS Modules with the tokens in `src/app/tokens.css`. No UI kit. Reuse `src/ui/`
-  components (add new shared ones there). Minimum 14 px text, 32 px hit targets, visible
-  keyboard focus, `prefers-reduced-motion` respected, WCAG AA contrast (secondary text
-  uses `--color-mist`, not Silt).
+  components (add new shared ones there). Minimum 14 px text, 32 px hit targets (use
+  `var(--hit-min)`: it becomes 44 px on touch screens), visible keyboard focus,
+  `prefers-reduced-motion` respected, WCAG AA contrast (secondary text uses `--color-mist`,
+  not Silt).
+- Phones and tablets: every screen fits from 320 px wide; the breakpoints are listed in
+  `tokens.css` and the desktop (1024 px and wider) must not change. Drag controls take
+  pointer events with capture and a `touch-action` (see DECISIONS 2026-09-29), and anything
+  shown on hover or done with a modifier key needs a touch equivalent.
+  `tests/e2e/responsive.spec.ts` covers new screens.
 - The canvas surround is true black. The source clip never appears outside Prepare.
 
 ## Dependencies
