@@ -147,7 +147,8 @@ press **Play** (the first time the Studio opens, a note says so).
 **Draw by chance** (or C) lets chance choose the visual and sound materials and open a few
 shared properties for play. The other shared properties stay at their baseline, **locked**
 (dimmed, with a lock). You can still unlock one; the composition notes that you did, so the
-record stays honest. The same seed always draws the same way.
+record stays honest. The same seed always draws the same way. **Open properties** says how
+many it opens; with **Also choose values** on, chance sets where they start, too.
 
 ![Draw by chance](images/guide/studio-chance.png)
 
