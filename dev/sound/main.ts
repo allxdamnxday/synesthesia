@@ -12,6 +12,7 @@ import type { PropertyDef, PropertyValues, SoundMaterialEntry } from '../../src/
 import { createSyntheticSampler, type SyntheticKind } from '../../src/signature/synthetic';
 import type { LoopMode, SignatureSampler } from '../../src/signature/types';
 import {
+  beforeLimiter,
   correlation,
   encodeWav,
   envelopes,
@@ -46,6 +47,11 @@ export interface RenderOptions {
   normalize?: boolean;
   /** Offline scheduling window in seconds (0 = one call). */
   windowSec?: number;
+  /**
+   * Master gain before the output limiter, for renders and the preview probe alike (default:
+   * the engine's). Debugging: well below the default, the limiter never engages.
+   */
+  masterGain?: number;
 }
 
 export interface RenderStats {
@@ -105,6 +111,7 @@ async function render(opts: RenderOptions): Promise<AudioBuffer> {
     duration: opts.seconds,
     normalize: opts.normalize ?? true,
     windowSec: opts.windowSec,
+    masterGain: opts.masterGain,
   });
 }
 
@@ -134,6 +141,19 @@ async function renderHash(opts: RenderOptions): Promise<string> {
 
 async function renderStats(opts: RenderOptions & { pitch?: boolean }): Promise<RenderStats> {
   return statsOf(await render(opts), opts.pitch ?? true);
+}
+
+/** The render's samples (base64, little-endian float32 per channel), for analysis elsewhere. */
+async function renderRaw(
+  opts: RenderOptions,
+): Promise<{ sampleRate: number; left: string; right: string }> {
+  const buffer = await render(opts);
+  const [left, right] = channelsOf(buffer);
+  return {
+    sampleRate: buffer.sampleRate,
+    left: float32ToBase64(left ?? new Float32Array(0)),
+    right: float32ToBase64(right ?? left ?? new Float32Array(0)),
+  };
 }
 
 async function renderCompare(
@@ -274,6 +294,11 @@ export interface ProbeOptions extends RenderOptions {
   samplesAroundActions?: number;
   /** Return the raw samples (both channels) of this many seconds around the largest click. */
   samplesAroundMaxClick?: number;
+  /**
+   * Return the whole recording (from composition time 0 on) and the material's scheduling
+   * calls, to locate a click relative to the engine's jumps (debugging).
+   */
+  raw?: boolean;
   /** Transport loop on. */
   loop?: boolean;
   /** Stop after this many wall seconds (default: when playback ends). */
@@ -328,6 +353,13 @@ export interface ProbeResult {
     referenceClick: number;
     previewJump: number;
     referenceJump: number;
+    /**
+     * The click check made on the signal going into the output limiter (see
+     * `beforeLimiter` in analysis.ts), for the preview and the references alike. It differs
+     * from the pair above only where the output went past the limiter's knee (0.8).
+     */
+    previewClickBeforeLimiter: number;
+    referenceClickBeforeLimiter: number;
   }[];
   /** How the engine's scheduler kept up (see AudioEngine.schedulerStats). */
   scheduler: SchedulerStats;
@@ -345,6 +377,50 @@ export interface ProbeResult {
   bursts: { recSec: number; quanta: number }[];
   /** Render quanta that never reached the recorder (seconds into the recording, frames). */
   skips: { recSec: number; frames: number }[];
+  /** With `raw`: the recording from composition time 0 on (base64, little-endian float32). */
+  raw?: { sampleRate: number; left: string; right: string };
+  /**
+   * With `raw`: the material's scheduling calls in order, in seconds into the recording. A
+   * seek or resync shows as a cancel at the jump followed by a window starting there.
+   */
+  trace?: { kind: 'schedule' | 'cancel'; recSec: number; t0?: number; t1?: number }[];
+}
+
+/** Base64 of a Float32Array's bytes (little-endian on every platform Chrome runs on). */
+function float32ToBase64(data: Float32Array): string {
+  const bytes = new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  }
+  return btoa(binary);
+}
+
+/**
+ * The entry, with its material's `schedule` and `cancelFrom` calls logged in context time
+ * (the calls themselves are unchanged).
+ */
+function tracedEntry(
+  entry: SoundMaterialEntry,
+  log: { kind: 'schedule' | 'cancel'; ctx: number; t0?: number; t1?: number }[],
+): SoundMaterialEntry {
+  return {
+    ...entry,
+    create: () => {
+      const material = entry.create();
+      const schedule = material.schedule.bind(material);
+      const cancelFrom = material.cancelFrom.bind(material);
+      material.schedule = (win) => {
+        log.push({ kind: 'schedule', ctx: win.ctxTimeAtT0, t0: win.t0, t1: win.t1 });
+        schedule(win);
+      };
+      material.cancelFrom = (ctxTime) => {
+        log.push({ kind: 'cancel', ctx: ctxTime });
+        cancelFrom(ctxTime);
+      };
+      return material;
+    },
+  };
 }
 
 type ActionKind = 'edit' | 'seek' | 'pause' | 'play' | 'drag' | 'stall';
@@ -390,10 +466,16 @@ async function previewProbe(opts: ProbeOptions): Promise<ProbeResult> {
     } else if (msg.type === 'flushed') onFlushed?.();
   };
 
-  const engine = new AudioEngine({ context: ctx, destination: recorder });
+  const engine = new AudioEngine({
+    context: ctx,
+    destination: recorder,
+    masterGain: opts.masterGain,
+  });
   const sampler = makeSampler(opts);
   const props = propsFor(entry, opts.props);
-  await engine.load({ entry, sampler, props, seed: opts.seed ?? 1 });
+  const callLog: { kind: 'schedule' | 'cancel'; ctx: number; t0?: number; t1?: number }[] = [];
+  const played = opts.raw ? tracedEntry(entry, callLog) : entry;
+  await engine.load({ entry: played, sampler, props, seed: opts.seed ?? 1 });
   let ended = false;
   let wraps = 0;
   engine.onEnded = () => {
@@ -596,6 +678,11 @@ async function previewProbe(opts: ProbeOptions): Promise<ProbeResult> {
   const previewEnv = envelopes([pl, pr], sr, 0.01);
   const fromStart = Math.max(0, startFrame);
   const fullEnv = envelopes([left.slice(fromStart), right.slice(fromStart)], sr, 0.01);
+  const fullEnvBefore = envelopes(
+    beforeLimiter([left.slice(fromStart), right.slice(fromStart)]),
+    sr,
+    0.01,
+  );
   const maxJump = Math.max(0, ...fullEnv.jump);
 
   const offlineBuffer = await render({ ...opts, normalize: false });
@@ -616,13 +703,20 @@ async function previewProbe(opts: ProbeOptions): Promise<ProbeResult> {
     return p;
   };
   const actionResults: ProbeResult['actions'] = [];
-  const refCache = new Map<string, { click: number[]; jump: number[] }>();
-  const refEnvelopes = async (p: PropertyValues): Promise<{ click: number[]; jump: number[] }> => {
+  interface RefEnvelopes {
+    click: number[];
+    jump: number[];
+    clickBeforeLimiter: number[];
+  }
+  const refCache = new Map<string, RefEnvelopes>();
+  const refEnvelopes = async (p: PropertyValues): Promise<RefEnvelopes> => {
     const key = JSON.stringify(p);
     let env = refCache.get(key);
     if (!env) {
-      const ref = await render({ ...opts, props: p, normalize: false });
-      env = envelopes(channelsOf(ref), sr, 0.01);
+      const ref = channelsOf(await render({ ...opts, props: p, normalize: false }));
+      const out = envelopes(ref, sr, 0.01);
+      const unlimited = envelopes(beforeLimiter(ref), sr, 0.01);
+      env = { click: out.click, jump: out.jump, clickBeforeLimiter: unlimited.click };
       refCache.set(key, env);
     }
     return env;
@@ -633,6 +727,11 @@ async function previewProbe(opts: ProbeOptions): Promise<ProbeResult> {
     const recSec = a.ctx - offset;
     const previewClick = clickMax(fullEnv.click, recSec - before, recSec + after);
     const previewJump = clickMax(fullEnv.jump, recSec - before, recSec + after);
+    const previewClickBeforeLimiter = clickMax(
+      fullEnvBefore.click,
+      recSec - before,
+      recSec + after,
+    );
     // Every setting heard inside the window: this action's before and after, plus any later
     // action that lands inside it (a slider drag changes values every ~50 ms).
     const settings = [a.before, a.after];
@@ -647,11 +746,16 @@ async function previewProbe(opts: ProbeOptions): Promise<ProbeResult> {
     ];
     let referenceClick = 0;
     let referenceJump = 0;
+    let referenceClickBeforeLimiter = 0;
     for (const p of settings) {
       const env = await refEnvelopes(p);
       for (const [from, to] of spans) {
         referenceClick = Math.max(referenceClick, clickMax(env.click, from, to));
         referenceJump = Math.max(referenceJump, clickMax(env.jump, from, to));
+        referenceClickBeforeLimiter = Math.max(
+          referenceClickBeforeLimiter,
+          clickMax(env.clickBeforeLimiter, from, to),
+        );
       }
     }
     const half = Math.round(((opts.samplesAroundActions ?? 0) * sr) / 2);
@@ -676,6 +780,8 @@ async function previewProbe(opts: ProbeOptions): Promise<ProbeResult> {
       referenceClick,
       previewJump,
       referenceJump,
+      previewClickBeforeLimiter,
+      referenceClickBeforeLimiter,
     });
   }
 
@@ -730,6 +836,16 @@ async function previewProbe(opts: ProbeOptions): Promise<ProbeResult> {
       recSec: (s.frame - first - fromStart) / sr,
       frames: s.to - s.frame,
     })),
+    raw: opts.raw
+      ? {
+          sampleRate: sr,
+          left: float32ToBase64(left.slice(fromStart)),
+          right: float32ToBase64(right.slice(fromStart)),
+        }
+      : undefined,
+    trace: opts.raw
+      ? callLog.map((c) => ({ kind: c.kind, recSec: c.ctx - offset, t0: c.t0, t1: c.t1 }))
+      : undefined,
   };
 }
 
@@ -764,6 +880,7 @@ declare global {
       listMaterials: typeof listMaterials;
       renderHash: typeof renderHash;
       renderStats: typeof renderStats;
+      renderRaw: typeof renderRaw;
       renderCompare: typeof renderCompare;
       workletCheck: typeof workletCheck;
       previewProbe: typeof previewProbe;
@@ -775,6 +892,7 @@ window.spSound = {
   listMaterials,
   renderHash,
   renderStats,
+  renderRaw,
   renderCompare,
   workletCheck,
   previewProbe,

@@ -65,6 +65,9 @@ interface ProbeResult {
     recSec: number;
     previewClick: number;
     referenceClick: number;
+    /** The same check on the signal going into the output limiter (dev/sound/analysis.ts). */
+    previewClickBeforeLimiter: number;
+    referenceClickBeforeLimiter: number;
   }[];
 }
 
@@ -368,10 +371,22 @@ test.describe('sound materials', () => {
       for (const a of edited.actions) {
         // Around the action, the preview is no rougher than steady renders of the settings
         // before and after it at the same moments: no click from the change itself.
-        expect(
-          a.previewClick,
-          `${m.id}: ${a.kind} at ${a.recSec.toFixed(2)} s`,
-        ).toBeLessThanOrEqual(a.referenceClick * 1.5 + 0.01);
+        //
+        // A seek is checked on the signal going into the output limiter (identical wherever
+        // the output stays below the limiter's knee). After the jump the preview still
+        // carries the reverb tail of what played before it, which no steady render has. At
+        // these loud settings that tail lifts the new sound's peaks deeper into the limiter's
+        // soft clip than any render goes, and the soft clip rounding a peak reads as roughness
+        // to a second-difference check though nothing clicked. Measured on Resonance (Metal,
+        // everything at 0.9), 127 ms after the jump: 0.065–0.077 after the limiter in about
+        // half the runs, against 0.034–0.036 before it and 0.035 in the renders.
+        const [preview, reference] =
+          a.kind === 'seek'
+            ? [a.previewClickBeforeLimiter, a.referenceClickBeforeLimiter]
+            : [a.previewClick, a.referenceClick];
+        expect(preview, `${m.id}: ${a.kind} at ${a.recSec.toFixed(2)} s`).toBeLessThanOrEqual(
+          reference * 1.5 + 0.01,
+        );
       }
       // The seek shows up in the clock: time jumps back to ~0.62 s.
       const jumpedBack = edited.times.some((t, i) => i > 0 && t < (edited.times[i - 1] ?? 0) - 0.5);

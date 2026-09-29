@@ -2,12 +2,13 @@
  * A material's own dip around a jump of the timeline, as a gain node driven by explicit fades
  * (the event-driven counterpart of seekDip.ts, which writes the dip into a control bus).
  *
- * The engine fades out and back in around an ordinary seek, but it resynchronises a starved
- * scheduler as a seek without fading. A material whose sound can't simply glide to the new
- * moment (a ringing body to silence, strings to damp, noise to realign) dips its output here
- * and does those things once it is silent. The fades follow seekDip.ts: from wherever the
- * level is down to silence over SEEK_DIP_OUT_SEC, silent until SEEK_DIP_SILENT_UNTIL_SEC,
- * then back in over SEEK_DIP_IN_SEC.
+ * The engine fades out and back in around every jump (a seek, or its resync of a starved
+ * scheduler). A material whose sound can't simply glide to the new moment (a ringing body to
+ * silence, strings to damp, noise to realign) also dips its own output here and does those
+ * things once it is silent. The fades follow seekDip.ts: from wherever the level is down to
+ * silence over MATERIAL_DIP_OUT_SEC, silent until SEEK_DIP_SILENT_UNTIL_SEC, then back in over
+ * SEEK_DIP_IN_SEC. Whatever the material starts before the silent moment `dip` returns is
+ * silenced with the rest, so an event due then should wait for it (see resonance.ts).
  *
  * Renders never seek, so a render never dips: the gain stays exactly 1 (bit-transparent).
  */
