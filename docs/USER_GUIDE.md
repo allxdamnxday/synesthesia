@@ -27,7 +27,7 @@ while building it is written down in `docs/DECISIONS.md` so you can revisit it.
 
 - Use **Google Chrome** on your MacBook. Other browsers aren't supported yet.
 - Your work lives **in Chrome on this computer**, not online. Back it up now and then (see
-  "Keeping your work safe").
+  [Keeping your work safe](#keeping-your-work-safe)).
 - After your first visit, the instrument works without the internet.
 - The first time you open the Studio, it spends about three seconds "getting to know this
   computer" to choose how detailed the preview can be.
@@ -50,7 +50,8 @@ with a small picture of its wake.
   "…" button) opens it in the Studio; **New album** starts an album.
 - **Import file** brings in a signature, composition or album file; **Export file** (in
   each item's menu) saves one to share or keep.
-- **Back up everything** and **Restore from backup**: see "Keeping your work safe".
+- **Back up everything** and **Restore from backup**: see
+  [Keeping your work safe](#keeping-your-work-safe).
 
 ## Making a signature (Prepare)
 
@@ -83,8 +84,8 @@ Name the signature and choose **Save**, or **Save and open in Studio**. The clip
 stays on this screen and is never kept.
 
 **If it looks faint:** a clip that moves the whole time (water, a curtain) can fool the
-automatic sensitivity. Prepare says so; open **Advanced** and raise **Sensitivity**, then
-**Extract again**.
+automatic sensitivity. Prepare says so; choose **Extract again**, open **Advanced**, turn on
+**Set sensitivity by hand** and raise **Sensitivity**, then **Extract signature**.
 
 ## The Studio
 

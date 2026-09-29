@@ -455,6 +455,37 @@ implementation follows the intent. To revisit with Freeman only if a material fe
   before the limiter (broader than the one affected case); lowering the harness's master gain
   (changes the signal path under test).
 
+## 2026-09-29: The user guide inside the app
+- **Decision:** a Guide page (`#/guide`, and `#/guide/<section>` for each section) renders
+  `docs/USER_GUIDE.md` itself, bundled with Vite's `?raw`, so the document and the page can't
+  drift. A small in-house parser (`src/guide/markdown.ts`, unit-tested) turns it into a plain
+  tree that `src/guide/MarkdownView.tsx` renders as React elements. Help points newcomers to it
+  ("New here? Read the guide") and links each step of "How a session goes" to its section;
+  Help stays the reference for words, materials, properties and shortcuts.
+- **Why no Markdown library:** none is on the approved list (SPEC 7.2), and the guide uses a
+  small subset: headings, emphasis, code, links, pictures, nested lists, tables. The parser
+  follows CommonMark for what it covers; anything else, HTML included, shows as text. Every
+  word becomes a React text node, so markup in the file can never run.
+- **Links and addresses:** section addresses are stable slugs in `GUIDE_SECTIONS`
+  (`src/guide/sections.ts`) for deep links from other screens; a unit test fails when a heading
+  changes without the list. GitHub-style anchors (`#keeping-your-work-safe`) go to sections
+  through the hash router, so the same file works on GitHub; links to other repository files
+  or web addresses show as plain text (the site has neither and makes no network requests).
+  The guide's two quoted cross-references to "Keeping your work safe" became links (same words).
+- **Pictures:** the 12 screenshots the guide shows (1440 px PNG, 2.5 MB) are re-encoded by
+  Chrome (canvas to WebP, no image dependency) at 1280 px wide and quality 0.85: 466 KiB in
+  all. At 2× zoom 0.85 keeps small interface text as crisp as 0.9 (+23%); 0.7 starts to blur
+  it; JPEG at the same setting was ~75% larger. `scripts/guide-images.mjs` makes them (and
+  `capture-guide.mjs` runs it after new screenshots); their sizes are recorded, so the page
+  reserves their space. They load lazily and open full size in a viewer.
+- **Offline cost:** the service worker precaches them with the rest (`.webp` added to its
+  patterns; only pictures the guide uses are bundled): 22 → 34 entries, 12,641 → 13,146 KiB
+  (+505 KiB: pictures 466, JavaScript 32 including the guide's text, CSS 8). The offline test
+  opens the guide and every picture with the network cut.
+- **Alternatives:** a Markdown dependency (not approved, and far more than needed); rewriting
+  the guide as components (two copies that drift); the original PNGs (5× the size); loading the
+  page as its own chunk (32 KB didn't justify a loading state).
+
 ## Pending
 - **Freeman's MacBook Pro:** model, year, chip, macOS and Chrome versions. Diagnostics' Copy
   report records the macOS version, CPU type (Intel or Apple Silicon), GPU and Chrome

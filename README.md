@@ -10,7 +10,9 @@ Made for Freeman. v0 of the Synesthesia Project instrument, a static web app for
 
 ## Using it
 
-- `docs/USER_GUIDE.md`: how to use the instrument (for Freeman).
+- `docs/USER_GUIDE.md`: how to use the instrument (for Freeman). The app shows the same file
+  as its Guide page (`#/guide`); after changing the guide's pictures, run
+  `node scripts/guide-images.mjs`.
 - In the app: **Help** (top right) and **Diagnostics** (with a report to copy and send).
 
 ## Developing
