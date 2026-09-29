@@ -36,6 +36,7 @@ See SPEC 7.3. Key contracts, written first and shared by everyone:
 | `src/chance/prng.ts` | `createRng(seed)`, `hash32(...)`, shuffles. The only randomness allowed in output code |
 | `src/lib/math.ts` | clamp, lerp, smoothstep, percentile, … |
 | `src/app/router.ts` | Hash router: `navigate()`, `href()`, `matchPath()`; routes in `src/app/App.tsx` |
+| `src/guide/sections.ts` | `GUIDE_SECTIONS`: stable slugs for deep links into the guide, `href(guidePath('studio'))` |
 
 Change a shared contract only when necessary, additively, and say so in your report.
 

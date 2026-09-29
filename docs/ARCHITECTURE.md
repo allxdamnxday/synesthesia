@@ -41,6 +41,7 @@ Clip ──► Prepare (trim, speed, rotate, mirror, focus area, sensitivity)
 | `src/state/` | Zustand stores for the UI | no |
 | `src/studio/`, `src/screens/`, `src/ui/`, `src/app/` | Screens, preview loops, UI components, shell | no |
 | `src/perf/` | Benchmark (wall-clock timing) | no |
+| `src/guide/` | The in-app user guide: Markdown parser and renderer, section slugs, pictures | no |
 
 "Deterministic" folders are guarded by ESLint: no clock reads or browser randomness.
 
@@ -136,9 +137,23 @@ storage is requested on the first save.
 | `#/studio/new/:signatureId`, `#/studio/:compositionId` | Studio |
 | `#/album/new/:signatureId`, `#/album/:albumId` | Album mode |
 | `#/settings`, `#/help`, `#/diagnostics` | Settings, Help, Diagnostics |
+| `#/guide`, `#/guide/:section` | Guide: `docs/USER_GUIDE.md`, whole or at a section |
 
 App-level pieces in `src/app/`: the startup capability gate, the first-run introduction
 (Library only, until finished or skipped) and the optional dedication, a hash router, and a
 file-drop guard (a clip dropped on any screen opens in Prepare; the browser never
 navigates away to play it). First-run overlays stay out of automated browsers unless forced
 with `?introduction=1` / `?dedication=1`.
+
+## Guide
+
+The Guide screen (`src/screens/Guide/`) renders `docs/USER_GUIDE.md` itself, imported with
+`?raw`, so editing the file edits the page. `src/guide/markdown.ts` parses the subset of
+Markdown the guide uses into a plain tree (anything else stays text) and `MarkdownView.tsx`
+renders it as React elements, never as HTML. `src/guide/sections.ts` splits it at its `##`
+headings and gives each section and `###` sub-section a stable slug from `GUIDE_SECTIONS`:
+link to one with `href(guidePath('studio'))`. GitHub-style anchors in the guide's links go to
+sections; links to other files show as plain text. The pictures are web-sized WebP copies of
+`docs/images/guide/*.png` in `src/guide/images/` (sizes in `images.json`), made by
+`node scripts/guide-images.mjs` (the screenshot script runs it); a unit test fails when the
+guide shows a picture without a copy.

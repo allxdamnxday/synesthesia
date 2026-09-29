@@ -89,18 +89,20 @@ describe('the guide in the app is docs/USER_GUIDE.md', () => {
   });
 
   it('shows every picture from a bundled, web-sized copy', () => {
+    // After changing the guide's pictures: `node scripts/guide-images.mjs` remakes the copies.
+    const remake = 'run node scripts/guide-images.mjs';
     const pictures = nodes.flatMap((n) => (n.type === 'image' ? [n.src] : []));
     expect(pictures.length).toBeGreaterThan(0);
     for (const src of pictures) {
       const image = guideImage(src);
-      expect(image, src).not.toBeNull();
+      expect(image, `${src}: ${remake}`).not.toBeNull();
       expect(image?.width).toBeLessThanOrEqual(1280);
       expect(image?.height).toBeGreaterThan(0);
     }
     // images.json and src/guide/images/ hold exactly the pictures the guide shows.
-    expect(Object.keys(sizes).sort()).toEqual([...new Set(pictures)].sort());
+    expect(Object.keys(sizes).sort(), remake).toEqual([...new Set(pictures)].sort());
     const files = readdirSync(join(root, 'src', 'guide', 'images')).sort();
-    expect(files).toEqual(
+    expect(files, remake).toEqual(
       Object.values(sizes)
         .map((s) => s.file)
         .sort(),
