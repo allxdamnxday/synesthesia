@@ -428,6 +428,33 @@ implementation follows the intent. To revisit with Freeman only if a material fe
 - **Alternatives:** generating impulse responses in a worker; shorter responses during drags;
   a watchdog fade the moment the schedule runs out (a dropout instead of a freeze).
 
+## 2026-09-28: Seeks: the click check, and strikes just after a landing
+- **Resonance's intermittent seek "click" was the output limiter, not a click.** After a jump
+  the preview keeps the reverb tail of what played before it (every material; a render never
+  has it). At the test's loud settings (Metal, everything at 0.9) that tail (~0.2 rms) lifted
+  the new sound's loudest peak, 127 ms after the jump, into the master soft clip, and the soft
+  clip rounding it read as roughness to the second-difference check: 0.065–0.077 in about half
+  the runs, against 0.063 allowed. Before the limiter the same seek measured 0.034–0.036
+  (renders 0.035); with the limiter kept linear, 0 of 12 runs failed. A sweep of 23 seek
+  targets found nothing at the reset, the dips or the fades.
+- **Decision:** the sound harness also measures clicks before the limiter (an exact inverse of
+  its curve, identical below its knee), and the click-free test checks seeks with it. The
+  threshold and every other check are unchanged. It then passed 10 runs in a row.
+- **Strikes just after a landing:** Resonance and Pulse silence their body or strings a few ms
+  after a jump, under their own dip. A strike or pluck due in that gap was erased with them
+  (15–23 dB quieter than the render until the next onset); it now starts together with the
+  reset, still in silence. And a jump landing exactly on a control point used to move a few
+  samples later, skipping an onset exactly at the target (onsets sit on frame times, often on
+  the grid; the scrub bar's arrow keys step whole seconds). It now moves a few samples earlier
+  (later only near 0, where no onset can be). A new E2E check seeks onto the wink's close and
+  3 ms before it; it fails by 15–23 dB with any of the three fixes undone. Renders are
+  bit-identical (hashes compared before and after), so no material version changes.
+- **Left as is:** the old reverb tail rings on across a seek in every material, as in most
+  audio software. Cutting it would need a new convolver at every seek; revisit if it bothers.
+- **Alternatives:** relaxing the threshold (would hide real clicks too); checking every action
+  before the limiter (broader than the one affected case); lowering the harness's master gain
+  (changes the signal path under test).
+
 ## Pending
 - **Freeman's MacBook Pro:** model, year, chip, macOS and Chrome versions. Diagnostics' Copy
   report records the macOS version, CPU type (Intel or Apple Silicon), GPU and Chrome
