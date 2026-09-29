@@ -21,7 +21,7 @@ const SIZES = [
 
 /** At this width and narrower the header's links fold into the Menu (MainNav.tsx). */
 const COMPACT_NAV_MAX = 720;
-const NAV_ITEMS = ['Library', 'Settings', 'Help', 'Diagnostics'];
+const NAV_ITEMS = ['Library', 'Guide', 'Help', 'Settings', 'Diagnostics'];
 
 function watchErrors(page: Page): string[] {
   const errors: string[] = [];

@@ -65,8 +65,9 @@ function NotFound() {
 /** The main navigation, in the header (or its Menu on phones). */
 const NAV: NavItem[] = [
   { path: '/', label: 'Library' },
-  { path: '/settings', label: 'Settings' },
+  { path: '/guide', label: 'Guide' },
   { path: '/help', label: 'Help' },
+  { path: '/settings', label: 'Settings' },
   { path: '/diagnostics', label: 'Diagnostics' },
 ];
 

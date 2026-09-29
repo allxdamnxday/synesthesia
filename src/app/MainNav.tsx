@@ -9,6 +9,14 @@ export interface NavItem {
 }
 
 /**
+ * Whether a nav item is the screen being shown: its own path, or one below it (a guide
+ * section, `/guide/studio`, is the Guide). The Library (`/`) matches only itself.
+ */
+export function isCurrentNav(itemPath: string, current: string): boolean {
+  return current === itemPath || (itemPath !== '/' && current.startsWith(`${itemPath}/`));
+}
+
+/**
  * At this width and narrower the links fold into a Menu button. Keep it in step with
  * MainNav.module.css (CSS can't read it from here).
  */
@@ -76,7 +84,7 @@ export function MainNav({ items, current }: { items: readonly NavItem[]; current
           <li key={item.path} className={styles.item}>
             <a
               href={href(item.path)}
-              aria-current={current === item.path ? 'page' : undefined}
+              aria-current={isCurrentNav(item.path, current) ? 'page' : undefined}
               onClick={() => setOpenAt(null)}
             >
               {item.label}
