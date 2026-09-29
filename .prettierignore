@@ -9,3 +9,4 @@ package-lock.json
 spikes/fixtures
 tests/fixtures
 .claude
+public/samples

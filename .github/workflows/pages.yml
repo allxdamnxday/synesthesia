@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       build:
-        description: "release (for Freeman) or test (includes spike and harness pages)"
+        description: 'release (for Freeman) or test (includes spike and harness pages)'
         required: true
         default: release
         type: choice

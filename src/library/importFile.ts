@@ -23,7 +23,8 @@ export type LibraryImportResult =
 export const IMPORT_MESSAGES = {
   unknown: "This file isn't a Synesthesia signature, composition or album.",
   backup: 'This is a backup. Use Restore from backup to bring it in.',
-  tooLarge: "This file is too large to be a signature, composition or album, so it wasn't imported.",
+  tooLarge:
+    "This file is too large to be a signature, composition or album, so it wasn't imported.",
 } as const;
 
 /** Far above the largest signature (60 s at 60 fps on a 32 × 48 grid is about 60 MB). */
