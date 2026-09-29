@@ -33,11 +33,23 @@ interface RenderStats {
   hash: string;
 }
 
+interface ProbeOptions extends RenderOptions {
+  /** Wall seconds after start to seek, and the composition time to seek to. */
+  seekAt?: number;
+  seekTo?: number;
+  /** Stop after this many wall seconds (default: when playback ends). */
+  playSeconds?: number;
+}
+
 interface ProbeResult {
   correlation: number;
   levelDiffDb: number;
   ended: boolean;
   contextState: string;
+  /** RMS envelope (hop 0.01 s) of the whole preview, from composition time 0's start. */
+  recording: { rms: number[] };
+  /** Each live action, with its time in seconds into the recording. */
+  actions: { kind: string; recSec: number }[];
 }
 
 interface MaterialInfo {
@@ -49,7 +61,7 @@ interface SpSound {
   listMaterials(): MaterialInfo[];
   renderHash(o: RenderOptions): Promise<string>;
   renderStats(o: RenderOptions): Promise<RenderStats>;
-  previewProbe(o: RenderOptions): Promise<ProbeResult>;
+  previewProbe(o: ProbeOptions): Promise<ProbeResult>;
 }
 
 const CLOSE = 0.7;
@@ -379,6 +391,45 @@ test.describe('A4 Resonance and A5 Pulse', () => {
       expect(live.ended).toBe(true);
       expect(live.correlation, `${materialId}: preview follows the render`).toBeGreaterThan(0.9);
       expect(Math.abs(live.levelDiffDb), `${materialId}: preview level`).toBeLessThan(1.5);
+    }
+  });
+
+  test('a seek onto an onset, or just before one, still strikes it', async ({ page }) => {
+    // From the still start (nothing ringing) to the close: exactly onto its onset (a round
+    // time, on the control grid) and 3 ms before it (inside the material's own seek dip,
+    // before the body or strings are silenced). The strike must sound as in the render: not
+    // skipped by the landing, not erased by the reset.
+    const HOP = 0.01;
+    const rmsOver = (env: number[], from: number, to: number): number => {
+      const v = env.slice(Math.round(from / HOP), Math.round(to / HOP));
+      return Math.sqrt(v.reduce((sum, x) => sum + x * x, 0) / Math.max(1, v.length));
+    };
+    for (const materialId of ['resonance', 'pulse']) {
+      const render = await sp(page, 'renderStats', {
+        materialId,
+        kind: 'wink',
+        seconds: 1.2,
+        normalize: false,
+        pitch: false,
+      });
+      for (const target of [CLOSE, CLOSE - 0.003]) {
+        const probe = await sp(page, 'previewProbe', {
+          materialId,
+          kind: 'wink',
+          seconds: 1.2,
+          seekAt: 0.3,
+          seekTo: target,
+        });
+        const seek = probe.actions.find((a) => a.kind === 'seek');
+        expect(seek, `${materialId}: the seek happened`).toBeDefined();
+        const landed = seek?.recSec ?? 0;
+        // After the dips (the engine's, ~21 ms; the material's, ~40 ms), before the open.
+        const preview = rmsOver(probe.recording.rms, landed + 0.06, landed + 0.2);
+        const reference = rmsOver(render.rmsEnvelope, target + 0.05, target + 0.19);
+        expect(dB(preview), `${materialId}: seek to ${target.toFixed(3)} s`).toBeGreaterThan(
+          dB(reference) - 6,
+        );
+      }
     }
   });
 });

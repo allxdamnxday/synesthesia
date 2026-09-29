@@ -15,9 +15,9 @@
  * sources (see mixPairwise in shared/graph.ts), so renders are bit-identical. Values that
  * change only with properties are StaticParams.
  *
- * After a seek (or the engine's resync of a starved scheduler, which is a seek without its
- * fade) the output dips briefly (shared/seekDipGain.ts) and the strings still ringing are
- * silenced under the dip.
+ * After a seek (or the engine's resync of a starved scheduler, which it treats as a seek) the
+ * output dips briefly (shared/seekDipGain.ts) inside the engine's own dip: the strings still
+ * ringing are silenced under it, and plucks due before that wait for it.
  */
 import { hash32 } from '../../../chance/prng';
 import type { ScheduleWindow, SoundMaterial } from '../../types';
@@ -169,16 +169,23 @@ class PulseSound implements SoundMaterial {
     const offset = windowOffset(win);
     let continued = true;
     let firstPoint = true;
+    /** Where this window silences the strings (−∞ if it doesn't). */
+    let resetAt = Number.NEGATIVE_INFINITY;
     timeline.schedule(win, {
       begin: (mode) => {
         continued = mode === 'continue';
-        this.jumpTo(win.ctxTimeAtT0, mode);
+        resetAt = this.jumpTo(win.ctxTimeAtT0, mode);
         this.applyStatics(params, win.ctxTimeAtT0, mode === 'start');
       },
       point: (_ctxTime, s) => {
         if (s.count > 0) {
           for (const pluck of plucksToSchedule(s, firstPoint, continued, win.t0)) {
-            this.pluck(params, pluck, pluck.t + offset);
+            // After a seek the strings are silenced a few milliseconds after the jump, once
+            // the dip has made the output silent. A pluck due before that would be faded out
+            // with them (28–70 dB quieter than the render), so it waits for the reset: still
+            // in silence, a few ms late. The worklet applies a reset before a pluck at the
+            // same sample. A start or a render resets at the window's first moment: unchanged.
+            this.pluck(params, pluck, Math.max(pluck.t + offset, resetAt));
           }
         }
         firstPoint = false;
@@ -216,13 +223,15 @@ class PulseSound implements SoundMaterial {
   /**
    * Start or jump playback: silence the strings still ringing. On the first window that is
    * under the engine's fade in (and at composition time 0 in a render); after a seek the
-   * output dips first and the strings are silenced once it is quiet.
+   * output dips first and the strings are silenced once it is quiet. Returns the context time
+   * of the reset (−∞ when the window carries on).
    */
-  private jumpTo(ctxTimeAtT0: number, mode: ContinuityMode): void {
-    if (mode !== 'start' && mode !== 'seek') return;
+  private jumpTo(ctxTimeAtT0: number, mode: ContinuityMode): number {
+    if (mode !== 'start' && mode !== 'seek') return Number.NEGATIVE_INFINITY;
     let at = ctxTimeAtT0;
     if (mode === 'seek' && this.dip) at = this.dip.dip(at);
     this.resets?.fire(at, {});
+    return at;
   }
 
   /** Property-only values: set outright on the first window, glided otherwise. */
