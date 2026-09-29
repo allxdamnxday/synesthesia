@@ -89,10 +89,21 @@ export function cancelFrom(param: AudioParam, ctxTime: number): void {
  *
  * Connected to an AudioParam, the bus output is added to that parameter's own value, so
  * targets are usually given a base value of 0 (or a fixed offset such as a voice detune).
+ *
+ * `cancelFrom` always leaves the bus holding its value from the cancel time on, so the next
+ * point written ramps from there. Inside the written curve `cancelAndHoldAtTime` does that.
+ * After the last point written (the scheduled sound ran out and the engine resyncs) the Web
+ * Audio spec inserts no hold: the parameter has simply been holding the last value, and a
+ * `linearRampToValueAtTime` would ramp from that last point, long in the past, so the
+ * parameter would snap onto the ramp's line the moment it is written. The bus remembers its
+ * last point and anchors it at the cancel time instead.
  */
 export class ControlBus {
   readonly node: ConstantSourceNode;
   private written = false;
+  /** The last point written (NaN once a cancel has cut into the curve at an unknown value). */
+  private lastValue = Number.NaN;
+  private lastTime = Number.NEGATIVE_INFINITY;
 
   constructor(ctx: BaseAudioContext, initial = 0) {
     this.node = ctx.createConstantSource();
@@ -121,10 +132,21 @@ export class ControlBus {
     } else {
       this.param.linearRampToValueAtTime(value, ctxTime);
     }
+    this.lastValue = value;
+    this.lastTime = ctxTime;
   }
 
+  /** Clear automation after `ctxTime` and hold the value there (see the class comment). */
   cancelFrom(ctxTime: number): void {
     cancelFrom(this.param, ctxTime);
+    if (ctxTime >= this.lastTime) {
+      // At or past everything written: the parameter holds the last value. Anchor it.
+      if (Number.isFinite(this.lastValue)) this.param.setValueAtTime(this.lastValue, ctxTime);
+    } else {
+      // Cut inside the curve: cancelAndHoldAtTime held the value there, which isn't tracked.
+      this.lastValue = Number.NaN;
+    }
+    this.lastTime = ctxTime;
   }
 
   dispose(): void {

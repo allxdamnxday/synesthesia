@@ -10,9 +10,10 @@
  * the very same noise.
  *
  * After that it runs on continuously, through seeks, loop wraps, live edits and scheduler
- * resyncs. It deliberately does not realign on a seek: the engine resyncs a starved scheduler
- * as a seek *without* fading, and restarting noise there would click. (Only a stretch where
- * nothing is scheduled at all, after its restart was cancelled, starts it again.)
+ * resyncs. It deliberately does not realign on a seek or a resync: after a jump the preview
+ * needn't match the render sample for sample, and a restart is one more thing that could be
+ * heard. (Only a stretch where nothing is scheduled at all, after its restart was cancelled,
+ * starts it again.)
  *
  * Call `sync()` from the control timeline's `begin` handler and `cancelFrom()` from the
  * material's `cancelFrom`.

@@ -11,13 +11,21 @@
  *
  * Transport behaviour:
  * - play/pause fade in/out over a few milliseconds (no clicks);
- * - seek dips the output to silence for ~16 ms around the jump; the material resets and
- *   fast-forwards to the new time;
+ * - seek dips the output around the jump (8 ms out, silent, 8 ms in); the material resets
+ *   and fast-forwards to the new time;
  * - at the end of the timeline the engine stops and calls `onEnded`, or, with `loop` on,
  *   wraps to 0 seamlessly: the sound's state carries straight on (click-free);
  * - property edits cancel scheduled automation just ahead of the audible time and
  *   reschedule the window with the new values (SPEC 9.1);
- * - switching material crossfades old and new without stopping playback.
+ * - switching material crossfades old and new without stopping playback;
+ * - if the main thread is too busy for the scheduler to keep up and the scheduled sound runs
+ *   out (the material holds its last values meanwhile), the next tick resynchronises to where
+ *   playback should be, with the same dip as a seek.
+ *
+ * Jumps are silent for one control step: after a play start, a seek, a resync or a new
+ * material's start, the output stays at zero until the material's first control point has
+ * passed (it can fall up to one step after the jump), so a material may set its values
+ * outright at that point.
  *
  * No wall-clock reads: timing comes from `ctx.currentTime` (the lint forbids clocks here).
  * `setInterval` drives the scheduler only; what gets scheduled depends on context time.
@@ -36,7 +44,7 @@ import {
 } from '../../materials/types';
 import type { SignatureSampler } from '../../signature/types';
 import { clamp } from '../../lib/math';
-import { PlaybackMap } from './playbackMap';
+import { awayFromControlPoint, PlaybackMap } from './playbackMap';
 
 export interface AudioEngineOptions {
   /** Use an existing context (the engine will not close it). Default: a new one. */
@@ -71,6 +79,33 @@ interface Slot {
   gain: RampedParam;
 }
 
+/** How the lookahead scheduler has kept up since playback started (for Diagnostics). */
+export interface SchedulerStats {
+  /** Scheduler ticks while playing. */
+  ticks: number;
+  /**
+   * Times the schedule ran out before a tick came (a busy main thread) and playback had to
+   * resynchronise.
+   */
+  resyncs: number;
+  /** Context time where the latest resync jumped, in silence (NaN if none). */
+  lastResyncAt: number;
+  /**
+   * Smallest amount of scheduled sound left when a tick came, in seconds (Infinity before the
+   * second tick). Normally about lookahead − interval; below the safety margin means a resync.
+   */
+  minLeadSec: number;
+}
+
+function freshStats(): SchedulerStats {
+  return {
+    ticks: 0,
+    resyncs: 0,
+    lastResyncAt: Number.NaN,
+    minLeadSec: Number.POSITIVE_INFINITY,
+  };
+}
+
 /** Play/pause fade, seconds. */
 const FADE_SEC = 0.012;
 /** Seek dip: fade out, jump, fade in; seconds each way. */
@@ -79,6 +114,14 @@ const DIP_SEC = 0.008;
 const XFADE_SEC = 0.04;
 /** Timelines shorter than this don't loop (guards a runaway scheduler). */
 const MIN_LOOP_SEC = 0.05;
+/**
+ * Seconds scheduled ahead around a material's start (play, a material switch): its build and
+ * first window can keep the main thread busy for a while (a new impulse response, seeded
+ * noise), longer than the usual lookahead would cover.
+ */
+const START_LOOKAHEAD_SEC = 0.5;
+/** A live edit starts at least this many samples away from any control point. */
+const GRID_GUARD_SAMPLES = 4;
 
 export class AudioEngine {
   readonly context: AudioContext;
@@ -121,6 +164,9 @@ export class AudioEngine {
   private playToken = 0;
   private loadToken = 0;
   private disposed = false;
+  private stats: SchedulerStats = freshStats();
+  /** False until the first tick after play() has scheduled (its lead is not a measurement). */
+  private leadValid = false;
 
   constructor(options: AudioEngineOptions = {}) {
     this.ownsContext = !options.context;
@@ -167,6 +213,15 @@ export class AudioEngine {
     return this.slot?.entry.meta.id ?? null;
   }
 
+  /** How the scheduler has kept up since the last `resetSchedulerStats()` (or construction). */
+  get schedulerStats(): SchedulerStats {
+    return { ...this.stats };
+  }
+
+  resetSchedulerStats(): void {
+    this.stats = freshStats();
+  }
+
   /**
    * Build a fresh instance of a sound material and make it current. While playing, the new
    * material crossfades in at the current position without restarting playback. Call again
@@ -175,6 +230,8 @@ export class AudioEngine {
   async load(opts: SoundLoadOptions): Promise<void> {
     this.assertUsable();
     const token = ++this.loadToken;
+    // Building the new material can take a while: let the current one run further ahead.
+    this.scheduleAhead(START_LOOKAHEAD_SEC);
     const material = opts.entry.create();
     const node = this.context.createGain();
     const gain = new RampedParam(node.gain, 0);
@@ -192,6 +249,8 @@ export class AudioEngine {
     }
 
     const samplerChanged = this.sampler !== opts.sampler;
+    // So is the new material's first window: it takes over this far ahead.
+    if (!samplerChanged) this.scheduleAhead(START_LOOKAHEAD_SEC);
     const old = this.slot;
     this.slot = { entry: opts.entry, material, node, gain };
     this.sampler = opts.sampler;
@@ -209,11 +268,12 @@ export class AudioEngine {
     if (samplerChanged) {
       // A different signature: the timeline itself changed, so jump (with a dip).
       gain.setAt(1, at);
-      this.seek(Math.min(this.compositionTime(), this.duration));
+      this.jumpTo(at, clamp(this.compositionTime(), 0, this.duration));
+      this.scheduleAhead(START_LOOKAHEAD_SEC);
       return;
     }
     gain.setAt(0, at);
-    gain.rampTo(1, at, XFADE_SEC);
+    gain.rampTo(1, at + this.jumpHoldSec(), XFADE_SEC);
     this.scheduleMaterialRange(material, at, this.scheduledCtx);
   }
 
@@ -247,8 +307,11 @@ export class AudioEngine {
     this.endCtx = Number.POSITIVE_INFINITY;
     this.endFadeAt = Number.NaN;
     this.pendingWraps = [];
-    this.fade.rampTo(1, start, FADE_SEC);
+    this.fade.rampTo(1, start + this.jumpHoldSec(), FADE_SEC);
     this.playingFlag = true;
+    this.leadValid = false;
+    // The first window may be heavy (the material's first impulse response): a head start.
+    this.scheduleAhead(START_LOOKAHEAD_SEC);
     this.tick();
     this.timer = setInterval(this.tick, this.intervalMs);
   }
@@ -276,17 +339,7 @@ export class AudioEngine {
       this.position = target;
       return;
     }
-    const at = this.context.currentTime + this.safetyMargin();
-    const switchAt = at + DIP_SEC;
-    this.fade.rampTo(0, at, DIP_SEC);
-    this.fade.rampTo(1, switchAt, DIP_SEC);
-    this.slot.material.cancelFrom(switchAt);
-    this.map.push(switchAt, target);
-    this.pendingWraps = this.pendingWraps.filter((c) => c < switchAt);
-    this.scheduledCtx = switchAt;
-    this.scheduledT = target;
-    this.endCtx = Number.POSITIVE_INFINITY;
-    this.endFadeAt = Number.NaN;
+    this.jumpTo(this.context.currentTime + this.safetyMargin(), target);
     this.scheduleUntil(this.context.currentTime + this.lookaheadSec);
   }
 
@@ -413,22 +466,67 @@ export class AudioEngine {
       return;
     }
 
+    this.stats.ticks++;
+    if (this.leadValid) {
+      this.stats.minLeadSec = Math.min(this.stats.minLeadSec, this.scheduledCtx - now);
+    }
+    this.leadValid = true;
     const margin = this.safetyMargin();
     if (this.scheduledCtx < now + margin) {
-      // The timer was starved (e.g. a busy main thread) and the schedule ran out:
-      // resynchronise where playback should be now. The material treats it as a seek.
+      // The timer was starved (a busy main thread) and the scheduled sound ran out: the
+      // material has been holding its last values. Resynchronise to where playback should be
+      // now, with the same dip as a seek, so the jump from the held sound can't click or snap.
+      // The material treats it as a seek.
+      this.stats.resyncs++;
       const at = now + margin;
-      const t = Math.min(this.map.timeAt(at), this.duration);
-      this.slot?.material.cancelFrom(at);
-      this.map.push(at, t);
-      this.scheduledCtx = at;
-      this.scheduledT = t;
+      const target = Math.min(this.map.timeAt(at + DIP_SEC), this.duration);
+      this.stats.lastResyncAt = this.jumpTo(at, target);
     }
     this.scheduleUntil(now + this.lookaheadSec);
     this.map.prune(audible - 1);
     this.fade.prune(audible - 1);
     this.slot?.gain.prune(audible - 1);
   };
+
+  /**
+   * Jump the timeline to composition time `target` inside a dip: the output fades out from
+   * `at`, the material jumps at the returned switch time in silence, stays silent for one
+   * control step (its first control point may fall that late), then fades back in.
+   * Scheduling continues from the switch time.
+   */
+  private jumpTo(at: number, target: number): number {
+    const switchAt = at + DIP_SEC;
+    this.fade.rampTo(0, at, DIP_SEC);
+    this.fade.rampTo(1, switchAt + this.jumpHoldSec(), DIP_SEC);
+    this.slot?.material.cancelFrom(switchAt);
+    this.map.push(switchAt, target);
+    this.pendingWraps = this.pendingWraps.filter((c) => c < switchAt);
+    this.scheduledCtx = switchAt;
+    this.scheduledT = target;
+    this.endCtx = Number.POSITIVE_INFINITY;
+    this.endFadeAt = Number.NaN;
+    return switchAt;
+  }
+
+  /**
+   * Silence after a jump before fading in: one control step, the longest a material's first
+   * control point can come after the start of a window.
+   */
+  private jumpHoldSec(): number {
+    return 1 / this.controlRate;
+  }
+
+  /**
+   * While playing, schedule at least `sec` ahead of the audio clock (at least the usual
+   * lookahead). Does nothing once the end is scheduled, or if the schedule has already run
+   * out (the next tick resyncs).
+   */
+  private scheduleAhead(sec: number): void {
+    if (!this.playingFlag || !this.slot || Number.isFinite(this.endCtx)) return;
+    const now = this.context.currentTime;
+    if (this.scheduledCtx < now + this.safetyMargin()) return;
+    this.scheduleUntil(now + Math.max(this.lookaheadSec, sec));
+  }
 
   /** Schedule the current material from the cursor up to context time `horizon`. */
   private scheduleUntil(horizon: number): void {
@@ -489,8 +587,9 @@ export class AudioEngine {
   }
 
   /** Cancel the material's automation from `at` and reschedule up to the same horizon. */
-  private rescheduleFrom(at: number): void {
+  private rescheduleFrom(requested: number): void {
     const slot = this.slot;
+    const at = this.offControlPoint(requested);
     if (!slot || at >= this.scheduledCtx - 1e-9) return;
     const horizon = this.scheduledCtx;
     slot.material.cancelFrom(at);
@@ -504,6 +603,22 @@ export class AudioEngine {
       this.clearEndFade();
     }
     this.scheduleUntil(horizon);
+  }
+
+  /**
+   * A live edit's start, moved a few samples past a control point if it falls on one.
+   *
+   * Edits start on render-quantum boundaries and control points are every 5 ms, so about one
+   * edit in fifteen would start exactly on a point. The rewritten automation then has events a
+   * few ulps apart around the cancel time (the kept old point, the hold, the new point, each
+   * time computed through a slightly different window offset), and Chrome renders that
+   * wrongly: measured in Chrome 153 (replaying the recorded automation offline), every control
+   * bus dropped to nearly zero for one sample, a loud click. A few samples away from any point,
+   * the hold is an ordinary short ramp.
+   */
+  private offControlPoint(at: number): number {
+    const guard = GRID_GUARD_SAMPLES / this.context.sampleRate;
+    return awayFromControlPoint(at, this.map.timeAt(at), this.controlRate, guard);
   }
 
   /** The timeline ends at the cursor: fade out over its last moments. */

@@ -25,11 +25,9 @@
  */
 import { hash32 } from '../../../chance/prng';
 import type { ScheduleWindow, SoundMaterial } from '../../types';
-import { StaticParam } from '../shared/automation';
+import { ControlBus, StaticParam } from '../shared/automation';
 import { ControlTimeline, type ContinuityMode } from '../shared/controlTimeline';
-import { HoldingControlBus } from '../shared/holdingBus';
 import { driveCurve, driveStageGains, mixPairwise, setKRate } from '../shared/graph';
-import { reverbDecaySeconds } from '../shared/mapping';
 import { createNoiseBuffer } from '../shared/noise';
 import { Reverb } from '../shared/reverb';
 import { seekDipGain, seekGlideHolds } from '../shared/seekDip';
@@ -63,16 +61,15 @@ class BreathSound implements SoundMaterial {
   readonly description = BREATH_SOUND_META.description;
   readonly properties = BREATH_SOUND_META.properties;
 
-  private ctx: BaseAudioContext | null = null;
   private program: BreathProgram | null = null;
   private timeline: ControlTimeline<BreathState> | null = null;
   private noise: TimelineNoise | null = null;
   private buses: {
-    amp: HoldingControlBus;
-    shift: HoldingControlBus;
-    q: HoldingControlBus;
-    formantQ: HoldingControlBus;
-    pan: HoldingControlBus;
+    amp: ControlBus;
+    shift: ControlBus;
+    q: ControlBus;
+    formantQ: ControlBus;
+    pan: ControlBus;
   } | null = null;
   private bands: Band[] = [];
   private statics: StaticParam[] = [];
@@ -88,16 +85,15 @@ class BreathSound implements SoundMaterial {
   private nodes: AudioNode[] = [];
 
   build(ctx: BaseAudioContext, destination: AudioNode, seed: number): Promise<void> {
-    this.ctx = ctx;
     this.program = new BreathProgram(breathVariation(seed));
     this.timeline = new ControlTimeline(this.program, { historySec: 1, maxFastForwardSec: 30 });
 
     const buses = {
-      amp: new HoldingControlBus(ctx, 0),
-      shift: new HoldingControlBus(ctx, 0),
-      q: new HoldingControlBus(ctx, 1),
-      formantQ: new HoldingControlBus(ctx, 1),
-      pan: new HoldingControlBus(ctx, 0),
+      amp: new ControlBus(ctx, 0),
+      shift: new ControlBus(ctx, 0),
+      q: new ControlBus(ctx, 1),
+      formantQ: new ControlBus(ctx, 1),
+      pan: new ControlBus(ctx, 0),
     };
     this.buses = buses;
 
@@ -184,9 +180,9 @@ class BreathSound implements SoundMaterial {
     const dry = ctx.createGain();
     const send = ctx.createGain();
     const out = ctx.createGain();
+    // The decay is set by the first schedule window (from Persistence).
     const reverb = new Reverb(ctx, {
       seed: hash32(seed, REVERB_SALT),
-      decaySec: reverbDecaySeconds(0.5),
       damping: 0.5,
       preDelaySec: 0.015,
     });
@@ -234,9 +230,9 @@ class BreathSound implements SoundMaterial {
         this.applyStatics(params, win.ctxTimeAtT0, mode);
       },
       point: (ctxTime, s, _t, jump) => {
-        // Set values outright only on the very first window. After a seek, glide from where
-        // the sound froze under a short dip of its own (see seekDip.ts): a resync is a seek
-        // without the engine's fade, and a leap in the level or the band of noise clicks.
+        // Set values outright only on the very first window. After a seek (or a resync),
+        // stay silent a little longer while the band glides to where the composition is, so
+        // a narrow band can't ring from a leap (see seekDip.ts).
         const instant = jump && first;
         const since = ctxTime - win.ctxTimeAtT0;
         const dip = seek ? seekDipGain(since) : 1;
@@ -248,6 +244,12 @@ class BreathSound implements SoundMaterial {
         buses.pan.write(s.panOut, ctxTime, instant);
       },
     });
+    // After the window's automation: a new impulse response can take a while to build.
+    const reverb = this.reverb;
+    if (reverb) {
+      if (first) reverb.setDecayNow(params.reverbDecaySec, win.ctxTimeAtT0);
+      else reverb.setDecay(params.reverbDecaySec, win.ctxTimeAtT0);
+    }
   }
 
   cancelFrom(ctxTime: number): void {
@@ -271,7 +273,6 @@ class BreathSound implements SoundMaterial {
     this.reverb = null;
     this.timeline = null;
     this.program = null;
-    this.ctx = null;
   }
 
   // -------------------------------------------------------------------------------------
@@ -294,12 +295,6 @@ class BreathSound implements SoundMaterial {
       b.q.apply(p.bandQ[k] ?? 1, at, jump);
       b.level.apply(p.bandGain[k] ?? 0, at, jump);
     });
-    const reverb = this.reverb;
-    const ctx = this.ctx;
-    if (reverb && ctx) {
-      if (jump) reverb.setDecayNow(p.reverbDecaySec, at);
-      else reverb.setDecay(p.reverbDecaySec, at, ctx.currentTime);
-    }
   }
 }
 
