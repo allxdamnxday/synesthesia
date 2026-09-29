@@ -49,3 +49,20 @@
     --transition-fast: 0ms;
   }
 }
+
+/* Touch screens: every control is at least 44 px to a finger (Apple's guideline, WCAG 2.5.5). */
+@media (pointer: coarse) {
+  :root {
+    --hit-min: 44px;
+  }
+}
+
+/*
+ * Layout breakpoints (docs/DECISIONS.md, 2026-09-29 "Phones and tablets"). CSS custom media
+ * queries aren't available, so the numbers are repeated in the modules; keep them in step.
+ * - 1024 px and wider: the desktop layout, as designed for the Mac.
+ * - 900 px and narrower (not short landscape): stage screens stack and the page scrolls.
+ * - Short landscape (landscape, 500 px tall or less, narrower than 1024 px; a phone on its
+ *   side): the Studio keeps the wake beside its controls, filling the window.
+ * - 720 px and narrower: the header's links fold into a Menu (MainNav).
+ */

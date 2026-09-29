@@ -13,6 +13,7 @@ import {
   type RectHandle,
 } from './rectMath';
 import type { SliderPhase } from './Slider';
+import { touchIntent } from './touchMath';
 
 export interface FocusBoxProps {
   /** The box, normalized to this layer (0..1); null when there is none. */
@@ -37,12 +38,24 @@ type Gesture =
       client: Point;
       previous: NormRect | null;
       started: boolean;
+      /** A finger, which may be scrolling the page instead (touch-action pan-y). */
+      touch: boolean;
+      scrolling: boolean;
     }
-  | { kind: 'move'; pointerId: number; origin: Point; start: NormRect }
-  | { kind: 'resize'; pointerId: number; origin: Point; start: NormRect; handle: RectHandle };
+  | { kind: 'move'; pointerId: number; origin: Point; start: NormRect; last: NormRect }
+  | {
+      kind: 'resize';
+      pointerId: number;
+      origin: Point;
+      start: NormRect;
+      last: NormRect;
+      handle: RectHandle;
+    };
 
 /** Pointer travel (px) before a press on empty picture starts drawing a new box. */
 const DRAW_THRESHOLD_PX = 4;
+/** A finger must move this far, more sideways than up or down, to draw (else it scrolls). */
+const TOUCH_DRAW_THRESHOLD_PX = 8;
 /** Arrow keys move or resize by 1% of the frame (5% with Shift). */
 const KEY_STEP = 0.01;
 const KEY_STEP_LARGE = 0.05;
@@ -59,6 +72,9 @@ export function describeFocusRect(rect: NormRect): string {
  * drag inside it to move it; drag its edges or corners to resize it. When it has keyboard
  * focus, arrow keys move it, Option/Alt + arrows resize it and Delete removes it.
  * Everything outside the box is dimmed.
+ *
+ * A finger moves and resizes the box the same way; on the picture around it, a sideways
+ * drag draws a new box and an up or down swipe scrolls the page (touch-action pan-y).
  */
 export function FocusBox({
   rect,
@@ -105,10 +121,17 @@ export function FocusBox({
     const origin = pointAt(e);
     const handle = (e.target as HTMLElement).dataset.handle as RectHandle | undefined;
     if (rect && handle) {
-      gesture.current = { kind: 'resize', pointerId: e.pointerId, origin, start: rect, handle };
+      gesture.current = {
+        kind: 'resize',
+        pointerId: e.pointerId,
+        origin,
+        start: rect,
+        last: rect,
+        handle,
+      };
       onChange(rect, 'start');
     } else if (rect && containsPoint(rect, origin[0], origin[1])) {
-      gesture.current = { kind: 'move', pointerId: e.pointerId, origin, start: rect };
+      gesture.current = { kind: 'move', pointerId: e.pointerId, origin, start: rect, last: rect };
       onChange(rect, 'start');
     } else {
       gesture.current = {
@@ -118,6 +141,8 @@ export function FocusBox({
         client: [e.clientX, e.clientY],
         previous: rect,
         started: false,
+        touch: e.pointerType !== 'mouse',
+        scrolling: false,
       };
     }
   };
@@ -127,17 +152,36 @@ export function FocusBox({
     if (!g || g.pointerId !== e.pointerId) return;
     const p = pointAt(e);
     if (g.kind !== 'draw') {
-      onChange(shaped(g, p), 'change');
+      g.last = shaped(g, p);
+      onChange(g.last, 'change');
       return;
     }
+    if (g.scrolling) return;
     if (!g.started) {
-      const travel = Math.hypot(e.clientX - g.client[0], e.clientY - g.client[1]);
-      if (travel < DRAW_THRESHOLD_PX) return;
+      const dx = e.clientX - g.client[0];
+      const dy = e.clientY - g.client[1];
+      if (g.touch) {
+        // Up or down first: the page is scrolling (the browser cancels this pointer).
+        const intent = touchIntent(dx, dy, TOUCH_DRAW_THRESHOLD_PX);
+        if (intent === 'scroll') g.scrolling = true;
+        if (intent !== 'drag') return;
+      } else if (Math.hypot(dx, dy) < DRAW_THRESHOLD_PX) {
+        return;
+      }
       g.started = true;
       onChange(rectFromPoints(g.origin[0], g.origin[1], p[0], p[1]), 'start');
       return;
     }
     onChange(rectFromPoints(g.origin[0], g.origin[1], p[0], p[1]), 'change');
+  };
+
+  /** The browser took the touch (to scroll, say): keep what the gesture had reached. */
+  const onPointerCancel = (e: PointerEvent<HTMLDivElement>) => {
+    const g = gesture.current;
+    if (!g || g.pointerId !== e.pointerId) return;
+    gesture.current = null;
+    if (g.kind !== 'draw') onChange(g.last, 'end');
+    else if (g.started) onChange(g.previous, 'end');
   };
 
   const onPointerUp = (e: PointerEvent<HTMLDivElement>) => {
@@ -191,7 +235,7 @@ export function FocusBox({
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
-      onPointerCancel={onPointerUp}
+      onPointerCancel={onPointerCancel}
       data-testid="focus-layer"
     >
       {rect ? (

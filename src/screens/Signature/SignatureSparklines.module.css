@@ -26,10 +26,12 @@
   cursor: help;
 }
 
+/* A finger dragging sideways moves the playhead; one swiping up or down scrolls the page. */
 .plots {
   position: relative;
   cursor: pointer;
-  touch-action: none;
+  touch-action: pan-y;
+  -webkit-tap-highlight-color: transparent;
   user-select: none;
 }
 
@@ -77,8 +79,30 @@
   background: color-mix(in srgb, var(--color-honey) 70%, transparent);
 }
 
+/* A row's hint, opened by tapping its name (touch screens). */
+.hint {
+  grid-column: 1 / -1;
+  margin: var(--space-1) 0 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-mist);
+}
+
 @media (max-width: 720px) {
   .sparklines {
     grid-template-columns: 7.5rem minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .sparklines {
+    padding-inline: var(--space-3);
+  }
+}
+
+@media (hover: none) {
+  .label {
+    text-decoration: underline dotted color-mix(in srgb, var(--color-mist) 70%, transparent);
+    text-underline-offset: 4px;
+    -webkit-tap-highlight-color: transparent;
   }
 }

@@ -32,6 +32,8 @@ interface Drag {
   pointerId: number;
   /** Where the pointer grabbed the handle, relative to the handle's time. */
   offset: number;
+  /** Where the drag last put it, for a touch the system cancels. */
+  last: number;
 }
 
 const round2 = (v: number) => Math.round(v * 100) / 100;
@@ -86,7 +88,7 @@ export function TrimBar({
     refFor(kind).current?.focus({ preventScroll: true });
     const t = timeAt(e.clientX);
     const current = kind === 'start' ? start : kind === 'end' ? end : t;
-    drag.current = { kind, pointerId: e.pointerId, offset: current - t };
+    drag.current = { kind, pointerId: e.pointerId, offset: current - t, last: current };
     setActive(kind);
     emit(kind, t + (current - t), 'start');
   };
@@ -94,7 +96,8 @@ export function TrimBar({
   const onPointerMove = (e: PointerEvent<HTMLDivElement>) => {
     const d = drag.current;
     if (!d || d.pointerId !== e.pointerId) return;
-    emit(d.kind, timeAt(e.clientX) + d.offset, 'change');
+    d.last = timeAt(e.clientX) + d.offset;
+    emit(d.kind, d.last, 'change');
   };
 
   const onPointerUp = (e: PointerEvent<HTMLDivElement>) => {
@@ -102,7 +105,7 @@ export function TrimBar({
     if (!d || d.pointerId !== e.pointerId) return;
     drag.current = null;
     setActive(null);
-    emit(d.kind, timeAt(e.clientX) + d.offset, 'end');
+    emit(d.kind, e.type === 'pointerup' ? timeAt(e.clientX) + d.offset : d.last, 'end');
   };
 
   const onKeyDown = (kind: DragKind) => (e: KeyboardEvent<HTMLDivElement>) => {
@@ -151,6 +154,7 @@ export function TrimBar({
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
+        onLostPointerCapture={onPointerUp}
       >
         <div className={styles.rail} />
         <div className={styles.outside} style={{ left: 0, width: pct(start) }} />
