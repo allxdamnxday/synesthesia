@@ -91,6 +91,9 @@ Change a shared contract only when necessary, additively, and say so in your rep
   shown on hover or done with a modifier key needs a touch equivalent.
   `tests/e2e/responsive.spec.ts` covers new screens.
 - The canvas surround is true black. The source clip never appears outside Prepare.
+- Each screen (and each dialog or popover the guide explains) links to its guide section
+  with `<GuideLink section="…" />` from `src/ui/GuideLink.tsx`; when a heading changes,
+  update `GUIDE_SECTIONS`. Where to go next should be visible, not in a menu.
 
 ## Dependencies
 

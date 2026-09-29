@@ -140,10 +140,17 @@ storage is requested on the first save.
 | `#/guide`, `#/guide/:section` | Guide: `docs/USER_GUIDE.md`, whole or at a section |
 
 App-level pieces in `src/app/`: the startup capability gate, the first-run introduction
-(Library only, until finished or skipped) and the optional dedication, a hash router, and a
-file-drop guard (a clip dropped on any screen opens in Prepare; the browser never
-navigates away to play it). First-run overlays stay out of automated browsers unless forced
-with `?introduction=1` / `?dedication=1`.
+(Library only, until finished or skipped) and the optional dedication, a hash router (arriving
+on another screen starts at the top of the window: `arrival.ts`), and a file-drop guard (a
+clip dropped on any screen opens in Prepare; the browser never navigates away to play it).
+First-run overlays and hints stay out of automated browsers unless forced with
+`?introduction=1` / `?dedication=1` / `?studiotip=1`.
+
+Where to go next (DECISIONS 2026-09-29): the Library's How it works steps
+(`src/screens/Library/HowItWorks.tsx`, with the pure `journey.ts`), signature cards and the
+Signature page that offer Start a composition and New album, the Studio's first-visit tip
+and its note after a first save (notices in `studioStore`), all switched by the
+`showGuidance` setting.
 
 ## Guide
 
@@ -152,7 +159,8 @@ The Guide screen (`src/screens/Guide/`) renders `docs/USER_GUIDE.md` itself, imp
 Markdown the guide uses into a plain tree (anything else stays text) and `MarkdownView.tsx`
 renders it as React elements, never as HTML. `src/guide/sections.ts` splits it at its `##`
 headings and gives each section and `###` sub-section a stable slug from `GUIDE_SECTIONS`:
-link to one with `href(guidePath('studio'))`. GitHub-style anchors in the guide's links go to
+link to one with `href(guidePath('studio'))`, or from a screen with
+`<GuideLink section="studio" />` (`src/ui/GuideLink.tsx`). GitHub-style anchors in the guide's links go to
 sections; links to other files show as plain text. The pictures are web-sized WebP copies of
 `docs/images/guide/*.png` in `src/guide/images/` (sizes in `images.json`), made by
 `node scripts/guide-images.mjs` (the screenshot script runs it); a unit test fails when the
