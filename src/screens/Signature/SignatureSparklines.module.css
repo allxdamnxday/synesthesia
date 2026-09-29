@@ -99,8 +99,10 @@
   }
 }
 
+/* Touch screens: a dotted name opens its hint (iOS only sends taps to pointer targets). */
 @media (hover: none) {
   .label {
+    cursor: pointer;
     text-decoration: underline dotted color-mix(in srgb, var(--color-mist) 70%, transparent);
     text-underline-offset: 4px;
     -webkit-tap-highlight-color: transparent;

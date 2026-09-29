@@ -426,6 +426,7 @@ async function touch(page: Page) {
   const send = (type: 'touchStart' | 'touchMove' | 'touchEnd', points: Point[]) =>
     cdp.send('Input.dispatchTouchEvent', { type, touchPoints: points });
   return {
+    /** A drag that comes to rest before the finger lifts (so it doesn't fling the page). */
     async drag(from: Point, to: Point, steps = 12): Promise<void> {
       await send('touchStart', [from]);
       for (let i = 1; i <= steps; i++) {
@@ -433,10 +434,19 @@ async function touch(page: Page) {
           { x: from.x + ((to.x - from.x) * i) / steps, y: from.y + ((to.y - from.y) * i) / steps },
         ]);
       }
+      for (let i = 0; i < 3; i++) {
+        await page.waitForTimeout(40);
+        await send('touchMove', [to]);
+      }
       await send('touchEnd', []);
     },
     async tap(at: Point): Promise<void> {
       await send('touchStart', [at]);
+      await send('touchEnd', []);
+    },
+    async hold(at: Point, ms: number): Promise<void> {
+      await send('touchStart', [at]);
+      await page.waitForTimeout(ms);
       await send('touchEnd', []);
     },
     detach: () => cdp.detach(),
@@ -456,7 +466,7 @@ async function valueOf(target: Locator): Promise<number> {
 test.describe('a finger on a phone', () => {
   test.use({ viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true });
 
-  test('drags a slider without moving the page, scrolls past it, and double-taps it back', async ({
+  test('drags a slider without moving the page, scrolls past it, double-taps it back, and replaces a snapshot', async ({
     page,
   }) => {
     test.setTimeout(120_000);
@@ -474,6 +484,10 @@ test.describe('a finger on a phone', () => {
     await finger.drag(await pointOn(viscosity, 0.5), await pointOn(viscosity, 0.8));
     await expect.poll(() => valueOf(viscosity)).toBeCloseTo(0.8, 1);
     expect(await scrollY(page)).toBe(before);
+    // Snapshot A keeps this.
+    await finger.tap(await pointOn(page.getByRole('button', { name: 'Store snapshot A' }), 0.5));
+    const snapshotA = page.getByRole('button', { name: /^Snapshot A: recall/ });
+    await expect(snapshotA).toBeVisible();
 
     // Up the screen from the slider: the page scrolls and the slider keeps its value.
     const start = await pointOn(viscosity, 0.3);
@@ -490,6 +504,16 @@ test.describe('a finger on a phone', () => {
     // A single tap jumps there, like a click.
     await page.waitForTimeout(600);
     await finger.tap(await pointOn(viscosity, 0.25));
+    await expect.poll(() => valueOf(viscosity)).toBeCloseTo(0.25, 1);
+
+    // Press and hold snapshot A to replace it (Shift-click with a mouse): no recall.
+    await finger.hold(await pointOn(snapshotA, 0.5), 900);
+    await expect.poll(() => valueOf(viscosity)).toBeCloseTo(0.25, 1);
+    await page.waitForTimeout(600);
+    await finger.tap(await pointOn(viscosity, 0.6));
+    await expect.poll(() => valueOf(viscosity)).toBeCloseTo(0.6, 1);
+    // A tap recalls it: the replaced state, not the first one.
+    await finger.tap(await pointOn(snapshotA, 0.5));
     await expect.poll(() => valueOf(viscosity)).toBeCloseTo(0.25, 1);
     await finger.detach();
     expect(errors).toEqual([]);
