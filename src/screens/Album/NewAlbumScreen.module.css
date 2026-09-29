@@ -172,6 +172,28 @@
   gap: var(--space-3);
 }
 
+@media (max-width: 600px) {
+  .page {
+    padding: var(--space-4) var(--space-4) var(--space-7);
+  }
+
+  .thumb {
+    width: 96px;
+  }
+
+  .row {
+    gap: var(--space-4) var(--space-5);
+  }
+
+  .pools {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .actions {
+    flex-wrap: wrap;
+  }
+}
+
 /* Only appears if opening takes a moment, so quick loads don't flash. */
 .loading {
   color: var(--color-mist);

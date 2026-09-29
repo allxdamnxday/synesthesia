@@ -123,3 +123,15 @@
   grid-template-columns: repeat(auto-fill, minmax(232px, 1fr));
   gap: var(--space-6) var(--space-5);
 }
+
+@media (max-width: 600px) {
+  .page {
+    padding: var(--space-5) var(--space-4) var(--space-7);
+  }
+
+  /* Two cards abreast on larger phones, one on the smallest. */
+  .grid {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 156px), 1fr));
+    gap: var(--space-5) var(--space-3);
+  }
+}

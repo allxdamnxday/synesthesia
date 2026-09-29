@@ -54,3 +54,13 @@
   border-left: 3px solid var(--color-water);
   font-size: var(--font-size-sm);
 }
+
+@media (max-width: 600px) {
+  .page {
+    padding: var(--space-5) var(--space-4) var(--space-7);
+  }
+
+  .row {
+    gap: var(--space-4);
+  }
+}

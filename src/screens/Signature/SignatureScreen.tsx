@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { href, navigate } from '../../app/router';
 import { errorDetail, getSignature, userMessage } from '../../library';
 import type { KineticSignature } from '../../signature/types';
@@ -186,7 +186,15 @@ function SignatureView({ signature }: { signature: KineticSignature }) {
 
         <div className={styles.body}>
           <div className={styles.work}>
-            <div className={styles.stage}>
+            {/* On phones the stage takes the field's shape (SignatureScreen.module.css). */}
+            <div
+              className={styles.stage}
+              style={
+                {
+                  '--stage-aspect': `${signature.grid.cols} / ${signature.grid.rows}`,
+                } as CSSProperties
+              }
+            >
               <WakeCanvas
                 playback={playback}
                 label={`The wake of “${name}”: a short stroke for each part of the movement, pointing the way it moves`}

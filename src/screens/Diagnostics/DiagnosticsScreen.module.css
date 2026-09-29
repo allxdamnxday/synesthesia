@@ -160,3 +160,9 @@
     gap: var(--space-1);
   }
 }
+
+@media (max-width: 600px) {
+  .page {
+    padding: var(--space-5) var(--space-4) var(--space-7);
+  }
+}

@@ -203,3 +203,24 @@
   font-size: var(--font-size-sm);
   padding: var(--space-1) var(--space-2);
 }
+
+@media (pointer: coarse) {
+  .link {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--hit-min);
+  }
+}
+
+@media (max-width: 600px) {
+  .section,
+  .summary,
+  .extract,
+  .topNotice {
+    padding-inline: var(--space-4);
+  }
+
+  .advancedBody {
+    padding-inline: var(--space-4);
+  }
+}

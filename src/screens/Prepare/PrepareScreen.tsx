@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { navigate } from '../../app/router';
 import {
@@ -33,6 +33,7 @@ import { SignatureSparklines } from '../Signature/SignatureSparklines';
 import { useClipFollower, useClipPlayer } from './clipPlayback';
 import { ClipView } from './ClipView';
 import { DropZone } from './DropZone';
+import { orientedSize } from './orientation';
 import { PlayerBar } from './PlayerBar';
 import { EmptyPanel, SetupPanel, SignaturePanel } from './PreparePanel';
 import styles from './PrepareScreen.module.css';
@@ -374,11 +375,29 @@ export function PrepareScreen(_props: { params?: Record<string, string> }) {
   const showClip = mode === 'clip' || (mode === 'signature' && !hideSource);
   const split = mode === 'signature' && showClip;
 
+  // On phones the stage takes the shape of what it shows (PrepareScreen.module.css): the
+  // clip as turned, or the signature's field.
+  const shown = showClip && clip ? orientedSize(clip.width, clip.height, settings.rotate) : null;
+  const aspect = shown
+    ? shown.width / shown.height
+    : mode === 'signature' && body
+      ? body.grid.cols / body.grid.rows
+      : NaN;
+  const stageShape =
+    Number.isFinite(aspect) && aspect > 0
+      ? ({ '--stage-aspect': aspect.toFixed(4) } as CSSProperties)
+      : undefined;
+
   return (
-    <section className={styles.screen} aria-labelledby="prepare-title">
+    <section className={styles.screen} aria-labelledby="prepare-title" data-mode={mode}>
       <div className={styles.layout}>
         <div className={styles.work}>
-          <div className={styles.stage} data-layout={split ? 'split' : 'single'}>
+          <div
+            className={styles.stage}
+            data-layout={split ? 'split' : 'single'}
+            data-shaped={stageShape ? '' : undefined}
+            style={stageShape}
+          >
             {clip && url ? (
               <div className={styles.pane} hidden={!showClip} data-testid="clip-pane">
                 <ClipView
