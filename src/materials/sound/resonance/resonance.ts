@@ -30,7 +30,7 @@ import { StaticParam } from '../shared/automation';
 import { ControlTimeline, type ContinuityMode } from '../shared/controlTimeline';
 import { driveCurve, driveStageGains } from '../shared/graph';
 import { HoldingControlBus } from '../shared/holdingBus';
-import { reverbDecaySeconds, upwardFlow } from '../shared/mapping';
+import { upwardFlow } from '../shared/mapping';
 import { createNoiseBuffer } from '../shared/noise';
 import { Reverb } from '../shared/reverb';
 import { seekGlideHolds } from '../shared/seekDip';
@@ -158,9 +158,10 @@ class ResonanceSound implements SoundMaterial {
     const dry = ctx.createGain();
     const send = ctx.createGain();
     const out = ctx.createGain();
+    // No decay here: the first schedule window loads it at once (setDecayNow), so an
+    // offline render never waits on a background rebuild (see shared/reverb.ts).
     const reverb = new Reverb(ctx, {
       seed: hash32(seed, REVERB_SALT),
-      decaySec: reverbDecaySeconds(0.5),
       damping: 0.4,
       preDelaySec: 0.015,
     });

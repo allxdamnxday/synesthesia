@@ -24,7 +24,6 @@ import type { ScheduleWindow, SoundMaterial } from '../../types';
 import { StaticParam, windowOffset } from '../shared/automation';
 import { ControlTimeline, type ContinuityMode } from '../shared/controlTimeline';
 import { driveCurve, driveStageGains } from '../shared/graph';
-import { reverbDecaySeconds } from '../shared/mapping';
 import { Reverb } from '../shared/reverb';
 import { SeekDipGain } from '../shared/seekDipGain';
 import { TriggerLane, workletParam } from '../shared/triggers';
@@ -125,9 +124,10 @@ class PulseSound implements SoundMaterial {
     const dry = ctx.createGain();
     const send = ctx.createGain();
     const out = ctx.createGain();
+    // No decay here: the first schedule window loads it at once (setDecayNow), so an
+    // offline render never waits on a background rebuild (see shared/reverb.ts).
     const reverb = new Reverb(ctx, {
       seed: hash32(seed, REVERB_SALT),
-      decaySec: reverbDecaySeconds(0.5),
       damping: 0.5,
       preDelaySec: 0.01,
     });
