@@ -13,6 +13,7 @@ import {
   type RenderResolution,
 } from '../../library';
 import { Button } from '../../ui/Button';
+import { GuideLink } from '../../ui/GuideLink';
 import { SegmentedControl } from '../../ui/SegmentedControl';
 import { Toggle } from '../../ui/Toggle';
 import styles from './SettingsScreen.module.css';
@@ -102,12 +103,15 @@ export function SettingsScreen() {
     setBusy(false);
   };
 
+  const title = (
+    <div className={styles.titleRow}>
+      <h1>Settings</h1>
+      <GuideLink section="settings" />
+    </div>
+  );
+
   if (!settings) {
-    return (
-      <section className={styles.page}>
-        <h1>Settings</h1>
-      </section>
-    );
+    return <section className={styles.page}>{title}</section>;
   }
 
   const qualityIndex = QUALITY_OPTIONS.findIndex((o) => o.value === settings.previewQuality);
@@ -118,7 +122,7 @@ export function SettingsScreen() {
 
   return (
     <section className={styles.page}>
-      <h1>Settings</h1>
+      {title}
       {message ? (
         <p className={styles.message} role="status">
           {message}
@@ -196,6 +200,17 @@ export function SettingsScreen() {
           checked={settings.dedicationSplash}
           onChange={(checked) => void update({ dedicationSplash: checked })}
         />
+        <div className={styles.setting}>
+          <Toggle
+            label="Show how it works"
+            checked={settings.showGuidance}
+            onChange={(checked) => void update({ showGuidance: checked })}
+          />
+          <p className={styles.hint}>
+            The three steps at the top of the Library, a tip the first time the Studio opens, and
+            what to do next after you first save a composition.
+          </p>
+        </div>
         <div className={styles.actions}>
           <Button
             variant="quiet"

@@ -17,6 +17,7 @@ import {
 } from '../../library';
 import { ActionMenu } from '../../ui/ActionMenu';
 import { Button } from '../../ui/Button';
+import { GuideLink } from '../../ui/GuideLink';
 import { InlineRename } from '../../ui/InlineRename';
 import { Notice, type NoticeTone } from '../../ui/Notice';
 import { signatureName } from '../Library/importSummary';
@@ -228,11 +229,14 @@ function AlbumView({ albumId }: { albumId: string }) {
 
   return (
     <section className={styles.page} aria-labelledby="album-title">
-      <nav className={styles.crumbs} aria-label="Breadcrumb">
-        <a href={href('/')}>Library</a>
-        <span aria-hidden="true"> / </span>
-        <span>Album</span>
-      </nav>
+      <div className={styles.topRow}>
+        <nav className={styles.crumbs} aria-label="Breadcrumb">
+          <a href={href('/')}>Library</a>
+          <span aria-hidden="true"> / </span>
+          <span>Album</span>
+        </nav>
+        <GuideLink section="albums" />
+      </div>
 
       <header className={styles.header}>
         <div className={styles.heading}>
@@ -282,11 +286,20 @@ function AlbumView({ albumId }: { albumId: string }) {
         </div>
       </header>
 
-      <p className={styles.hint}>
-        Open a track to play it in the Studio: its open properties are yours to play, the rest stay
-        at their baseline, and unlocking one is recorded. Mark what you keep and what you set aside;
-        set-aside tracks stay in the album and its log.
-      </p>
+      <ol className={styles.loop} aria-label="Working through the album">
+        <li>
+          Choose <strong>Open in Studio</strong> on a track and play its open properties. The rest
+          stay at their baseline; unlocking one is recorded.
+        </li>
+        <li>
+          Mark the track <strong>Kept</strong> or <strong>Set aside</strong>, with notes if you
+          like. Set-aside tracks stay in the album and its log.
+        </li>
+        <li>
+          <strong>Batch render</strong> makes videos of the tracks you choose (the kept ones to
+          start with); <strong>Export album log</strong> saves the written record.
+        </li>
+      </ol>
 
       {signatureAvailable ? null : (
         <Notice tone="warning">

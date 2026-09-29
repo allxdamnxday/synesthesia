@@ -5,6 +5,17 @@
   margin: 0 auto;
 }
 
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.titleRow h1 {
+  margin: 0;
+}
+
 .intro {
   color: var(--color-mist);
   max-width: 64ch;

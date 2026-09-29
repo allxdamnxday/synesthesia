@@ -189,15 +189,18 @@
   color: var(--color-mist);
 }
 
+/* Over the top of the wake (the same grid area, painted after it); on phones, above it. */
 .notices {
-  position: absolute;
-  top: var(--space-3);
-  left: var(--space-3);
-  right: var(--space-3);
+  grid-area: stage;
+  align-self: start;
+  position: relative;
+  z-index: 1;
+  margin: var(--space-3);
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
   max-width: 640px;
+  min-width: 0;
   pointer-events: none;
 }
 
@@ -391,6 +394,7 @@
     grid-template-rows: none;
     grid-template-areas:
       'header'
+      'notices'
       'stage'
       'panel'
       'transport';
@@ -398,6 +402,18 @@
 
   .header {
     padding: var(--space-1) var(--space-4);
+  }
+
+  /* Notices sit between the header and the wake, never over it. */
+  .notices {
+    grid-area: notices;
+    margin: 0;
+    padding: var(--space-3) var(--space-4);
+    max-width: none;
+  }
+
+  .notices:empty {
+    padding: 0;
   }
 
   .crumbs a {

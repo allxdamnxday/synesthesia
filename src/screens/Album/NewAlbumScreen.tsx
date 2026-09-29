@@ -15,6 +15,7 @@ import type { KineticSignature } from '../../signature/types';
 import { formatSeed, newSeed, parseSeed } from '../../state/seed';
 import { Button } from '../../ui/Button';
 import { Checkbox } from '../../ui/Checkbox';
+import { GuideLink } from '../../ui/GuideLink';
 import { Notice } from '../../ui/Notice';
 import { SeedField } from '../../ui/SeedField';
 import { SegmentedControl } from '../../ui/SegmentedControl';
@@ -184,11 +185,14 @@ function NewAlbumPage({ signatureId }: { signatureId: string }) {
 
   return (
     <section className={styles.page} aria-labelledby="new-album-title">
-      <nav className={styles.crumbs} aria-label="Breadcrumb">
-        <a href={href('/')}>Library</a>
-        <span aria-hidden="true"> / </span>
-        <span>New album</span>
-      </nav>
+      <div className={styles.topRow}>
+        <nav className={styles.crumbs} aria-label="Breadcrumb">
+          <a href={href('/')}>Library</a>
+          <span aria-hidden="true"> / </span>
+          <span>New album</span>
+        </nav>
+        <GuideLink section="albums" />
+      </div>
 
       <header className={styles.header}>
         {thumbnail ? <img className={styles.thumb} src={thumbnail} alt="" /> : null}

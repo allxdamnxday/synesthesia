@@ -410,8 +410,14 @@ export function SignaturePanel({
   const notice = usePrepareStore((s) => s.notice);
   const store = usePrepareStore.getState;
   const nameId = useId();
+  // Which save is under way, so its button says so.
+  const [openAfter, setOpenAfter] = useState(true);
   if (!body) return null;
 
+  const save = (thenOpen: boolean) => {
+    setOpenAfter(thenOpen);
+    onSave(thenOpen);
+  };
   const seconds = body.frameCount / body.frameRate;
   const looksHigh = noiseFloorLooksHigh(body);
 
@@ -440,7 +446,7 @@ export function SignaturePanel({
           readOnly={saved !== null}
           onChange={(e) => store().setName(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === 'Enter' && saved === null && !saving) onSave(false);
+            if (e.key === 'Enter' && saved === null && !saving) save(false);
           }}
         />
         {saved ? (
@@ -460,14 +466,17 @@ export function SignaturePanel({
         ) : (
           <>
             <div className={styles.buttonRow}>
-              <Button variant="primary" onClick={() => onSave(false)} disabled={saving}>
-                {saving ? 'Saving…' : 'Save'}
+              <Button variant="primary" onClick={() => save(true)} disabled={saving}>
+                {saving && openAfter ? 'Saving…' : 'Save and open in Studio'}
               </Button>
-              <Button onClick={() => onSave(true)} disabled={saving}>
-                Save and open in Studio
+              <Button onClick={() => save(false)} disabled={saving}>
+                {saving && !openAfter ? 'Saving…' : 'Save'}
               </Button>
             </div>
-            <p className={styles.help}>Not saved yet.</p>
+            <p className={styles.help}>
+              Not saved yet. Next comes the Studio, where it moves through a visual and a sound
+              material.
+            </p>
           </>
         )}
         {saveError ? <Notice tone="error">{saveError}</Notice> : null}
@@ -496,7 +505,8 @@ export function SignaturePanel({
         {looksHigh ? (
           <Notice tone="info">
             Much of this clip keeps moving, so small movements may have been left out. If the wake
-            looks too empty, choose Extract again, open Advanced and raise Sensitivity.
+            looks too empty, choose Extract again, open Advanced, turn on Set sensitivity by hand,
+            and raise Sensitivity.
           </Notice>
         ) : null}
       </Section>

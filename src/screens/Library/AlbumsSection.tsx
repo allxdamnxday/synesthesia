@@ -99,8 +99,8 @@ export function AlbumsSection({ notify, run, busy }: AlbumsSectionProps) {
       {albums.length === 0 ? (
         status === 'ready' ? (
           <p className={styles.sectionEmpty}>
-            No albums yet. Choose New album from a signature’s menu to draw a set of compositions by
-            chance.
+            No albums yet. Choose New album on a signature to let chance draw a set of compositions
+            from it.
           </p>
         ) : null
       ) : (

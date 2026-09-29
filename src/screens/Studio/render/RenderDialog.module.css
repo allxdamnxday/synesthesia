@@ -263,6 +263,12 @@
   margin-top: var(--space-5);
 }
 
+/* The guide link sits apart from the buttons, on the left. */
+.guide {
+  margin-right: auto;
+  margin-left: calc(-1 * var(--space-2));
+}
+
 @media (pointer: coarse) {
   .option {
     min-width: var(--hit-min);

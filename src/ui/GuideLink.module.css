@@ -1,0 +1,43 @@
+.link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--hit-min);
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-md);
+  color: var(--color-mist);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-regular);
+  line-height: 1.2;
+  text-decoration: none;
+  white-space: nowrap;
+  flex: none;
+  transition: color var(--transition-fast);
+}
+
+.link svg {
+  flex: none;
+}
+
+.link:hover {
+  color: var(--color-pearl);
+}
+
+.link:hover .text {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Phones, and a phone on its side: the icon alone (the link keeps its name, from aria-label). */
+@media (max-width: 600px),
+  (orientation: landscape) and (max-height: 500px) and (max-width: 1023.98px) {
+  .compact {
+    justify-content: center;
+    min-width: var(--hit-min);
+    padding: 0;
+  }
+
+  .compact .text {
+    display: none;
+  }
+}

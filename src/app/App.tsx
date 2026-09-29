@@ -11,6 +11,7 @@ import { SignatureScreen } from '../screens/Signature/SignatureScreen';
 import { StudioScreen } from '../screens/Studio/StudioScreen';
 import { usePresentationStore } from '../state/presentationStore';
 import styles from './App.module.css';
+import { useScrollToTopOnArrival } from './arrival';
 import { DedicationSplash } from './DedicationSplash';
 import { FileDropGuard } from './FileDropGuard';
 import { Introduction } from './Introduction';
@@ -73,6 +74,7 @@ const NAV: NavItem[] = [
 
 export function App() {
   const path = useHashPath();
+  useScrollToTopOnArrival(path);
   // Presentation mode shows only the wake (Studio, SPEC 6.3).
   const presenting = usePresentationStore((s) => s.active);
   return (

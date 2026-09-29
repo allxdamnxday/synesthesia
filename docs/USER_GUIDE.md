@@ -21,7 +21,7 @@ Nothing here labels or interprets a movement. You are the only authority on what
 anything, becomes noticeable.
 
 This is a first playable version, **v0**, meant for you to co-direct: every choice made
-while building it is written down in `docs/DECISIONS.md` so you can revisit it.
+while building it is written down in Braden's log of decisions, so you can revisit any of them.
 
 ## Before you start
 
@@ -37,6 +37,11 @@ with a clip of your own. You can show the introduction again from Settings.
 
 ![The introduction](images/guide/introduction.png)
 
+The whole journey has three steps: make a **signature** from a clip, start a
+**composition** from it in the Studio, then **render a video** of it or **make an album**.
+The Library shows these steps, and every screen has a small **Guide** link (a question mark)
+that opens this guide where it explains that screen.
+
 ## The Library
 
 The Library is home. It lists your **signatures**, **albums** and **compositions**, each
@@ -44,12 +49,21 @@ with a small picture of its wake.
 
 ![The Library](images/guide/library.png)
 
+**How it works**, at the top, shows the three steps. The step to take next has its buttons
+and a **Guide** link; finished steps get a tick. With nothing in the Library yet, it offers
+**New from clip** and **Try the sample wink**. **Hide** puts it away; **Show how it works** in
+Settings brings it back.
+
 - **New from clip** starts a new signature. You can also drop a video file anywhere on the
   window.
-- **Open** a signature to see its bare wake; **Start a composition** from its menu (the
-  "…" button) opens it in the Studio; **New album** starts an album.
-- **Import file** brings in a signature, composition or album file; **Export file** (in
-  each item's menu) saves one to share or keep.
+- Each signature has **Start a composition**, which opens it in the Studio, and **New
+  album**, which lets chance draw a set of compositions from it. Choose its picture to see
+  its bare wake and its movement over time, with the same two ways forward.
+- Choose a composition's or an album's picture, or **Open**, to open it.
+- The "…" button beside each item holds **Rename**, **Duplicate**, **Export file** and
+  **Delete** (for an album: **Rename**, **Export album log** and **Delete**). **Export file**
+  saves a signature or composition as a file to share or keep.
+- **Import file** brings in a signature, composition or album file.
 - **Back up everything** and **Restore from backup**: see
   [Keeping your work safe](#keeping-your-work-safe).
 
@@ -80,8 +94,8 @@ marks show **moments of sudden movement**.
 
 ![The bare wake, with the movement's lines below](images/guide/prepare-signature.png)
 
-Name the signature and choose **Save**, or **Save and open in Studio**. The clip itself
-stays on this screen and is never kept.
+Name the signature and choose **Save and open in Studio** to go straight on and play it, or
+**Save** to keep it and stay here. The clip itself stays on this screen and is never kept.
 
 **If it looks faint:** a clip that moves the whole time (water, a curtain) can fool the
 automatic sensitivity. Prepare says so; choose **Extract again**, open **Advanced**, turn on
@@ -89,7 +103,8 @@ automatic sensitivity. Prepare says so; choose **Extract again**, open **Advance
 
 ## The Studio
 
-The Studio is where you play. The wake fills most of the screen.
+The Studio is where you play. The wake fills most of the screen; it stays dark until you
+press **Play** (the first time the Studio opens, a note says so).
 
 ![The Studio](images/guide/studio.png)
 
@@ -113,28 +128,34 @@ The Studio is where you play. The wake fills most of the screen.
 - **Seed**: a six-digit number that fixes every chance choice, so a composition always
   replays the same way. **New seed** picks another.
 - **Snapshots A, B, C, D**: click an empty letter to store the current version there; click
-  a full one to switch to it while it plays; Shift-click to replace it. (Keys: 1–4 to
-  switch, Shift+1–4 to store.)
+  a full one to switch to it while it plays; Shift-click it (on a touch screen, press and
+  hold it) to replace it. (Keys: 1–4 to switch, Shift+1–4 to store.)
 - **Notes** and **Status** (draft, kept, set aside) are part of the research record.
-- **Undo** and **Redo**: Cmd+Z and Shift+Cmd+Z.
+- To undo a change, press Cmd+Z; Shift+Cmd+Z redoes it. (These are keys only; there are no
+  buttons for them.)
 - **Present** (or F) shows only the wake, full screen. Esc comes back.
 - **Save** keeps the composition in the Library with a small picture of its wake; **Save as
   new** keeps a copy. The Studio also saves your work in the background, so if Chrome
   closes unexpectedly, your changes come back the next time you open it.
+- The first time you save a new composition, a note says what could come next: **Render
+  MP4** makes a video of it, and **New album** lets chance draw an album from its signature.
+- On a phone, **Save as new**, **Render MP4** and **Present** are in the "…" menu beside
+  **Save**.
 
 ### Draw by chance
 
 **Draw by chance** (or C) lets chance choose the visual and sound materials and open a few
 shared properties for play. The other shared properties stay at their baseline, **locked**
 (dimmed, with a lock). You can still unlock one; the composition notes that you did, so the
-record stays honest. The same seed always draws the same way.
+record stays honest. The same seed always draws the same way. **Open properties** says how
+many it opens; with **Also choose values** on, chance sets where they start, too.
 
 ![Draw by chance](images/guide/studio-chance.png)
 
 ## Rendering a video
 
-**Render MP4** (or R) makes a video of the composition, frame by frame, at full quality
-however long it takes.
+**Render MP4** (or R) in the Studio makes a video of the composition, frame by frame, at
+full quality however long it takes.
 
 ![Render MP4](images/guide/render.png)
 
@@ -148,16 +169,19 @@ however long it takes.
 ## Albums
 
 An album gathers many compositions from one signature, as a body of work and a research
-record. Start one from a signature's menu in the Library (**New album**).
+record. Start one with **New album** on a signature in the Library, or on the signature's
+own page.
 
 ![A new album](images/guide/album-new.png)
 
 - Choose how many **tracks**, a **master seed**, which materials chance may use, how many
   properties each track opens for play, and the **pairing**: every visual and sound pairing
   once, or pure chance. The same master seed and settings always make the same album.
-- **Generate album** makes the drafts. Open each track in the Studio to play its open
-  properties; mark it **Kept** or **Set aside**, and write notes. Nothing is thrown away:
-  set-aside tracks stay in the record.
+- **Also choose values**: chance also sets where each open property starts. Otherwise they
+  start at their baseline.
+- **Generate album** makes the drafts. The album's page lists the way through: choose **Open
+  in Studio** on a track to play its open properties; mark it **Kept** or **Set aside**, and
+  write notes. Nothing is thrown away: set-aside tracks stay in the record.
 
 ![An album's tracks](images/guide/album.png)
 
@@ -177,7 +201,9 @@ record. Start one from a signature's menu in the Library (**New album**).
 - **Renders**: the size and frame rate new videos start with.
 - **Your library**: how much space your work uses, whether Chrome has agreed to keep it,
   and **Back up everything**.
-- **Welcome**: the dedication when the instrument opens, and the introduction.
+- **Welcome**: the dedication when the instrument opens; **Show how it works** (the steps
+  at the top of the Library, the Studio's first note about Play, and its note on what could
+  come next after you first save a composition); and the introduction, shown again.
 
 ## Keeping your work safe
 
@@ -194,8 +220,8 @@ clear them if the computer runs very low on space, or if its data is cleared.
   computer. On the iPhone, set **Settings › Camera › Formats › Most Compatible** and record
   again, or convert the clip to MP4.
 - **The Studio is slow or jerky.** Lower **Preview quality** in Settings.
-- **Something else.** Open **Diagnostics** (top right), choose **Copy report**, and paste it
-  into a message to Braden.
+- **Something else.** Open **Diagnostics** (at the top right of the window; on a phone,
+  under **Menu**), choose **Copy report**, and paste it into a message to Braden.
 
 ![Diagnostics](images/guide/diagnostics.png)
 

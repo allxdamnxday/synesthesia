@@ -1,12 +1,11 @@
 import { useEffect, useRef, useState, type CSSProperties, type Ref } from 'react';
+import { overlayAllowed } from '../../app/firstRun';
 import { href } from '../../app/router';
 import { useStudioStore, type TransportController } from '../../state/studioStore';
 import { measureThisComputer } from '../../studio/measure';
 import { FALLBACK_QUALITY } from '../../studio/quality';
 import { StudioRuntime, type PictureProblem } from '../../studio/runtime';
-import { ConfirmDialog } from '../../ui/ConfirmDialog';
 import { CloseIcon } from '../../ui/icons';
-import { Notice } from '../../ui/Notice';
 import styles from './Studio.module.css';
 
 /** Hide the pointer after this long without movement in presentation mode. */
@@ -51,11 +50,8 @@ export function StudioStage({ ref }: { ref?: Ref<HTMLDivElement> }) {
   const quality = useStudioStore((s) => s.quality);
   const composition = useStudioStore((s) => s.composition);
   const picture = useStudioStore((s) => s.picture);
-  const notices = useStudioStore((s) => s.notices);
   const presentation = useStudioStore((s) => s.presentation);
-  const isNew = useStudioStore((s) => s.isNew);
   const [cursorHidden, setCursorHidden] = useState(false);
-  const [confirmDiscard, setConfirmDiscard] = useState(false);
   const measuring = quality === null;
 
   // First visit: measure this computer, then remember the tier (SPEC 14.2).
@@ -112,6 +108,14 @@ export function StudioStage({ ref }: { ref?: Ref<HTMLDivElement> }) {
   useEffect(() => {
     if (quality) runtimeRef.current?.setQuality(quality);
   }, [quality]);
+
+  // The very first visit, once this computer has been measured: a tip to press Play (the
+  // stage is dark until then). Like the introduction, it stays out of automated browsers
+  // unless asked for with `?studiotip=1`.
+  useEffect(() => {
+    if (measuring || !overlayAllowed('studiotip')) return;
+    void useStudioStore.getState().showFirstVisitTip();
+  }, [measuring, session]);
 
   useEffect(() => {
     if (composition) runtimeRef.current?.setComposition(composition);
@@ -172,49 +176,8 @@ export function StudioStage({ ref }: { ref?: Ref<HTMLDivElement> }) {
             </p>
           ) : null}
           {composition?.mute.visual ? <p className={styles.mutedLabel}>Visual muted</p> : null}
-          <div className={styles.notices} role="status" aria-live="polite">
-            {notices.map((n) => (
-              <Notice
-                key={n.id}
-                tone={n.tone}
-                onDismiss={() => store().dismissNotice(n.id)}
-                actions={
-                  n.action === 'discard' ? (
-                    <button
-                      type="button"
-                      className={styles.noticeAction}
-                      onClick={() => setConfirmDiscard(true)}
-                    >
-                      Discard changes
-                    </button>
-                  ) : undefined
-                }
-              >
-                {n.text}
-              </Notice>
-            ))}
-          </div>
         </>
       )}
-      <ConfirmDialog
-        open={confirmDiscard}
-        title="Discard the unsaved changes?"
-        confirmLabel="Discard changes"
-        cancelLabel="Keep them"
-        tone="danger"
-        onCancel={() => setConfirmDiscard(false)}
-        onConfirm={() => {
-          setConfirmDiscard(false);
-          void store().discardChanges();
-        }}
-      >
-        <p>
-          {isNew
-            ? 'The composition starts again from its materials’ baselines.'
-            : 'The composition goes back to how it was last saved.'}{' '}
-          This can’t be undone.
-        </p>
-      </ConfirmDialog>
     </div>
   );
 }

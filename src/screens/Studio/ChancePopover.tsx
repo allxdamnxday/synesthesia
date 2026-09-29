@@ -3,6 +3,7 @@ import { useStudioStore, type ChancePopoverHandle } from '../../state/studioStor
 import { chanceSoundMetas, chanceVisualMetas } from '../../studio/catalog';
 import { Button } from '../../ui/Button';
 import { Checkbox } from '../../ui/Checkbox';
+import { GuideLink } from '../../ui/GuideLink';
 import { SegmentedControl } from '../../ui/SegmentedControl';
 import { Toggle } from '../../ui/Toggle';
 import styles from './ChancePopover.module.css';
@@ -172,6 +173,7 @@ export function ChanceButton() {
           </p>
         )}
         <div className={styles.actions}>
+          <GuideLink section="chance" className={styles.guide} />
           <Button popoverTarget={popoverId} popoverTargetAction="hide">
             Close
           </Button>
