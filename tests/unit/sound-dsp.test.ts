@@ -2,7 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { createRng } from '../../src/chance/prng';
 import { normalizePeakInPlace, peakOf } from '../../src/engine/audio/normalize';
 import { windowEdges } from '../../src/engine/audio/offline';
-import { awayFromControlPoint, PlaybackMap } from '../../src/engine/audio/playbackMap';
+import {
+  awayFromControlPoint,
+  landingOffControlPoint,
+  PlaybackMap,
+} from '../../src/engine/audio/playbackMap';
 import { generateImpulseResponse, impulseLength } from '../../src/materials/sound/shared/impulse';
 import {
   brightnessCutoffHz,
@@ -256,5 +260,25 @@ describe('playback map (context time ↔ composition time)', () => {
       expect(Math.abs(tMoved - k / rate)).toBeGreaterThanOrEqual(guard * 0.999);
       expect(moved - at).toBeLessThan(0.001); // imperceptible
     }
+  });
+
+  it('lands a jump clear of the control points, before an onset at the target', () => {
+    const rate = 200;
+    const guard = 4 / 48000;
+    const clearOfGrid = (t: number) => Math.abs(t - Math.round(t * rate) / rate);
+    // Off the grid: unchanged.
+    expect(landingOffControlPoint(1.0023, rate, guard)).toBe(1.0023);
+    // On a point (a round seek target, often an onset's frame time too), or a few ulps
+    // either side: moved back, so an onset exactly at the target still falls in the window.
+    for (const t of [1.0, 1.0000000000000002, 0.9999999999999998, 1.005 + guard / 2]) {
+      const landing = landingOffControlPoint(t, rate, guard);
+      expect(landing).toBeLessThan(t);
+      expect(clearOfGrid(landing)).toBeGreaterThanOrEqual(guard * 0.999);
+      expect(t - landing).toBeLessThan(0.001); // imperceptible
+    }
+    // At 0 (play from the start) it can only move on; no onset can be at 0.
+    const start = landingOffControlPoint(0, rate, guard);
+    expect(start).toBeGreaterThan(0);
+    expect(clearOfGrid(start)).toBeGreaterThanOrEqual(guard * 0.999);
   });
 });

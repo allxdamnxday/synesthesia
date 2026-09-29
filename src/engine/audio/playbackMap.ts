@@ -27,6 +27,19 @@ export function awayFromControlPoint(
   return Math.abs(t - k / rate) < guardSec ? at + 2 * guardSec : at;
 }
 
+/**
+ * Where a jump (play, seek, resync) to composition time `t` should land: `t`, or, if that is
+ * within `guardSec` of a control point, `2 × guardSec` earlier, clear of the point. Earlier,
+ * not later, so an onset exactly at `t` (onsets sit on frame times, often on the grid) is
+ * still played. Only near 0, where no onset can be (the first frame has no surge), does it
+ * move later. Pure.
+ */
+export function landingOffControlPoint(t: number, rate: number, guardSec: number): number {
+  const k = Math.round(t * rate);
+  if (!(Math.abs(t - k / rate) < guardSec)) return t;
+  return t >= 2 * guardSec ? t - 2 * guardSec : t + 2 * guardSec;
+}
+
 export class PlaybackMap {
   private segs: PlaybackSegment[] = [];
 

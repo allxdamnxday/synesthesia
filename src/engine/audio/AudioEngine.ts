@@ -2,7 +2,7 @@
  * Preview sound engine (SPEC 9.1 "Sound scheduling", 7.5 timing model).
  *
  * Owns an AudioContext (48 kHz requested), the master chain, and the current sound
- * material. A lookahead scheduler runs every ~50 ms and schedules the next ~200 ms of the
+ * material. A lookahead scheduler runs every ~50 ms and schedules the next ~350 ms of the
  * composition timeline into the material, in windows aligned to the global control grid,
  * so preview and the offline render write the same automation.
  *
@@ -44,7 +44,7 @@ import {
 } from '../../materials/types';
 import type { SignatureSampler } from '../../signature/types';
 import { clamp } from '../../lib/math';
-import { awayFromControlPoint, PlaybackMap } from './playbackMap';
+import { awayFromControlPoint, landingOffControlPoint, PlaybackMap } from './playbackMap';
 
 export interface AudioEngineOptions {
   /** Use an existing context (the engine will not close it). Default: a new one. */
@@ -631,13 +631,13 @@ export class AudioEngine {
   }
 
   /**
-   * A composition time moved a few samples past a control point if it falls on one, for the
-   * landing point of a jump (play, seek, resync). A few samples (under 0.1 ms) can't be heard.
+   * A composition time moved a few samples off a control point if it falls on one, for the
+   * landing point of a jump (play, seek, resync): see landingOffControlPoint. A few samples
+   * (under 0.2 ms) can't be heard.
    */
   private offGridTime(t: number): number {
     const guard = GRID_GUARD_SAMPLES / this.context.sampleRate;
-    const k = Math.round(t * this.controlRate);
-    return Math.abs(t - k / this.controlRate) < guard ? t + 2 * guard : t;
+    return landingOffControlPoint(t, this.controlRate, guard);
   }
 
   /** The timeline ends at the cursor: fade out over its last moments. */
