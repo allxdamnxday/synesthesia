@@ -68,6 +68,12 @@ test('the whole workflow: clip to signature to composition to MP4', async ({ pag
   await expect(page.getByRole('button', { name: /^Sound\s*Breath/ })).toBeVisible();
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(page).toHaveURL(/#\/studio\/(?!new)/, { timeout: 30_000 });
+  // Its first save says where to go next (tests/e2e/workflow-guidance.spec.ts follows its
+  // buttons); here, put it away and use the header's Render MP4.
+  const next = page.getByRole('status').filter({ hasText: 'Saved in your Library.' });
+  await expect(next.getByRole('button', { name: 'New album' })).toBeVisible();
+  await next.getByRole('button', { name: 'Dismiss' }).click();
+  await expect(next).toHaveCount(0);
 
   const timeText = await page
     .getByText(/^\d+:\d\d\.\d \/ \d+:\d\d\.\d$/)

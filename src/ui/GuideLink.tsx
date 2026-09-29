@@ -19,11 +19,16 @@ export interface GuideLinkProps {
 export function GuideLink({ section, compact = false, className }: GuideLinkProps) {
   const title = GUIDE_SECTIONS[section];
   const classes = [styles.link, compact ? styles.compact : '', className].filter(Boolean).join(' ');
+  // The name starts with the word shown ("Guide"), so voice control finds it by that word.
   return (
-    <a href={href(guidePath(section))} className={classes} title={`${title}, in the guide`}>
+    <a
+      href={href(guidePath(section))}
+      className={classes}
+      aria-label={`Guide: ${title}`}
+      title={`${title}, in the guide`}
+    >
       <GuideIcon />
       <span className={styles.text}>Guide</span>
-      <span className="visually-hidden">: {title}</span>
     </a>
   );
 }

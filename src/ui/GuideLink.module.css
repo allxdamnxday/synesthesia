@@ -1,6 +1,4 @@
-/* Positioned, so its screen-reader-only words stay inside it. */
 .link {
-  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -30,7 +28,7 @@
   text-underline-offset: 3px;
 }
 
-/* Phones, and a phone on its side: the icon alone (the link keeps its name for screen readers). */
+/* Phones, and a phone on its side: the icon alone (the link keeps its name, from aria-label). */
 @media (max-width: 600px),
   (orientation: landscape) and (max-height: 500px) and (max-width: 1023.98px) {
   .compact {
@@ -40,12 +38,6 @@
   }
 
   .compact .text {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
+    display: none;
   }
 }

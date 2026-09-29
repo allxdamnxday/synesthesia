@@ -64,17 +64,24 @@ export function HowItWorks({
   const rootRef = useRef<HTMLElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const previous = useRef(current);
+  const refocus = useRef(false);
 
   // When a step is done from here (the sample wink), its button goes; if that left focus
-  // nowhere, move it to the next step's action rather than the top of the page.
+  // nowhere, move it to the next step's action (once the Library is no longer busy, so the
+  // button can take it) rather than leave it at the top of the page.
   useEffect(() => {
-    if (previous.current === current) return;
-    previous.current = current;
+    if (previous.current !== current) {
+      previous.current = current;
+      const active = document.activeElement;
+      refocus.current = !active || active === document.body;
+    }
+    if (!refocus.current || busy) return;
+    refocus.current = false;
     const active = document.activeElement;
     if (active && active !== document.body) return;
     const next = rootRef.current?.querySelector<HTMLElement>('[data-state="current"] button');
     (next ?? headingRef.current)?.focus();
-  }, [current]);
+  }, [current, busy]);
 
   const describe = (id: JourneyStepId): ReactNode => {
     switch (id) {

@@ -123,6 +123,25 @@ for (const size of SIZES) {
     test.use({ viewport: size, isMobile: true, hasTouch: true });
     const portrait = size.height > size.width;
 
+    test('the empty library: how it works, and the sample wink', async ({ page }) => {
+      const errors = watchErrors(page);
+      await page.goto('./');
+      const strip = page.getByRole('region', { name: 'How it works' });
+      await expect(strip).toBeVisible();
+      await expectFits(page);
+      for (const name of ['New from clip', 'Try the sample wink', 'Hide how it works']) {
+        await expectInside(page, strip.getByRole('button', { name }));
+      }
+      await expectInside(page, strip.getByRole('link', { name: /^Guide: / }));
+      await strip.getByRole('button', { name: 'Try the sample wink' }).tap();
+      await expectInside(
+        page,
+        strip.getByRole('button', { name: `Start a composition from ${FIXTURE.name}` }),
+      );
+      await expectFits(page);
+      expect(errors).toEqual([]);
+    });
+
     test('the library, the header and the plain pages', async ({ page }) => {
       const errors = watchErrors(page);
       await importSignature(page);
@@ -136,6 +155,17 @@ for (const size of SIZES) {
         page,
         page.getByRole('button', { name: `More actions for ${FIXTURE.name}` }),
       );
+      // The steps and the signature's ways forward.
+      await expectInside(page, page.getByRole('region', { name: 'How it works' }));
+      await expectInside(page, page.getByRole('link', { name: 'Guide: The Library' }));
+      const signatures = page.getByRole('list', { name: 'Signatures' });
+      for (const name of [
+        `Start a composition from ${FIXTURE.name}`,
+        `New album from ${FIXTURE.name}`,
+        `Open ${FIXTURE.name}`,
+      ]) {
+        await expectInside(page, signatures.getByRole('button', { name, exact: true }));
+      }
 
       const nav = page.getByRole('navigation', { name: 'Main' });
       const menu = nav.getByRole('button', { name: 'Menu' });
@@ -259,9 +289,18 @@ for (const size of SIZES) {
       const wake = await boxOf(page.getByRole('img', { name: /^The wake of/ }));
       if (portrait) expect(wake.width).toBeGreaterThanOrEqual(0.9 * size.width);
       expect(wake.height).toBeGreaterThanOrEqual(150);
-      for (const name of ['Export file', 'Start a composition', `Rename ${FIXTURE.name}`]) {
+      for (const name of [
+        'Export file',
+        'Start a composition',
+        'New album',
+        `Rename ${FIXTURE.name}`,
+      ]) {
         await expectInside(page, page.getByRole('button', { name }));
       }
+      await expectInside(
+        page,
+        page.getByRole('link', { name: 'Guide: Making a signature (Prepare)' }),
+      );
       await expectInside(page, page.getByRole('button', { name: /^(Play|Pause)$/ }));
       await expectInside(page, page.getByRole('slider', { name: 'Playhead' }));
       await expectInside(page, page.getByTestId('sparklines'));
@@ -315,6 +354,8 @@ for (const size of SIZES) {
 
       // The header's texts and buttons don't overlap.
       const crumbs = page.getByRole('navigation', { name: 'Where you are' });
+      const guide = page.getByRole('link', { name: 'Guide: The Studio' });
+      await expectInside(page, guide);
       await expectApart([
         crumbs.getByRole('link', { name: 'Library' }),
         crumbs.getByRole('link', { name: FIXTURE.name }),
@@ -322,6 +363,7 @@ for (const size of SIZES) {
         page.getByTestId('save-state'),
         save,
         more,
+        guide,
       ]);
 
       // The transport stays in reach while the controls scroll; a phone on its side keeps
