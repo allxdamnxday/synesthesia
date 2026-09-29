@@ -34,9 +34,10 @@ function goToHeading(slug: string, behavior: ScrollBehavior): void {
 }
 
 /**
- * The heading the reader is in: the last one above a line a quarter of the way down the
- * window. At the very end of the page, where short last sections can't reach that line, the
- * section asked for in the address wins if it's in view, else the last one.
+ * The heading the reader is in: the last one above a line near the top of the window (a jump
+ * puts a heading 24 px from the top). At the very end of the page, where short last sections
+ * can't reach that line, the section asked for in the address wins if it's in view, else the
+ * last one.
  */
 function useCurrentHeading(headings: readonly GuideHeading[], asked: string | null) {
   const [current, setCurrent] = useState<string | null>(null);
@@ -44,7 +45,7 @@ function useCurrentHeading(headings: readonly GuideHeading[], asked: string | nu
     let frame = 0;
     const update = () => {
       frame = 0;
-      const line = window.innerHeight / 4;
+      const line = Math.min(64, window.innerHeight / 4);
       let found: string | null = null;
       for (const heading of headings) {
         const element = document.getElementById(headingDomId(heading.slug));
