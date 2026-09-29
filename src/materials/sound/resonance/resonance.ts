@@ -19,10 +19,10 @@
  * else that changes only with properties are StaticParams. Strikes and resets are
  * TriggerLane events.
  *
- * After a seek (or the engine's resync of a starved scheduler, which is a seek without its
- * fade) the output dips briefly (shared/seekDipGain.ts): under the dip the body is silenced
- * and the bow noise realigned to composition time, and the control buses glide from where they
- * froze (shared/seekDip.ts, shared/holdingBus.ts).
+ * After a seek (or the engine's resync of a starved scheduler, which it treats as a seek) the
+ * output dips briefly (shared/seekDipGain.ts) inside the engine's own dip: under it the body is
+ * silenced and the bow noise realigned to composition time, strikes due before that wait for
+ * it, and the control buses glide from where they froze (shared/seekDip.ts).
  */
 import { hash32 } from '../../../chance/prng';
 import type { ScheduleWindow, SoundMaterial } from '../../types';
@@ -218,16 +218,18 @@ class ResonanceSound implements SoundMaterial {
     const params = program.params(win.props);
     let first = false;
     let seek = false;
+    /** Where this window silences the body (−∞ if it doesn't). */
+    let resetAt = Number.NEGATIVE_INFINITY;
     timeline.schedule(win, {
       begin: (mode) => {
         first = mode === 'start';
         seek = mode === 'seek';
-        this.jumpTo(win, mode);
+        resetAt = this.jumpTo(win, mode);
         this.applyStatics(params, win.ctxTimeAtT0, first);
       },
       point: (ctxTime, s, _t, jump) => {
         // Set outright only on the very first window. After a seek, the buses glide from where
-        // they froze while the output is dipped (a resync is a seek without the engine's fade).
+        // they froze while the output is dipped.
         if (seek && seekGlideHolds(ctxTime - win.ctxTimeAtT0)) return;
         const instant = jump && first;
         buses.bow.write(s.bowOut, ctxTime, instant);
@@ -235,7 +237,12 @@ class ResonanceSound implements SoundMaterial {
         buses.pan.write(s.panOut, ctxTime, instant);
       },
       events: (from, to) => win.sampler.onsetsBetween(from, to),
-      event: (t, ctxTime) => this.strike(win, params, t, ctxTime),
+      // After a seek the body is silenced a few milliseconds after the jump, once the dip has
+      // made the output silent. An onset just after the landing would be struck before that
+      // and erased by it (the strike lost until the next onset, ~18 dB quieter than the
+      // render), so its strike waits for the reset: still in silence, a few ms late, unheard.
+      // A start or a render resets at the window's first moment, before any strike: unchanged.
+      event: (t, ctxTime) => this.strike(win, params, t, Math.max(ctxTime, resetAt)),
     });
     this.dip?.prune(ctx.currentTime - 1);
   }
@@ -289,14 +296,16 @@ class ResonanceSound implements SoundMaterial {
   /**
    * Start or jump playback. On the first window (under the engine's fade in, and at composition
    * time 0 in a render) the body is silenced and the noise started at once. After a seek the
-   * output dips first, and both happen once it is silent.
+   * output dips first, and both happen once it is silent. Returns the context time of the
+   * reset (−∞ when the window carries on).
    */
-  private jumpTo(win: ScheduleWindow, mode: ContinuityMode): void {
-    if (mode !== 'start' && mode !== 'seek') return;
+  private jumpTo(win: ScheduleWindow, mode: ContinuityMode): number {
+    if (mode !== 'start' && mode !== 'seek') return Number.NEGATIVE_INFINITY;
     let at = win.ctxTimeAtT0;
     if (mode === 'seek' && this.dip) at = this.dip.dip(at);
     this.resets?.fire(at, {});
     this.alignNoise(at, win.t0 + (at - win.ctxTimeAtT0));
+    return at;
   }
 
   /**
