@@ -87,7 +87,18 @@ src/materials/sound/<id>/
   `upwardFlow`, Intensity and Brightness curves), `masterChain.ts`.
 - AudioWorklet DSP: write a plain `*.worklet.js` file, import it with `?url&no-inline`,
   and `await loadWorklet(ctx, url)` in `build()`. Keep processors deterministic and drive
-  them through AudioParams.
+  them through AudioParams (never port messages).
+- **Mixing rule (determinism):** never connect more than two sounding sources to one input,
+  and count an AudioParam's own non-zero value as one of them. Chrome sums more in an order
+  that depends on memory addresses, so renders stop being bit-identical. Use `mixPairwise`
+  (`shared/graph.ts`) for voices and `OneShotMix` for one-shot events (`add()` returns false
+  when full: don't start that source; call its `cancelFrom` from the material's
+  `cancelFrom`, and `prune(ctx.currentTime)` on each schedule).
+- **Reverb:** build `Reverb` without a decay and call `setDecayNow` / `setDecay` after writing
+  the window's automation; rebuilds are throttled for you.
+- `tests/e2e/sound.spec.ts` renders every material twice at baseline, at Density 1 and with
+  each primary property at 0 and at 1, and `tests/e2e/sound-stall.spec.ts` stalls the page
+  and drags Persistence: both run automatically for a new material.
 - Register the entry in `src/materials/sound/index.ts`.
 
 ## Test it

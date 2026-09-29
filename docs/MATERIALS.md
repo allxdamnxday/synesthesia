@@ -504,7 +504,7 @@ depth, Honey's defining behaviour.
   one input, Chrome's summing order varies between runs and renders differ in the last bits.
 - After a seek or a scheduler resync the level dips for about 40 ms while pitch and filter
   glide to their new values (`shared/seekDip.ts`), and its control buses anchor held values
-  (`shared/holdingBus.ts`), so a starved scheduler can't click.
+  (`ControlBus`, which anchors its held value when cancelled), so a starved scheduler can't click.
 
 ### A3 Breath
 
@@ -587,7 +587,7 @@ scale, and sharp onsets are already there with Viscosity at zero.
   ~0.9 s on the builder's machine, ~11× real time).
 - After a seek or a scheduler resync the level dips for about 40 ms while the band glides to
   its new place (`shared/seekDip.ts`), and its control buses anchor held values
-  (`shared/holdingBus.ts`): on noise, a leap in level or band would click.
+  (`ControlBus`, which anchors its held value when cancelled): on noise, a leap in level or band would click.
 
 ### A4 Resonance
 
@@ -701,7 +701,7 @@ in-between ones.
 - After a seek (including the engine's resync of a starved scheduler, which doesn't fade) the
   output dips (`shared/seekDipGain.ts`: out in 4 ms, silent to 25 ms, back in by 40 ms); the
   body is reset and the noise realigned under the dip, and the control buses glide from where
-  they froze (`HoldingControlBus`, `shared/seekDip.ts`). A render never seeks, so never dips.
+  they froze (`ControlBus` anchoring, `shared/seekDip.ts`). A render never seeks, so never dips.
 - The twelve modes are summed inside the worklet in a fixed order, and no Web Audio input
   takes more than two sounding sources (see `mixPairwise`), so renders are bit-identical also
   at Density 1 and at the property extremes.

@@ -204,7 +204,7 @@ implementation follows the intent. To revisit with Freeman only if a material fe
   `DynamicsCompressorNode`, which pumps and colours quiet material.
 - **Clock:** the AudioContext asks for 48 kHz with the 'interactive' latency hint; the visual
   preview follows `compositionTimeAt(rAF timestamp)` (output-latency compensated).
-- **Transport:** loop wraps carry the sound's state on; a seek dips the output 8 + 8 ms;
+- **Transport:** loop wraps carry the sound's state on; a seek dips the output 8 + 5 + 8 ms (every jump stays silent for one 5 ms control step);
   pause and play fade over 12 ms (no clicks).
 - **Intensity:** −15 / 0 / +9 dB around each material's calibrated level, plus drive.
 - **Water (A1):** pitch follows vertical travel (a running total of upward flow that leaks
@@ -398,6 +398,29 @@ implementation follows the intent. To revisit with Freeman only if a material fe
   extraction work (tests/e2e/offline.spec.ts).
 - **Alternatives:** cache OpenCV only after the first extraction (offline extraction would
   fail until then); no offline support.
+
+## 2026-09-28: Sound engine hardening
+- **Mixing rule, measured:** at most two sounding sources per audio input, and an AudioParam's
+  own non-zero value counts as one of the terms (a gain at 0.37 with two connections rendered
+  two ways in twelve renders). Water's voices meet through `mixPairwise`; one-shot events
+  (droplets, strikes) go through `OneShotMix` (16 slots mixed in pairs, slot chosen from the
+  events' times alone). Water stays version 1: every setting that was already deterministic
+  renders the same bits.
+- **Stalls:** `ControlBus.cancelFrom` anchors the held value when cancelled after its last
+  point; a starved scheduler resyncs with the same dip as a seek; every jump stays silent for
+  one control step. During a stall the sound holds its last values, then dips cleanly (a
+  freeze rather than a dropout).
+- **Live edits** start at least 4 samples away from any control point: Chrome renders
+  automation rewritten exactly on a point wrongly (all of Breath's buses dropped to ~0 for one
+  sample, a loud click, about one edit in fifteen).
+- **Head start:** 0.5 s is scheduled ahead at play and at a material switch.
+- **Reverb rebuilds** (e.g. while dragging Persistence) run after the current task, at least
+  150 ms and twice their own measured cost apart, in two steps (impulse response, then a new
+  convolver on the silent side), waiting for small changes until the value is steady; recent
+  responses are cached (16 MB). With the CPU throttled 2×, scheduler resyncs during drags went
+  from 7 in 12 to 0.
+- **Alternatives:** generating impulse responses in a worker; shorter responses during drags;
+  a watchdog fade the moment the schedule runs out (a dropout instead of a freeze).
 
 ## Pending
 - **Freeman's MacBook Pro:** model, year, chip, macOS and Chrome versions. Diagnostics' Copy

@@ -79,4 +79,4 @@ scale, and sharp onsets are already there with Viscosity at zero.
   ~0.9 s on the builder's machine, ~11× real time).
 - After a seek or a scheduler resync the level dips for about 40 ms while the band glides to
   its new place (`shared/seekDip.ts`), and its control buses anchor held values
-  (`shared/holdingBus.ts`): on noise, a leap in level or band would click.
+  (`ControlBus`, which anchors its held value when cancelled): on noise, a leap in level or band would click.

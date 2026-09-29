@@ -75,4 +75,4 @@ depth, Honey's defining behaviour.
   one input, Chrome's summing order varies between runs and renders differ in the last bits.
 - After a seek or a scheduler resync the level dips for about 40 ms while pitch and filter
   glide to their new values (`shared/seekDip.ts`), and its control buses anchor held values
-  (`shared/holdingBus.ts`), so a starved scheduler can't click.
+  (`ControlBus`, which anchors its held value when cancelled), so a starved scheduler can't click.

@@ -110,7 +110,7 @@ in-between ones.
 - After a seek (including the engine's resync of a starved scheduler, which doesn't fade) the
   output dips (`shared/seekDipGain.ts`: out in 4 ms, silent to 25 ms, back in by 40 ms); the
   body is reset and the noise realigned under the dip, and the control buses glide from where
-  they froze (`HoldingControlBus`, `shared/seekDip.ts`). A render never seeks, so never dips.
+  they froze (`ControlBus` anchoring, `shared/seekDip.ts`). A render never seeks, so never dips.
 - The twelve modes are summed inside the worklet in a fixed order, and no Web Audio input
   takes more than two sounding sources (see `mixPairwise`), so renders are bit-identical also
   at Density 1 and at the property extremes.
