@@ -419,6 +419,12 @@ implementation follows the intent. To revisit with Freeman only if a material fe
   convolver on the silent side), waiting for small changes until the value is steady; recent
   responses are cached (16 MB). With the CPU throttled 2×, scheduler resyncs during drags went
   from 7 in 12 to 0.
+- **Lookahead:** the preview scheduler keeps 0.35 s of sound written ahead (SPEC 9.1 suggests
+  ~0.2 s) for slack on slower Macs; live edits aren't delayed, since they reschedule from now.
+- **Known limit:** on a busy machine, dragging Persistence can still let the schedule run dry
+  once in a while (a long reverb rebuild takes tens of ms on the main thread). The resync is
+  click-free: a ~21 ms dip. The stall test allows one per drag and checks every step for
+  clicks. If it's noticeable on Freeman's Mac, generate impulse responses in a worker.
 - **Alternatives:** generating impulse responses in a worker; shorter responses during drags;
   a watchdog fade the moment the schedule runs out (a dropout instead of a freeze).
 

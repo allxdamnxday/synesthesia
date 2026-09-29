@@ -53,7 +53,7 @@ export interface AudioEngineOptions {
   sampleRate?: number;
   /** Default 'interactive'. */
   latencyHint?: AudioContextLatencyCategory | number;
-  /** Seconds scheduled ahead of the audio clock. Default 0.2. */
+  /** Seconds scheduled ahead of the audio clock. Default DEFAULT_LOOKAHEAD_SEC (0.35). */
   lookaheadSec?: number;
   /** Scheduler tick in milliseconds. Default 50. */
   intervalMs?: number;
@@ -120,6 +120,8 @@ const MIN_LOOP_SEC = 0.05;
  * noise), longer than the usual lookahead would cover.
  */
 const START_LOOKAHEAD_SEC = 0.5;
+/** How far ahead the preview scheduler keeps sound written (SPEC 9.1 suggests ~0.2 s). */
+export const DEFAULT_LOOKAHEAD_SEC = 0.35;
 /** A live edit starts at least this many samples away from any control point. */
 const GRID_GUARD_SAMPLES = 4;
 
@@ -176,7 +178,10 @@ export class AudioEngine {
         sampleRate: options.sampleRate ?? 48000,
         latencyHint: options.latencyHint ?? 'interactive',
       });
-    this.lookaheadSec = options.lookaheadSec ?? 0.2;
+    // 0.35 s of slack: a Persistence drag rebuilds a reverb on the main thread (tens of ms,
+    // longer on a 2017 MacBook Pro); 0.2 s occasionally ran dry. Live edits aren't delayed by
+    // this: they cancel and reschedule from "now".
+    this.lookaheadSec = options.lookaheadSec ?? DEFAULT_LOOKAHEAD_SEC;
     this.intervalMs = options.intervalMs ?? 50;
     this.controlRate = options.controlRate ?? DEFAULT_CONTROL_RATE;
     this.chain = createMasterChain(this.context, options.destination ?? this.context.destination, {
@@ -301,6 +306,7 @@ export class AudioEngine {
     const start = at + fadeOut;
     this.fade.rampTo(0, at, fadeOut);
     this.slot.material.cancelFrom(start);
+    t = Math.min(this.offGridTime(t), duration);
     this.map.reset(start, t);
     this.scheduledCtx = start;
     this.scheduledT = t;
@@ -496,13 +502,16 @@ export class AudioEngine {
    */
   private jumpTo(at: number, target: number): number {
     const switchAt = at + DIP_SEC;
+    // Land a few samples off the control grid (seek targets are often round times, which sit
+    // exactly on a control point): see offControlPoint for the Chrome behaviour this avoids.
+    const landing = Math.min(this.offGridTime(target), this.duration);
     this.fade.rampTo(0, at, DIP_SEC);
     this.fade.rampTo(1, switchAt + this.jumpHoldSec(), DIP_SEC);
     this.slot?.material.cancelFrom(switchAt);
-    this.map.push(switchAt, target);
+    this.map.push(switchAt, landing);
     this.pendingWraps = this.pendingWraps.filter((c) => c < switchAt);
     this.scheduledCtx = switchAt;
-    this.scheduledT = target;
+    this.scheduledT = landing;
     this.endCtx = Number.POSITIVE_INFINITY;
     this.endFadeAt = Number.NaN;
     return switchAt;
@@ -619,6 +628,16 @@ export class AudioEngine {
   private offControlPoint(at: number): number {
     const guard = GRID_GUARD_SAMPLES / this.context.sampleRate;
     return awayFromControlPoint(at, this.map.timeAt(at), this.controlRate, guard);
+  }
+
+  /**
+   * A composition time moved a few samples past a control point if it falls on one, for the
+   * landing point of a jump (play, seek, resync). A few samples (under 0.1 ms) can't be heard.
+   */
+  private offGridTime(t: number): number {
+    const guard = GRID_GUARD_SAMPLES / this.context.sampleRate;
+    const k = Math.round(t * this.controlRate);
+    return Math.abs(t - k / this.controlRate) < guard ? t + 2 * guard : t;
   }
 
   /** The timeline ends at the cursor: fade out over its last moments. */

@@ -14,8 +14,15 @@
 import { RampedParam } from './automation';
 import { SEEK_DIP_IN_SEC, SEEK_DIP_OUT_SEC, SEEK_DIP_SILENT_UNTIL_SEC } from './seekDip';
 
+/**
+ * The material's own fade out. The engine has normally faded the output already, but its dip
+ * and this one are scheduled separately; an instant cut (SEEK_DIP_OUT_SEC is 0) clicked
+ * whenever the two landed a few milliseconds apart. A short fade can't click either way.
+ */
+export const MATERIAL_DIP_OUT_SEC = Math.max(SEEK_DIP_OUT_SEC, 0.006);
+
 /** How long after the jump the output is certainly silent, seconds. */
-export const SEEK_DIP_QUIET_SEC = SEEK_DIP_OUT_SEC + 0.001;
+export const SEEK_DIP_QUIET_SEC = MATERIAL_DIP_OUT_SEC + 0.001;
 
 export class SeekDipGain {
   /** Route the material's signal through this node. */
@@ -32,7 +39,7 @@ export class SeekDipGain {
    * silent (until the fade back in), where the material can reset what was sounding.
    */
   dip(at: number): number {
-    this.gain.rampTo(0, at, SEEK_DIP_OUT_SEC);
+    this.gain.rampTo(0, at, MATERIAL_DIP_OUT_SEC);
     this.gain.rampTo(1, at + SEEK_DIP_SILENT_UNTIL_SEC, SEEK_DIP_IN_SEC);
     return at + SEEK_DIP_QUIET_SEC;
   }
