@@ -598,6 +598,15 @@ implementation follows the intent. To revisit with Freeman only if a material fe
   (`src/app/arrival.ts`) scrolls to the top in a layout effect when the *screen* changes; the
   Studio after a first save or Save as new (a new address, the same screen) and moves between
   guide sections (the guide positions itself) keep their place.
+- **The guide** was brought up to date (the steps, the cards, each item's menu as it is, undo
+  and redo as keys, press and hold for snapshots, Also choose values, Diagnostics under Menu
+  on a phone, no file path an in-app reader can't open) and its screenshots recaptured: 12
+  pictures, 498 KiB (from 466).
+- **Tests:** `tests/e2e/workflow-guidance.spec.ts` (the steps through the whole journey,
+  Hide and Settings, cards, the Signature page, Prepare's main button, the Studio's note and
+  tip, every guide link, arrival at the top); `responsive.spec.ts` checks the steps, cards and
+  guide links at every size; unit tests for the steps (`journey.test.ts`) and for which
+  addresses are the same screen (`arrival.test.ts`).
 - **Alternatives:** a guided tour or coach marks (gamified, and they cover what they explain);
   auto-hiding the steps once all are done (surprising; the Settings switch would then seem not
   to work); counting only albums for the last step (the steps would nag someone who only makes
