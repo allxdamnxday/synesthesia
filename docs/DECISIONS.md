@@ -463,8 +463,8 @@ implementation follows the intent. To revisit with Freeman only if a material fe
   (renders may need a small audio offset), float render targets, preview frame rate on a
   Retina screen, extraction time, QuickTime playback, the offline cache.
 - **A real wink clip** with a focus area (M1 acceptance).
-- **Hosting:** the plan is a free Vercel Hobby deployment from a private GitHub repository
-  (`docs/DEPLOY.md`); it needs the builder's own accounts, so nothing has been deployed.
+- **Hosting:** done 2026-09-29: a free Vercel Hobby project deploying from the private
+  GitHub repository `allxdamnxday/synesthesia` on every push to `main` (`docs/DEPLOY.md`).
 - **To confirm with Freeman after handover** (SPEC 18): the chance interpretation (open
   properties drawn from the shared properties the two materials use; the rest locked at
   baseline), which materials reveal or obscure the signature, the dedication splash (on by

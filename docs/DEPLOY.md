@@ -2,8 +2,28 @@
 
 The instrument is a static web app: any static host that serves HTTPS works. HTTPS matters:
 WebCodecs, AudioWorklet, the clipboard and folder saving only work in a secure context
-(HTTPS or `localhost`). Nothing here has been deployed yet; these steps need your own
-accounts.
+(HTTPS or `localhost`).
+
+## Where it runs now
+
+Set up on 2026-09-29:
+
+- **Code:** the private GitHub repository `allxdamnxday/synesthesia`.
+- **Hosting:** the Vercel project `synesthesia` in the team *Braden Freeman's projects* (free
+  Hobby plan), connected to that repository. `vercel.json` sets the build
+  (`npm run build:release`, output `dist`).
+- **Production:** every push to `main` builds and goes live on its own.
+- **Previews:** every other branch and every pull request gets its own preview deployment,
+  linked from the pull request. Previews ask for a Vercel login, so work in progress stays
+  private.
+- **The address to share:** the production domain listed in the Vercel project under
+  *Settings › Domains*. That one is public. The team address
+  (`synesthesia-braden-freemans-projects.vercel.app`) and each deployment's own address ask
+  for a Vercel login. (`synesthesia.vercel.app` belongs to someone else.)
+- **Rolling back:** in Vercel, *Deployments*, open an earlier production deployment and choose
+  *Promote to Production*, or revert the commit and push.
+
+The rest of this file is the original plan, kept for reference and for moving elsewhere.
 
 ## Builds
 
