@@ -154,8 +154,13 @@
   cursor: default;
 }
 
-/* Touch screens: 44 px to a finger, still reaching only outward from the selection. */
+/* Touch screens: 44 px to a finger, still reaching only outward from the selection (the
+   wider padding keeps the outer hit areas inside the bar). */
 @media (pointer: coarse) {
+  .trim {
+    padding: 0 44px;
+  }
+
   .head::before {
     left: -21px;
     right: -21px;

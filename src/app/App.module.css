@@ -39,6 +39,15 @@
   margin: 0 auto;
 }
 
+/* A finger-sized target on touch screens. */
+@media (pointer: coarse) {
+  .wordmark {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--hit-min);
+  }
+}
+
 @media (max-width: 720px) {
   .header {
     padding: var(--space-2) var(--space-4);

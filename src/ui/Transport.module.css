@@ -114,11 +114,22 @@
   .time {
     min-width: 0;
   }
+
+  .extra {
+    column-gap: var(--space-2);
+  }
 }
 
-/* The smallest phones show just the playhead's time; the scrub bar shows the length. */
+/*
+ * The smallest phones show just the playhead's time (the scrub bar shows the length), and
+ * the extras stay on one row: the last of them may wrap its label onto two lines.
+ */
 @media (max-width: 359px) {
   .total {
     display: none;
+  }
+
+  .extra {
+    flex-wrap: nowrap;
   }
 }

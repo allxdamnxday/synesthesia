@@ -172,6 +172,14 @@
   gap: var(--space-3);
 }
 
+@media (pointer: coarse) {
+  .crumbs a {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--hit-min);
+  }
+}
+
 @media (max-width: 600px) {
   .page {
     padding: var(--space-4) var(--space-4) var(--space-7);

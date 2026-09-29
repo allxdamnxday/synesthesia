@@ -49,6 +49,7 @@ export function ActionMenu({ label, items, className }: ActionMenuProps) {
     const place = () => {
       const r = button.getBoundingClientRect();
       menu.style.top = `${Math.round(r.bottom + 4)}px`;
+      menu.style.left = '';
       menu.style.right = `${Math.round(document.documentElement.clientWidth - r.right)}px`;
     };
     const onBeforeToggle = (event: Event) => {
@@ -63,6 +64,11 @@ export function ActionMenu({ label, items, className }: ActionMenuProps) {
           if (rect.bottom > window.innerHeight - 8) {
             const top = button.getBoundingClientRect().top - 4 - rect.height;
             menu.style.top = `${Math.max(8, Math.round(top))}px`;
+          }
+          // Near the left edge (a phone): line up with the button's left side instead.
+          if (rect.left < 8) {
+            menu.style.right = 'auto';
+            menu.style.left = `${Math.max(8, Math.round(button.getBoundingClientRect().left))}px`;
           }
           window.addEventListener('scroll', close, { capture: true, once: true, passive: true });
         }

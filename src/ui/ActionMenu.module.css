@@ -10,7 +10,11 @@
   top: anchor(bottom);
   right: anchor(right);
   margin-block: 4px;
-  position-try-fallbacks: flip-block;
+  /* Near the left edge (a phone), it lines up with the button's left side instead. */
+  position-try-fallbacks:
+    flip-block,
+    flip-inline,
+    flip-block flip-inline;
   min-width: 180px;
   /* Never wider or taller than a phone's screen. */
   max-width: calc(100vw - 16px);

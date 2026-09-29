@@ -263,6 +263,13 @@
   margin-top: var(--space-5);
 }
 
+@media (pointer: coarse) {
+  .option {
+    min-width: var(--hit-min);
+    justify-content: center;
+  }
+}
+
 @media (max-width: 480px) {
   .dialog {
     width: calc(100vw - 2 * var(--space-4));

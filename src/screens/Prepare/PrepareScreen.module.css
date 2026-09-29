@@ -115,7 +115,7 @@
   }
   .stage[data-shaped] {
     aspect-ratio: var(--stage-aspect);
-    min-height: 200px;
+    min-height: 180px;
     max-height: 60vh;
     max-height: 60svh;
   }

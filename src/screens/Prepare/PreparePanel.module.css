@@ -210,6 +210,10 @@
     align-items: center;
     min-height: var(--hit-min);
   }
+
+  .nameInput {
+    min-height: var(--hit-min);
+  }
 }
 
 @media (max-width: 600px) {

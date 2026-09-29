@@ -167,6 +167,9 @@ export function RenderDialog({ composition, signature, onClose }: RenderDialogPr
     const dialog = dialogRef.current;
     if (dialog && !dialog.open) dialog.showModal();
     dialog?.focus();
+    // Opening focused a button at the bottom first; on a short screen that scrolled the
+    // dialog past its title.
+    if (dialog) dialog.scrollTop = 0;
     let live = true;
     void loadRenderFolderHint();
     void (async () => {

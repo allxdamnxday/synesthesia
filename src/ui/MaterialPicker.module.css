@@ -88,6 +88,15 @@
   }
 }
 
+/* Phones: the list reaches across the screen (over Mute and Solo) so descriptions read well. */
+@media (max-width: 600px) {
+  .list {
+    right: auto;
+    width: calc(100vw - 2 * var(--space-4));
+    max-width: 440px;
+  }
+}
+
 /* A phone on its side: the list stays within the screen and scrolls. */
 @media (orientation: landscape) and (max-height: 500px) and (max-width: 1023.98px) {
   .list {

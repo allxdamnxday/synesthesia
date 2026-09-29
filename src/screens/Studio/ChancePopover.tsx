@@ -13,6 +13,10 @@ const supportsAnchors =
   typeof CSS.supports === 'function' &&
   CSS.supports('anchor-name', '--a');
 
+/** Where the popover is a sheet along the bottom instead (ChancePopover.module.css). */
+const SHEET_QUERY =
+  '(max-width: 900px), (orientation: landscape) and (max-height: 500px) and (max-width: 1023.98px)';
+
 /**
  * Draw by chance (SPEC 12.2): chance picks one visual and one sound material from the
  * eligible pool and opens K shared properties to play; every other shared property stays
@@ -59,7 +63,11 @@ export function ChanceButton() {
     const onBeforeToggle = (event: Event) => {
       if ((event as ToggleEvent).newState !== 'open' || supportsAnchors) return;
       const r = anchorRef.current?.getBoundingClientRect();
-      if (!r) return;
+      if (!r || window.matchMedia(SHEET_QUERY).matches) {
+        popover.style.right = '';
+        popover.style.bottom = '';
+        return;
+      }
       popover.style.right = `${Math.round(document.documentElement.clientWidth - r.right)}px`;
       popover.style.bottom = `${Math.round(window.innerHeight - r.top + 8)}px`;
     };
