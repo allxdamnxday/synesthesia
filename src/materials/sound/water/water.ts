@@ -9,46 +9,25 @@
  *     pan ──────────► every voice's panner
  *     amp ──────────► VCA gain                   flutter LFO ─► depth(flutter bus) ─► AM gain
  *
- *   voices ─► sum ─► VCA ─► AM ─► drive (soft saturation) ─► low-pass ─┬─► dry ─► out
- *   droplets (one short rising sine per onset) ─► drive                └─► send ─► reverb ─► out
+ *   voices, mixed in pairs ─► VCA ─► AM ─► drive (soft saturation) ─► low-pass ─┬─► dry ─► out
+ *   droplets (one short rising sine per onset) ─► one-shot mix ─► drive       └─► send ─► reverb ─► out
  *
  * Everything that changes per grid point goes through five control buses, so a window
  * writes five automation curves whatever the voice count. Values that change only with
  * properties (base pitch, detune, levels, cutoff, drive, reverb) are StaticParams.
+ *
+ * No audio input ever has more than two sounding sources (shared/graph.ts), so renders are
+ * bit-identical at every Density and however many droplets overlap.
  */
 import { hash32 } from '../../../chance/prng';
 import type { ScheduleWindow, SoundMaterial } from '../../types';
 import { ControlBus, StaticParam } from '../shared/automation';
 import { ControlTimeline, type ContinuityMode } from '../shared/controlTimeline';
+import { driveCurve, driveStageGains, mixPairwise, OneShotMix, setKRate } from '../shared/graph';
 import { Reverb } from '../shared/reverb';
-import { reverbDecaySeconds } from '../shared/mapping';
 import { WATER_SOUND_META } from './meta';
 import { MOD_RATIO, VOICE_COUNT, waterVariation, type WaterParams } from './params';
 import { BASE_GLIDE_SEC, WaterProgram, type WaterState } from './program';
-
-/** Curve for the drive stage: tanh over ±DRIVE_HEADROOM (see `applyDrive`). */
-const DRIVE_HEADROOM = 4;
-const DRIVE_CURVE_SIZE = 2049;
-
-function driveCurve(): Float32Array<ArrayBuffer> {
-  const curve = new Float32Array(DRIVE_CURVE_SIZE);
-  const half = (DRIVE_CURVE_SIZE - 1) / 2;
-  for (let i = 0; i < DRIVE_CURVE_SIZE; i++) {
-    curve[i] = Math.tanh(((i - half) / half) * DRIVE_HEADROOM);
-  }
-  return curve;
-}
-
-/** Switch parameters to one value per render quantum where the browser allows it. */
-function setKRate(...params: AudioParam[]): void {
-  for (const param of params) {
-    try {
-      param.automationRate = 'k-rate';
-    } catch {
-      // Some engines fix the rate; a-rate is only slower, never wrong.
-    }
-  }
-}
 
 interface Voice {
   carrier: OscillatorNode;
@@ -101,7 +80,7 @@ class WaterSound implements SoundMaterial {
     dry: StaticParam;
   } | null = null;
   private lfo: OscillatorNode | null = null;
-  private dropletBus: GainNode | null = null;
+  private oneShots: OneShotMix | null = null;
   private reverb: Reverb | null = null;
   private nodes: AudioNode[] = [];
   private droplets: Droplet[] = [];
@@ -122,7 +101,6 @@ class WaterSound implements SoundMaterial {
     };
     this.buses = buses;
 
-    const sum = ctx.createGain();
     const vca = ctx.createGain();
     vca.gain.value = 0;
     buses.amp.connect(vca.gain);
@@ -150,20 +128,19 @@ class WaterSound implements SoundMaterial {
     const dry = ctx.createGain();
     const send = ctx.createGain();
     const out = ctx.createGain();
+    // The decay is set by the first schedule window (from Persistence).
     const reverb = new Reverb(ctx, {
       seed: hash32(seed, 0x57),
-      decaySec: reverbDecaySeconds(0.5),
       damping: 0.45,
       preDelaySec: 0.012,
     });
     this.reverb = reverb;
-    const dropletBus = ctx.createGain();
-    this.dropletBus = dropletBus;
+    const oneShots = new OneShotMix(ctx);
+    this.oneShots = oneShots;
 
-    sum.connect(vca);
     vca.connect(am);
     am.connect(drivePre);
-    dropletBus.connect(drivePre);
+    oneShots.output.connect(drivePre);
     drivePre.connect(drive);
     drive.connect(drivePost);
     drivePost.connect(tone);
@@ -183,6 +160,7 @@ class WaterSound implements SoundMaterial {
     };
 
     this.voices = [];
+    const voiceOutputs: AudioNode[] = [];
     for (let i = 0; i < VOICE_COUNT; i++) {
       const modulator = ctx.createOscillator();
       const carrier = ctx.createOscillator();
@@ -203,7 +181,7 @@ class WaterSound implements SoundMaterial {
       depth.connect(carrier.frequency);
       carrier.connect(level);
       level.connect(panner);
-      panner.connect(sum);
+      voiceOutputs.push(panner);
       modulator.start();
       carrier.start();
       this.voices.push({
@@ -221,6 +199,10 @@ class WaterSound implements SoundMaterial {
       });
       this.nodes.push(modulator, carrier, depth, level, panner);
     }
+    // Voices meet in pairs, so their sum is bit-identical on every run (see mixPairwise).
+    const sum = mixPairwise(ctx, voiceOutputs);
+    sum.output.connect(vca);
+    this.nodes.push(...sum.nodes);
     this.statics = [
       ...Object.values(this.staticsOut),
       ...this.voices.flatMap((v) => [
@@ -232,8 +214,7 @@ class WaterSound implements SoundMaterial {
         v.panParam,
       ]),
     ];
-    this.nodes.push(sum, vca, am, lfo, lfoDepth, drivePre, drive, drivePost, tone, dry, send);
-    this.nodes.push(out, dropletBus);
+    this.nodes.push(vca, am, lfo, lfoDepth, drivePre, drive, drivePost, tone, dry, send, out);
     return Promise.resolve();
   }
 
@@ -241,8 +222,12 @@ class WaterSound implements SoundMaterial {
     const { ctx, program, timeline, buses } = this;
     if (!ctx || !program || !timeline || !buses) return;
     const params = program.params(win.props);
+    let mode: ContinuityMode = 'continue';
     timeline.schedule(win, {
-      begin: (mode) => this.applyStatics(params, win.ctxTimeAtT0, mode),
+      begin: (m) => {
+        mode = m;
+        this.applyStatics(params, win.ctxTimeAtT0, m);
+      },
       point: (ctxTime, s, _t, jump) => {
         buses.pitch.write(s.pitchCents, ctxTime, jump);
         buses.amp.write(s.amp, ctxTime, jump);
@@ -253,6 +238,8 @@ class WaterSound implements SoundMaterial {
       events: (from, to) => win.sampler.onsetsBetween(from, to),
       event: (t, ctxTime, s) => this.droplet(win, params, t, ctxTime, s),
     });
+    // After the window's automation: a new impulse response can take a while to build.
+    this.applyReverb(params, win.ctxTimeAtT0, mode);
     this.pruneDroplets(ctx.currentTime);
   }
 
@@ -266,6 +253,7 @@ class WaterSound implements SoundMaterial {
       else keep.push(d);
     }
     this.droplets = keep;
+    this.oneShots?.cancelFrom(ctxTime);
   }
 
   dispose(): void {
@@ -278,11 +266,14 @@ class WaterSound implements SoundMaterial {
     }
     this.lfo?.stop();
     for (const node of this.nodes) node.disconnect();
+    this.oneShots?.dispose();
     this.reverb?.dispose();
     this.nodes = [];
     this.voices = [];
     this.statics = [];
     this.buses = null;
+    this.oneShots = null;
+    this.reverb = null;
     this.timeline = null;
     this.program = null;
     this.ctx = null;
@@ -296,8 +287,9 @@ class WaterSound implements SoundMaterial {
     if (!out) return;
     // Drive: pre-gain k/H into tanh(H·u), post-gain 1/tanh(k): unity at k → 0, louder and
     // more saturated as Intensity raises k.
-    out.drivePre.apply(p.drive / DRIVE_HEADROOM, at, jump);
-    out.drivePost.apply(1 / Math.tanh(p.drive), at, jump);
+    const gains = driveStageGains(p.drive);
+    out.drivePre.apply(gains.pre, at, jump);
+    out.drivePost.apply(gains.post, at, jump);
     out.cutoff.apply(p.cutoffHz, at, jump);
     out.send.apply(p.reverbSend, at, jump);
     out.dry.apply(p.dry, at, jump);
@@ -309,12 +301,13 @@ class WaterSound implements SoundMaterial {
       v.levelParam.apply(p.voiceLevels[i] ?? 0, at, jump);
       v.panParam.apply(p.voicePan[i] ?? 0, at, jump);
     });
+  }
+
+  private applyReverb(p: WaterParams, at: number, mode: ContinuityMode): void {
     const reverb = this.reverb;
-    const ctx = this.ctx;
-    if (reverb && ctx) {
-      if (jump) reverb.setDecayNow(p.reverbDecaySec, at);
-      else reverb.setDecay(p.reverbDecaySec, at, ctx.currentTime);
-    }
+    if (!reverb) return;
+    if (mode === 'start' || mode === 'seek') reverb.setDecayNow(p.reverbDecaySec, at);
+    else reverb.setDecay(p.reverbDecaySec, at);
   }
 
   /** A droplet: a short sine that rises quickly (a bubble), marking an onset. */
@@ -326,8 +319,8 @@ class WaterSound implements SoundMaterial {
     s: WaterState,
   ): void {
     const ctx = this.ctx;
-    const bus = this.dropletBus;
-    if (!ctx || !bus) return;
+    const oneShots = this.oneShots;
+    if (!ctx || !oneShots) return;
     const frame = win.sampler.sample(t);
     const strength = Math.min(1, 0.4 + 0.6 * Math.max(0, frame.normalized.surge));
     const level = p.level * p.dropletLevel * strength;
@@ -355,7 +348,12 @@ class WaterSound implements SoundMaterial {
     );
     osc.connect(gain);
     gain.connect(panner);
-    panner.connect(bus);
+    if (!oneShots.add(panner, ctxTime, end)) {
+      // More droplets at once than the mix carries: this one wouldn't be heard apart.
+      osc.disconnect();
+      gain.disconnect();
+      return;
+    }
     osc.start(ctxTime);
     osc.stop(end);
     this.droplets.push({ start: ctxTime, osc, gain, panner });
@@ -374,6 +372,7 @@ class WaterSound implements SoundMaterial {
 
   /** Release droplets that finished long ago (bookkeeping only; they are silent). */
   private pruneDroplets(now: number): void {
+    this.oneShots?.prune(now);
     if (this.droplets.length < 32) return;
     const keep: Droplet[] = [];
     for (const d of this.droplets) {
