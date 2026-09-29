@@ -45,4 +45,5 @@ experiments) and `/dev/` (harness pages for materials, sound, extraction, render
 | `docs/THIRD_PARTY.md` | Dependencies and licences |
 | `docs/MAC_TEST_CHECKLIST.md` | What to check on a Mac |
 | `docs/DEPLOY.md` | Deploying the static build |
+| `docs/WALKTHROUGH_SCRIPT.md` | Script for a ~15-minute walkthrough video for Freeman |
 | `docs/milestones/` | Milestone acceptance reports |
