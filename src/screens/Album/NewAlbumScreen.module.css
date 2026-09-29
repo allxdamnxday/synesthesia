@@ -8,6 +8,15 @@
   gap: var(--space-4);
 }
 
+/* The breadcrumb, with the guide link at the other end. */
+.topRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-block: calc(-1 * var(--space-2));
+}
+
 .crumbs {
   font-size: var(--font-size-sm);
   color: var(--color-mist);

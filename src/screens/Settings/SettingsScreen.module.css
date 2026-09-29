@@ -5,6 +5,24 @@
   margin: 0 auto;
 }
 
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.titleRow h1 {
+  margin: 0;
+}
+
+/* A switch with a line under it saying what it does. */
+.setting {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
 .group {
   padding: var(--space-5) 0;
   border-top: 1px solid color-mix(in srgb, var(--color-silt) 45%, transparent);

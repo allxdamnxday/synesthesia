@@ -4,6 +4,7 @@ import { useStudioStore } from '../../state/studioStore';
 import { compositionsDiffer } from '../../studio/edits';
 import { ActionMenu } from '../../ui/ActionMenu';
 import { Button } from '../../ui/Button';
+import { GuideLink } from '../../ui/GuideLink';
 import { InlineRename } from '../../ui/InlineRename';
 import styles from './Studio.module.css';
 
@@ -120,6 +121,7 @@ export function StudioHeader() {
             ]}
           />
         </span>
+        <GuideLink section="studio" compact />
       </div>
     </header>
   );

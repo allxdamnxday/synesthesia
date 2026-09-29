@@ -88,9 +88,16 @@
   border-left: 1px solid color-mix(in srgb, var(--color-silt) 45%, transparent);
 }
 
+.titleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-4) 0 var(--space-5);
+}
+
 .title {
   margin: 0;
-  padding: var(--space-4) var(--space-5) 0;
   font-size: var(--font-size-xl);
   font-weight: var(--font-weight-light);
 }
@@ -152,14 +159,16 @@
   .stage {
     min-height: 160px;
   }
-  .title {
+  .titleRow {
     padding-top: var(--space-3);
+  }
+  .title {
     font-size: var(--font-size-lg);
   }
 }
 
 @media (max-width: 600px) {
-  .title {
-    padding-inline: var(--space-4);
+  .titleRow {
+    padding-inline: var(--space-4) var(--space-3);
   }
 }

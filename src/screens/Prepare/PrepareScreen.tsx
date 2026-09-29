@@ -20,6 +20,7 @@ import {
 import { CLIP_FORMAT_MESSAGE, EXTRACTION_FAILED_MESSAGE } from '../../signature/extractProtocol';
 import { useLibraryStore } from '../../state/libraryStore';
 import { extractionOptions, usePrepareStore } from '../../state/prepareStore';
+import { GuideLink } from '../../ui/GuideLink';
 import { centeredRect, type NormRect } from '../../ui/rectMath';
 import type { SliderPhase } from '../../ui/Slider';
 import type { TrimEdge } from '../../ui/TrimBar';
@@ -453,9 +454,12 @@ export function PrepareScreen(_props: { params?: Record<string, string> }) {
         </div>
 
         <aside className={styles.panel} aria-labelledby="prepare-title">
-          <h1 id="prepare-title" className={styles.title}>
-            Prepare
-          </h1>
+          <div className={styles.titleRow}>
+            <h1 id="prepare-title" className={styles.title}>
+              Prepare
+            </h1>
+            <GuideLink section="prepare" />
+          </div>
           {mode === 'empty' ? <EmptyPanel onFiles={onFiles} /> : null}
           {mode === 'clip' ? (
             <SetupPanel

@@ -13,6 +13,7 @@ import {
 } from '../../render/capabilities';
 import { Button } from '../../ui/Button';
 import { CopyFallback } from '../../ui/CopyFallback';
+import { GuideLink } from '../../ui/GuideLink';
 import { StatusBadge, type BadgeStatus } from '../../ui/StatusBadge';
 import { useCopyText } from '../../ui/useCopyText';
 import { APP_VERSION, buildReport } from './buildReport';
@@ -111,7 +112,10 @@ export function DiagnosticsScreen() {
 
   return (
     <section className={styles.page} aria-labelledby="diagnostics-title">
-      <h1 id="diagnostics-title">Diagnostics</h1>
+      <div className={styles.titleRow}>
+        <h1 id="diagnostics-title">Diagnostics</h1>
+        <GuideLink section="trouble" />
+      </div>
       <p className={styles.intro}>
         These checks show whether this computer and browser can run the instrument. If something
         isn&apos;t working, copy the report and send it to Braden.
