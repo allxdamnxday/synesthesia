@@ -58,6 +58,10 @@
   white-space: nowrap;
 }
 
+.timeShort {
+  display: none;
+}
+
 .extra {
   display: flex;
   align-items: center;
@@ -125,8 +129,16 @@
  * the extras stay on one row: the last of them may wrap its label onto two lines.
  */
 @media (max-width: 359px) {
-  .total {
+  .time {
     display: none;
+  }
+
+  .timeShort {
+    display: inline;
+    font-size: var(--font-size-sm);
+    color: var(--color-mist);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
   }
 
   .extra {

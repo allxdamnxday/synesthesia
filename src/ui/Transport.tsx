@@ -90,8 +90,12 @@ export function Transport({
         tailStart={tailStart}
       />
       <span className={styles.time} aria-live="off">
+        {formatTime(position, wantsTenths(duration))} /{' '}
+        {formatTime(duration, wantsTenths(duration))}
+      </span>
+      {/* The smallest phones show only the playhead's time (the scrub bar says the rest). */}
+      <span className={styles.timeShort} aria-hidden="true">
         {formatTime(position, wantsTenths(duration))}
-        <span className={styles.total}> / {formatTime(duration, wantsTenths(duration))}</span>
       </span>
       {catchingUp ? (
         <span className={styles.catching} role="status">
