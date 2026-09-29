@@ -82,6 +82,7 @@ export { DB_NAME, DB_VERSION, closeLibraryDb, openLibraryDb } from './db';
 export { downloadBlob, downloadText } from './download';
 export { LibraryError, errorDetail, userMessage } from './errors';
 export { IMPORT_MESSAGES, importLibraryFile, type LibraryImportResult } from './importFile';
+export { SAMPLE_WINK_PATH, importSampleWink } from './sample';
 export {
   DEFAULT_SETTINGS,
   RENDER_RESOLUTIONS,

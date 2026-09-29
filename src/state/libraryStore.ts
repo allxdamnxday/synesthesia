@@ -8,6 +8,7 @@
 import { create } from 'zustand';
 import type { Composition } from '../engine/composition';
 import {
+  DEFAULT_SETTINGS,
   LibraryError,
   deleteComposition,
   deleteSignature,
@@ -21,12 +22,14 @@ import {
   getSettings,
   getSignature,
   importLibraryFile,
+  importSampleWink,
   importSignatureFile,
   listCompositions,
   listSignatureMeta,
   renameComposition,
   renameSignature,
   restoreBackup,
+  setSetting,
   userMessage,
   type LibraryImportResult,
   type PersistenceState,
@@ -59,9 +62,15 @@ export interface LibraryState {
   /** Signature id → number of compositions that reference it. */
   usage: Readonly<Record<string, number>>;
   persistence: PersistenceState;
+  /** The "How it works" steps show (Settings and the steps' Hide change it). */
+  showGuidance: boolean;
+  /** A render has finished at least once (the steps' last one is done). */
+  videoRendered: boolean;
 
   /** Reload the lists from the library. */
   refresh: () => Promise<void>;
+  /** Show or hide the "How it works" steps (and the Studio's where-next notes). */
+  setShowGuidance: (show: boolean) => Promise<void>;
   renameSignature: (id: string, name: string) => Promise<SignatureMeta>;
   duplicateSignature: (id: string) => Promise<SignatureMeta>;
   /** Returns how many compositions moved to an identical copy of the signature. */
@@ -82,6 +91,8 @@ export interface LibraryState {
   ) => Promise<SignatureImportResult>;
   backUp: () => Promise<{ fileName: string; bytes: number }>;
   restore: (file: File) => Promise<RestoreSummary>;
+  /** Add the bundled sample wink (or find it already here). */
+  addSampleWink: () => Promise<SignatureImportResult>;
 }
 
 let refreshToken = 0;
@@ -103,6 +114,8 @@ export const useLibraryStore = create<LibraryState>()((set, get) => {
     compositions: [],
     usage: {},
     persistence: 'not-asked',
+    showGuidance: DEFAULT_SETTINGS.showGuidance,
+    videoRendered: DEFAULT_SETTINGS.videoRendered,
 
     async refresh() {
       const token = ++refreshToken;
@@ -129,11 +142,23 @@ export const useLibraryStore = create<LibraryState>()((set, get) => {
           })),
           usage,
           persistence: settings.persistence,
+          showGuidance: settings.showGuidance,
+          videoRendered: settings.videoRendered,
         });
       } catch (err) {
         if (token !== refreshToken) return;
         console.error('Library refresh failed:', errorDetail(err));
         set({ status: 'error', error: userMessage(err) });
+      }
+    },
+
+    async setShowGuidance(show) {
+      set({ showGuidance: show });
+      try {
+        await setSetting('showGuidance', show);
+      } catch (err) {
+        set({ showGuidance: !show });
+        throw err;
       }
     },
 
@@ -176,5 +201,6 @@ export const useLibraryStore = create<LibraryState>()((set, get) => {
 
     backUp: () => downloadBackup(),
     restore: (file) => change(() => restoreBackup(file)),
+    addSampleWink: () => change(() => importSampleWink()),
   };
 });

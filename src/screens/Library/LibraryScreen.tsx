@@ -14,9 +14,11 @@ import { useLibraryStore } from '../../state/libraryStore';
 import { Button } from '../../ui/Button';
 import { ConfirmDialog } from '../../ui/ConfirmDialog';
 import { FileButton } from '../../ui/FileButton';
+import { GuideLink } from '../../ui/GuideLink';
 import { Notice, type NoticeTone } from '../../ui/Notice';
 import { AlbumsSection } from './AlbumsSection';
 import { countOf, formatChanged, formatDuration } from './format';
+import { HowItWorks } from './HowItWorks';
 import { compositionName, describeImport, signatureName } from './importSummary';
 import { LibraryCard } from './LibraryCard';
 import styles from './LibraryScreen.module.css';
@@ -65,7 +67,16 @@ function newFromClip() {
  * restore. Everything lives in this browser until it is exported or backed up.
  */
 export function LibraryScreen() {
-  const { status, error, signatures, compositions, usage, persistence } = useLibraryStore(
+  const {
+    status,
+    error,
+    signatures,
+    compositions,
+    usage,
+    persistence,
+    showGuidance,
+    videoRendered,
+  } = useLibraryStore(
     useShallow((s) => ({
       status: s.status,
       error: s.error,
@@ -73,6 +84,8 @@ export function LibraryScreen() {
       compositions: s.compositions,
       usage: s.usage,
       persistence: s.persistence,
+      showGuidance: s.showGuidance,
+      videoRendered: s.videoRendered,
     })),
   );
   const refresh = useLibraryStore((s) => s.refresh);
@@ -241,16 +254,52 @@ export function LibraryScreen() {
     setPending({ kind: 'delete-signature', meta, uses: usage[meta.id] ?? 0, twin });
   };
 
+  const trySample = async () => {
+    const result = await run('Adding the sample wink…', () => store().addSampleWink());
+    if (!result) return;
+    notify(
+      'success',
+      result.status === 'already-present'
+        ? `“${signatureName(result.meta.name)}” is already in your library.`
+        : `Added the signature “${signatureName(result.meta.name)}”. Start a composition from it next.`,
+    );
+  };
+
+  const hideGuidance = async () => {
+    try {
+      await store().setShowGuidance(false);
+      notify('info', '“How it works” is hidden. You can bring it back in Settings.');
+    } catch (err) {
+      console.error(errorDetail(err));
+      notify('error', userMessage(err));
+    }
+    // Its Hide button has gone: keep focus at the top of the page, not nowhere.
+    titleRef.current?.focus();
+  };
+
   const ready = status === 'ready';
   const isEmpty = ready && signatures.length === 0 && compositions.length === 0 && albumCount === 0;
   const locked = busy !== null || !ready;
 
+  // The "How it works" steps work on what's here: the composition worked on last (one whose
+  // signature is here, so it can open), and the signature it uses, else the newest signature.
+  const latest = compositions.find((c) => c.signatureAvailable)?.composition;
+  const latestSignature =
+    (latest &&
+      signatures.find(
+        (s) => s.id === latest.signature.id || s.contentHash === latest.signature.contentHash,
+      )) ||
+    signatures[0];
+
   return (
     <section className={styles.page} aria-labelledby="library-title">
       <header className={styles.header}>
-        <h1 id="library-title" ref={titleRef} tabIndex={-1} className={styles.title}>
-          Library
-        </h1>
+        <div className={styles.titleRow}>
+          <h1 id="library-title" ref={titleRef} tabIndex={-1} className={styles.title}>
+            Library
+          </h1>
+          <GuideLink section="library" />
+        </div>
         <div className={styles.headerActions}>
           {busy ? (
             <span className={styles.busy} role="status">
@@ -324,7 +373,33 @@ export function LibraryScreen() {
         </Notice>
       ) : null}
 
-      {isEmpty ? (
+      {ready && showGuidance ? (
+        <HowItWorks
+          facts={{
+            signatures: signatures.length,
+            compositions: compositions.length,
+            albums: albumCount,
+            videoRendered,
+          }}
+          libraryEmpty={isEmpty}
+          signature={
+            latestSignature
+              ? { id: latestSignature.id, name: signatureName(latestSignature.name) }
+              : null
+          }
+          composition={latest ? { id: latest.id, name: compositionName(latest.name) } : null}
+          manyCompositions={compositions.length > 1}
+          busy={busy !== null}
+          onNewFromClip={newFromClip}
+          onTrySample={() => void trySample()}
+          onStartComposition={startComposition}
+          onNewAlbum={newAlbum}
+          onOpenComposition={openComposition}
+          onHide={() => void hideGuidance()}
+        />
+      ) : null}
+
+      {isEmpty && !showGuidance ? (
         <div className={styles.empty}>
           <p className={styles.lead}>Bring in a clip to make your first signature.</p>
           <Button variant="primary" onClick={newFromClip} disabled={busy !== null}>
@@ -368,9 +443,20 @@ export function LibraryScreen() {
                       onOpen={() => openSignature(meta.id)}
                       onRename={(next) => renameItem('signature', meta.id, next)}
                       onRenameEnd={() => setRenaming(null)}
+                      busy={busy !== null}
+                      actions={[
+                        {
+                          label: 'Start a composition',
+                          accessibleLabel: `Start a composition from ${name}`,
+                          onSelect: () => startComposition(meta.id),
+                        },
+                        {
+                          label: 'New album',
+                          accessibleLabel: `New album from ${name}`,
+                          onSelect: () => newAlbum(meta.id),
+                        },
+                      ]}
                       menu={[
-                        { label: 'Start a composition', onSelect: () => startComposition(meta.id) },
-                        { label: 'New album', onSelect: () => newAlbum(meta.id) },
                         {
                           label: 'Rename',
                           onSelect: () => setRenaming({ kind: 'signature', id: meta.id }),
@@ -414,7 +500,7 @@ export function LibraryScreen() {
             {looseCompositions.length === 0 ? (
               albumTracks > 0 ? null : (
                 <p className={styles.sectionEmpty}>
-                  No compositions yet. Open a signature and start a composition to make one.
+                  No compositions yet. Choose Start a composition on a signature to make one.
                 </p>
               )
             ) : (

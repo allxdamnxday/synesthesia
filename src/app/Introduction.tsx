@@ -1,12 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { getSetting, importParsedSignature, setSetting, userMessage } from '../library';
-import { parseSignature } from '../signature/serialize';
+import { errorDetail, getSetting, importSampleWink, setSetting, userMessage } from '../library';
 import { Button } from '../ui/Button';
 import { overlayAllowed } from './firstRun';
 import styles from './Introduction.module.css';
 import { navigate, useHashPath } from './router';
-
-const SAMPLE_URL = 'samples/sample-wink.sig.json';
 
 const STEPS = [
   {
@@ -72,12 +69,10 @@ export function Introduction() {
     setBusy(true);
     setError(null);
     try {
-      const response = await fetch(new URL(SAMPLE_URL, document.baseURI));
-      if (!response.ok) throw new Error(`Sample not found (${response.status})`);
-      const signature = parseSignature(await response.text());
-      const result = await importParsedSignature(signature);
+      const result = await importSampleWink();
       await finish(() => navigate(`/studio/new/${result.meta.id}`));
     } catch (err) {
+      console.error('The sample wink could not be added:', errorDetail(err));
       setError(userMessage(err));
     } finally {
       setBusy(false);
