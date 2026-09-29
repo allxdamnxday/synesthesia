@@ -30,20 +30,26 @@ describe('counter-based hash noise', () => {
     let sumSigned = 0;
     let min = 1;
     let max = 0;
+    let minSigned = 1;
+    let maxSigned = -1;
     const buckets = new Array<number>(10).fill(0);
+    // Ranges are checked once from the extremes: 80,000 expect() calls in the loop made this
+    // test slow enough to time out when the whole suite runs in parallel.
     for (let i = 0; i < n; i++) {
       const u = hashUnit(99, i, 7);
       const s = hashSigned(99, i, 8);
-      expect(u).toBeGreaterThanOrEqual(0);
-      expect(u).toBeLessThan(1);
-      expect(s).toBeGreaterThanOrEqual(-1);
-      expect(s).toBeLessThan(1);
       sum += u;
       sumSigned += s;
       min = Math.min(min, u);
       max = Math.max(max, u);
+      minSigned = Math.min(minSigned, s);
+      maxSigned = Math.max(maxSigned, s);
       buckets[Math.floor(u * 10)] += 1;
     }
+    expect(min).toBeGreaterThanOrEqual(0);
+    expect(max).toBeLessThan(1);
+    expect(minSigned).toBeGreaterThanOrEqual(-1);
+    expect(maxSigned).toBeLessThan(1);
     expect(sum / n).toBeCloseTo(0.5, 1);
     expect(sumSigned / n).toBeCloseTo(0, 1);
     expect(min).toBeLessThan(0.001);

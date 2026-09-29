@@ -86,5 +86,8 @@ export default defineConfig(({ mode }) => ({
   test: {
     include: ['tests/unit/**/*.test.ts', 'src/**/*.test.ts'],
     environment: 'node',
+    // The simulation and sound-program tests take 1–3 s on an idle computer; with the machine
+    // busy (a game running, a slower Mac) the default 5 s timed them out though nothing failed.
+    testTimeout: 20_000,
   },
 }));
