@@ -64,3 +64,61 @@
   gap: var(--space-3);
   margin-left: var(--space-2);
 }
+
+@media (pointer: coarse) {
+  .round,
+  .play {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+/*
+ * Narrow screens: play, loop, the scrub bar and the time keep the first row; the extras
+ * (snapshots, Draw by chance) take the next. "Catching up…" floats above the bar instead of
+ * pushing things around.
+ */
+@media (max-width: 720px) {
+  .transport {
+    position: relative;
+    flex-wrap: wrap;
+    row-gap: var(--space-2);
+  }
+
+  .extra {
+    flex: 1 0 100%;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    row-gap: var(--space-2);
+    margin-left: 0;
+  }
+
+  .catching {
+    position: absolute;
+    right: var(--space-4);
+    bottom: 100%;
+    margin-bottom: var(--space-2);
+    padding: 2px var(--space-2);
+    border-radius: var(--radius-sm);
+    background: color-mix(in srgb, var(--color-deep) 85%, transparent);
+    pointer-events: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .transport {
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+  }
+
+  .time {
+    min-width: 0;
+  }
+}
+
+/* The smallest phones show just the playhead's time; the scrub bar shows the length. */
+@media (max-width: 359px) {
+  .total {
+    display: none;
+  }
+}

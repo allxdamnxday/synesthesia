@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState, type Ref } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type Ref } from 'react';
 import { href } from '../../app/router';
 import { useStudioStore, type TransportController } from '../../state/studioStore';
 import { measureThisComputer } from '../../studio/measure';
 import { FALLBACK_QUALITY } from '../../studio/quality';
 import { StudioRuntime, type PictureProblem } from '../../studio/runtime';
 import { ConfirmDialog } from '../../ui/ConfirmDialog';
+import { CloseIcon } from '../../ui/icons';
 import { Notice } from '../../ui/Notice';
 import styles from './Studio.module.css';
 
@@ -116,7 +117,8 @@ export function StudioStage({ ref }: { ref?: Ref<HTMLDivElement> }) {
     if (composition) runtimeRef.current?.setComposition(composition);
   }, [composition]);
 
-  // Presentation mode: the pointer fades away when it rests.
+  // Presentation mode: the pointer (and, on touch screens, the Close button) fades away
+  // when it rests; a touch brings the button back.
   useEffect(() => {
     if (!presentation) {
       setCursorHidden(false);
@@ -129,18 +131,35 @@ export function StudioStage({ ref }: { ref?: Ref<HTMLDivElement> }) {
       timer = window.setTimeout(() => setCursorHidden(true), CURSOR_IDLE_MS);
     };
     window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerdown', onMove);
     return () => {
       window.clearTimeout(timer);
       window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerdown', onMove);
     };
   }, [presentation]);
 
   const store = useStudioStore.getState;
   const classes = [styles.stage, cursorHidden ? styles.cursorHidden : ''].filter(Boolean).join(' ');
+  // On phones the stage takes the composition's shape (Studio.module.css).
+  const aspect = composition
+    ? ({
+        '--stage-aspect': `${composition.render.width} / ${composition.render.height}`,
+      } as CSSProperties)
+    : undefined;
   return (
-    <div ref={ref} className={classes}>
+    <div ref={ref} className={classes} style={aspect}>
       <div ref={hostRef} className={styles.canvasHost} />
-      {presentation ? null : (
+      {presentation ? (
+        <button
+          type="button"
+          className={styles.leave}
+          onClick={() => store().setPresentation(false)}
+        >
+          <CloseIcon />
+          Close
+        </button>
+      ) : (
         <>
           {measuring ? (
             <p className={styles.measuring} role="status">

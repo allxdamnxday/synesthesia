@@ -74,3 +74,20 @@
   justify-content: flex-end;
   gap: var(--space-2);
 }
+
+/*
+ * Phones and tablets: a sheet along the bottom of the screen, whatever the button's place
+ * (the transport may sit anywhere), scrolling inside when the screen is short.
+ */
+@media (max-width: 900px),
+  (orientation: landscape) and (max-height: 500px) and (max-width: 1023.98px) {
+  .popover {
+    inset: auto var(--space-2) var(--space-2) var(--space-2);
+    translate: none;
+    width: auto;
+    max-width: 480px;
+    margin-inline: auto;
+    max-height: calc(100vh - 2 * var(--space-2));
+    max-height: calc(100dvh - 2 * var(--space-2));
+  }
+}
