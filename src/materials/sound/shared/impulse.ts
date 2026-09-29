@@ -3,6 +3,9 @@
  * decay, one independent noise stream per channel (decorrelated stereo), with high
  * frequencies dying away faster than lows the way they do in real rooms and water.
  * No external IR files. Pure: the same options always give the same samples.
+ *
+ * Generating one takes a while (~40 ms for a 6 s decay on the builder's machine), so recent
+ * ones are kept (`cachedImpulseResponse`), shared by the preview and the offline render.
  */
 import { createRng, hash32 } from '../../../chance/prng';
 
@@ -32,6 +35,75 @@ const LENGTH_FACTOR = 0.8;
 const FADE_OUT_SHARE = 0.15;
 /** Salt that separates reverb noise from every other use of the material seed. */
 const REVERB_SALT = 0x52455642; // "REVB"
+
+/** Most float samples kept by the cache (16 MB): about eight responses at the longest decay. */
+export const IMPULSE_CACHE_MAX_SAMPLES = 4_000_000;
+
+const cache = new Map<string, readonly Float32Array<ArrayBuffer>[]>();
+let cachedSamples = 0;
+const cacheCounts = { hits: 0, misses: 0 };
+
+function cacheKey(opts: ImpulseOptions): string {
+  const channels = Math.max(1, Math.round(opts.channels ?? 2));
+  return [
+    opts.sampleRate,
+    opts.decaySec,
+    opts.seed,
+    channels,
+    opts.preDelaySec ?? 0.012,
+    opts.damping ?? 0.5,
+  ].join('|');
+}
+
+/**
+ * The same samples as `generateImpulseResponse`, remembered for the most recent option sets
+ * (least recently used ones are dropped beyond IMPULSE_CACHE_MAX_SAMPLES). The arrays are
+ * shared: read them (e.g. `AudioBuffer.copyToChannel`), never write to them.
+ */
+export function cachedImpulseResponse(opts: ImpulseOptions): readonly Float32Array<ArrayBuffer>[] {
+  const key = cacheKey(opts);
+  const hit = cache.get(key);
+  if (hit) {
+    // Most recently used goes last (Map keeps insertion order).
+    cache.delete(key);
+    cache.set(key, hit);
+    cacheCounts.hits++;
+    return hit;
+  }
+  cacheCounts.misses++;
+  const channels = generateImpulseResponse(opts);
+  cache.set(key, channels);
+  cachedSamples += channels.reduce((n, c) => n + c.length, 0);
+  for (const [oldKey, old] of cache) {
+    if (cachedSamples <= IMPULSE_CACHE_MAX_SAMPLES || oldKey === key) break;
+    cache.delete(oldKey);
+    cachedSamples -= old.reduce((n, c) => n + c.length, 0);
+  }
+  return channels;
+}
+
+/** True when `cachedImpulseResponse(opts)` would answer from the cache (no generation). */
+export function hasCachedImpulseResponse(opts: ImpulseOptions): boolean {
+  return cache.has(cacheKey(opts));
+}
+
+/** Cache bookkeeping, for diagnostics and tests. */
+export function impulseCacheInfo(): {
+  hits: number;
+  misses: number;
+  entries: number;
+  samples: number;
+} {
+  return { ...cacheCounts, entries: cache.size, samples: cachedSamples };
+}
+
+/** Forget every cached response (tests). */
+export function clearImpulseCache(): void {
+  cache.clear();
+  cachedSamples = 0;
+  cacheCounts.hits = 0;
+  cacheCounts.misses = 0;
+}
 
 /** Length in samples of an impulse response with these options. */
 export function impulseLength(opts: ImpulseOptions): number {
