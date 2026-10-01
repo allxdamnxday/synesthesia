@@ -615,6 +615,33 @@ implementation follows the intent. To revisit with Freeman only if a material fe
   (the problem was that they were hidden); Library in the Studio's note (one more step to New
   album); new tabs for guide links (a second copy of the app, with its own dedication splash).
 
+## 2026-10-01: Going public: license, notices, a protected main
+- **Why now:** Braden made the repository public so a university capstone team can work on
+  the instrument.
+- **License: MIT** (`LICENSE`, "Braden Freeman and contributors"). A public repository with
+  no license lets nobody reuse it. MIT is the simplest for students and matches the
+  dependencies, which are all permissive. Contributions come in under the same terms
+  (`CONTRIBUTING.md`). Alternatives: AGPL-3.0 (keeps every derivative open, hosted copies
+  included; compatible with everything used here, but it leans on enforcement, and how much
+  copyright AI-assisted code carries is unsettled); no license plus written permission for the
+  team (keeps options open, but blocks everyone else).
+- **Freeman's brief stays public and stays his.** `docs/FREEMAN_WRITEUP.md` is marked
+  © Freeman, all rights reserved, and the README and CONTRIBUTING say the MIT License doesn't
+  cover it.
+- **Notices in the app.** The minified build dropped the MIT and ISC notices of React,
+  Zustand, idb, fflate, Workbox and the adapted fluid solver, and said nowhere how to get
+  Mediabunny's source (MPL-2.0). The app now ships `third-party-notices.txt` (27 KB, generated
+  from `node_modules` by `scripts/third-party-notices.mjs`), linked from Help › About and
+  cached with OpenCV's `LICENSE` and the typeface's `OFL.txt`, so it reads offline. A unit test
+  fails when it is stale or misses a runtime dependency. Alternative: a bundler plugin that
+  collects licenses (a new dependency for something a 150-line script does).
+- **`main` is protected** on GitHub: a pull request and a passing Vercel build are required,
+  for administrators too; no force pushes or deletion. A merge to `main` goes live, so nothing
+  should reach it unseen. No approving review is required (a sole maintainer can't approve
+  their own pull request).
+- **Not changed:** `CLAUDE.md` and `SPEC.md` still describe v0 as a surprise built solo; they
+  need rewriting for the new arrangement once it is settled.
+
 ## Pending
 - **Freeman's MacBook Pro:** model, year, chip, macOS and Chrome versions. Diagnostics' Copy
   report records the macOS version, CPU type (Intel or Apple Silicon), GPU and Chrome

@@ -20,6 +20,7 @@ const SECTIONS = [
   { id: 'materials', title: 'Materials' },
   { id: 'shortcuts', title: 'Keyboard shortcuts' },
   { id: 'trouble', title: 'If something goes wrong' },
+  { id: 'about', title: 'About' },
 ];
 
 /** The guide's sections for "How a session goes", in the order a session uses them. */
@@ -305,6 +306,18 @@ export function HelpScreen() {
               and choose <em>Copy report</em>, then paste it into a message to Braden.
             </li>
           </ul>
+        </section>
+
+        <section id="about">
+          <h2>About</h2>
+          <p>
+            Synesthesia is free to use, study and change (the MIT License). It is built with other
+            people&apos;s freely shared software and a typeface made to be easy to read:{' '}
+            <a href="third-party-notices.txt" target="_blank" rel="noopener">
+              read their notices
+            </a>
+            .
+          </p>
         </section>
       </article>
     </div>

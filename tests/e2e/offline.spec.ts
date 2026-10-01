@@ -25,6 +25,24 @@ test('after the first visit, the instrument works offline, extraction included',
   await page.goto('./#/help');
   await expect(page.getByRole('heading', { name: 'The idea' })).toBeVisible();
 
+  // Help's open-source notices, and the two licenses they point to, come from the cache too.
+  await expect(page.getByRole('link', { name: 'read their notices' })).toHaveAttribute(
+    'href',
+    'third-party-notices.txt',
+  );
+  const shipped = await page.evaluate(async () => {
+    const texts: Record<string, string> = {};
+    for (const file of ['third-party-notices.txt', 'vendor/opencv/LICENSE', 'fonts/OFL.txt']) {
+      const response = await fetch(file);
+      texts[file] = response.ok ? await response.text() : `HTTP ${response.status}`;
+    }
+    return texts;
+  });
+  expect(shipped['third-party-notices.txt']).toContain('Mozilla Public License Version 2.0');
+  expect(shipped['third-party-notices.txt']).toContain('Copyright (c) 2017 Pavel Dobryakov');
+  expect(shipped['vendor/opencv/LICENSE']).toContain('Apache License');
+  expect(shipped['fonts/OFL.txt']).toContain('SIL OPEN FONT LICENSE');
+
   // The guide and every one of its pictures (lazy-loaded, never seen online) come from the cache.
   await page.goto('./#/guide/albums');
   await expect(page.getByRole('heading', { level: 2, name: 'Albums' })).toBeInViewport();
