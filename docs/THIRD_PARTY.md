@@ -17,6 +17,14 @@ unmodified packages. Versions are pinned exactly in `package.json`.
 Mediabunny is used as published on npm, without modification, so MPL-2.0's file-level
 copyleft places no obligations on this project's own code.
 
+**Notices in the app.** The build is minified, which drops the license notices these packages
+ask to travel with their code. The app ships them as `third-party-notices.txt` (linked from
+Help › About and cached for offline use), together with OpenCV's `LICENSE` and the typeface's
+`OFL.txt`. It also covers what the build adds at run time (`scheduler`, Workbox,
+vite-plugin-pwa) and the adapted fluid solver. `npm run notices` rewrites it from
+`node_modules`; a unit test fails when it is out of date or misses a runtime dependency. When
+you add something that ships, add it to `scripts/third-party-notices.mjs` too.
+
 ## Vendored files
 
 | File | Source | Version | License | SHA-256 |

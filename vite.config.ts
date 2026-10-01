@@ -53,7 +53,11 @@ export default defineConfig(({ mode }) => ({
         icons: [{ src: 'favicon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' }],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,woff2,json,wasm,png,webp}'],
+        // The .txt files and OpenCV's LICENSE are the open-source notices Help links to.
+        globPatterns: [
+          '**/*.{js,css,html,svg,woff2,json,wasm,png,webp,txt}',
+          'vendor/opencv/LICENSE',
+        ],
         globIgnores: ['spikes/**', 'dev/**', '**/fixtures/**'],
         // OpenCV.js is ~11 MB (wasm embedded); the default limit is 2 MB.
         maximumFileSizeToCacheInBytes: 16 * 1024 * 1024,
