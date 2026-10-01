@@ -7,6 +7,8 @@ interface RenderOpts {
   kind: Kind;
   steps: number;
   props?: Record<string, number>;
+  /** Applied to the final draw only (every step runs with `props`). */
+  finalProps?: Record<string, number>;
   seed?: number;
   width?: number;
   height?: number;
@@ -16,6 +18,7 @@ interface RenderOpts {
 interface RenderStats {
   hash: string;
   meanLuma: number;
+  meanRgb: [number, number, number];
   litFraction: number;
   ms: number;
 }
@@ -145,6 +148,94 @@ test.describe('visual materials', () => {
     expect(await hash(page, { materialId: 'water', kind: 'wink', steps: STEPS, seed: 4 })).not.toBe(
       await hash(page, { materialId: 'water', kind: 'wink', steps: STEPS, seed: 3 }),
     );
+    expect(problems).toEqual([]);
+  });
+
+  test('Hue turns the colors of every material where it is drawn, and nothing else', async ({
+    page,
+  }) => {
+    test.setTimeout(300_000);
+    const problems = watchConsole(page);
+    await openHarness(page);
+    // The Brightness at which each material draws its colors exactly as mixed (saturation 1,
+    // and no surface light): a third of a turn then gives the same frame with its channels
+    // cycled, red from blue, green from red, blue from green.
+    const plain: Record<string, Record<string, number>> = {
+      water: { brightness: 6 / 13, surfaceLight: 0 },
+      honey: { brightness: 0.4, surfaceLight: 0 },
+      smoke: { brightness: 0.8 },
+      bubbles: { brightness: 6 / 13 },
+      filaments: { brightness: 6 / 13 },
+    };
+    const apart = (a: number[], b: number[]) =>
+      a.reduce((sum, x, i) => sum + Math.abs(x - (b[i] ?? 0)), 0);
+    /** A third of a turn on: the frame's color with its channels cycled, and not the reverse. */
+    const expectCycled = (before: number[], after: number[], label: string) => {
+      const [r = 0, g = 0, b = 0] = before;
+      const cycled = apart(after, [b, r, g]);
+      const reversed = apart(after, [g, b, r]);
+      expect(reversed, `${label}: there are colors to turn`).toBeGreaterThan(0.05 * (r + g + b));
+      expect(cycled, `${label}: red from blue, green from red, blue from green`).toBeLessThan(
+        0.25 * reversed,
+      );
+    };
+
+    for (const [materialId, props] of Object.entries(plain)) {
+      await test.step(materialId, async () => {
+        // Smoke is measured while the eye closes, when its falling tint is clearest.
+        const steps = materialId === 'smoke' ? 54 : STEPS;
+        const base: RenderOpts = { materialId, kind: 'wink', steps, seed: 7 };
+        const own = await hash(page, base);
+        expect(
+          await hash(page, { ...base, props: { hue: 0.5 } }),
+          'the middle changes nothing',
+        ).toBe(own);
+        const turned = await hash(page, { ...base, props: { hue: 0.8 } });
+        expect(turned, 'Hue changes the frame').not.toBe(own);
+        expect(await hash(page, { ...base, props: { hue: 0.8 } }), 'same inputs, same frame').toBe(
+          turned,
+        );
+        expect(await hash(page, { ...base, props: { hue: 0 } }), 'the slider’s ends meet').toBe(
+          await hash(page, { ...base, props: { hue: 1 } }),
+        );
+        // Every step at the baseline and only the final draw turned gives the frame of a wake
+        // turned all along. Hue reaching the dye or the ribbons would give another.
+        expect(
+          await hash(page, { ...base, props: { hue: 0.5 }, finalProps: { hue: 0.8 } }),
+          'Hue only changes how the wake is drawn',
+        ).toBe(turned);
+
+        const before = await stats(page, { ...base, props });
+        const after = await stats(page, { ...base, props: { ...props, hue: 0.5 + 1 / 3 } });
+        expectCycled(before.meanRgb, after.meanRgb, materialId);
+        expect(after.litFraction, 'the wake keeps its shape').toBeCloseTo(before.litFraction, 2);
+      });
+    }
+
+    // A still signature leaves the fluids exactly black at any Hue.
+    for (const materialId of ['water', 'honey', 'smoke']) {
+      for (const hue of [0, 0.2, 0.5 + 1 / 3]) {
+        const still = await stats(page, {
+          materialId,
+          kind: 'still',
+          steps: STEPS,
+          props: { hue, brightness: 1, surfaceLight: 1 },
+        });
+        expect(still.meanLuma, `${materialId} at Hue ${hue}`).toBe(0);
+        expect(still.litFraction, `${materialId} at Hue ${hue}`).toBe(0);
+      }
+    }
+
+    // Bubbles and strands at rest, drawn before any step: Hue shows from the first frame.
+    for (const materialId of ['bubbles', 'filaments']) {
+      const rest: RenderOpts = { materialId, kind: 'still', steps: 0, seed: 2 };
+      const own = (await stats(page, rest)).meanRgb;
+      const turned = (await stats(page, { ...rest, props: { hue: 0.5 + 1 / 3 } })).meanRgb;
+      // Pearl and silver-blue at rest: more blue than red, and the other way once turned.
+      expect(own[2], `${materialId} at rest`).toBeGreaterThan(own[0]);
+      expect(turned[0], `${materialId} at rest, turned`).toBeGreaterThan(turned[2]);
+      expectCycled(own, turned, `${materialId} at rest`);
+    }
     expect(problems).toEqual([]);
   });
 

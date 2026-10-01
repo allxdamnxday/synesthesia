@@ -24,7 +24,13 @@ import { WaterMaterial } from '../../src/materials/visual/water';
 import { runQualityBenchmark, type QualityBenchmarkResult } from '../../src/perf/benchmark';
 import { planSteps, stepsToReach } from '../../src/perf/fixedStep';
 import { FpsMeter } from '../../src/perf/fpsMeter';
-import { litFraction, meanLuma, renderOffscreen, sha256Hex } from '../../src/perf/offscreenRender';
+import {
+  litFraction,
+  meanLuma,
+  meanRgb,
+  renderOffscreen,
+  sha256Hex,
+} from '../../src/perf/offscreenRender';
 import { createSyntheticSampler, type SyntheticKind } from '../../src/signature/synthetic';
 import type { SignatureSampler } from '../../src/signature/types';
 import { solverHookProbe, type SolverProbeResult } from './solverProbe';
@@ -50,6 +56,8 @@ export interface RenderOpts {
 export interface RenderStats {
   hash: string;
   meanLuma: number;
+  /** Mean red, green and blue, each 0..1. */
+  meanRgb: [number, number, number];
   litFraction: number;
   ms: number;
 }
@@ -174,6 +182,7 @@ const api: SpVisualApi = {
     return {
       hash: await sha256Hex(pixels),
       meanLuma: meanLuma(pixels),
+      meanRgb: meanRgb(pixels),
       litFraction: litFraction(pixels),
       ms,
     };

@@ -117,6 +117,20 @@ export function meanLuma(pixels: Uint8Array): number {
   return n > 0 ? sum / n / 255 : 0;
 }
 
+/** Mean red, green and blue of RGBA bytes, each 0..1 (the color of the frame as a whole). */
+export function meanRgb(pixels: Uint8Array): [number, number, number] {
+  let r = 0;
+  let g = 0;
+  let b = 0;
+  const n = pixels.length / 4;
+  for (let i = 0; i < pixels.length; i += 4) {
+    r += pixels[i] ?? 0;
+    g += pixels[i + 1] ?? 0;
+    b += pixels[i + 2] ?? 0;
+  }
+  return n > 0 ? [r / n / 255, g / n / 255, b / n / 255] : [0, 0, 0];
+}
+
 /** Fraction of pixels brighter than a small threshold (how much of the frame is lit). */
 export function litFraction(pixels: Uint8Array, threshold = 8): number {
   let lit = 0;

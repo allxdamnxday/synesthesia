@@ -112,6 +112,30 @@ async function brightness(page: Page, wake: Locator): Promise<{ mean: number; li
   }, png.toString('base64'));
 }
 
+/** Mean red, green and blue (0..255) of what is actually on screen. */
+async function color(page: Page, wake: Locator): Promise<{ r: number; g: number; b: number }> {
+  const png = await wake.screenshot();
+  return page.evaluate(async (b64) => {
+    const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+    const bitmap = await createImageBitmap(new Blob([bytes], { type: 'image/png' }));
+    const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+    const g2d = canvas.getContext('2d');
+    if (!g2d) throw new Error('no 2d context');
+    g2d.drawImage(bitmap, 0, 0);
+    const d = g2d.getImageData(0, 0, bitmap.width, bitmap.height).data;
+    let r = 0;
+    let g = 0;
+    let b = 0;
+    for (let i = 0; i < d.length; i += 4) {
+      r += d[i] ?? 0;
+      g += d[i + 1] ?? 0;
+      b += d[i + 2] ?? 0;
+    }
+    const n = d.length / 4;
+    return { r: r / n, g: g / n, b: b / n };
+  }, png.toString('base64'));
+}
+
 function playhead(page: Page): Locator {
   return page.getByRole('slider', { name: 'Playhead' });
 }
@@ -354,6 +378,88 @@ test('play, compare, draw by chance, save and reopen a composition', async ({ pa
 
   // The source clip never appears in the Studio.
   await expect(page.locator('video')).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
+test('Hue is in view, recolors a paused wake at once, and is kept with the composition', async ({
+  page,
+}) => {
+  const errors = watchErrors(page);
+  await importSignature(page);
+  const wake = await openNewComposition(page);
+  await expect(page.getByText('Getting to know this computer…')).toBeHidden({ timeout: 30_000 });
+
+  // Under the visual material, without opening More, at the material's own colors.
+  const visual = page.getByRole('group', { name: 'Visual material properties' });
+  const hue = visual.getByRole('slider', { name: 'Hue', exact: true });
+  await expect(hue).toBeVisible();
+  await expect(hue).toHaveAttribute('aria-valuenow', '0.5');
+  await expect(visual.getByRole('button', { name: 'More (2)' })).toBeVisible();
+
+  // Play into the wink and pause: Water's wake is blue.
+  await page.getByRole('button', { name: 'Play' }).click();
+  await waitForPlayhead(page, 1.6, 2.6);
+  await page.getByRole('button', { name: 'Pause' }).click();
+  await expect(page.getByRole('button', { name: 'Play' })).toBeVisible();
+  const paused = await position(page);
+  const own = await color(page, wake);
+  expect(own.b).toBeGreaterThan(own.r * 1.5);
+
+  // A third of a turn, still paused: the same wake, now red.
+  await clickAt(page, hue, 0.83);
+  await expect(hue).toHaveAttribute('aria-valuenow', '0.83');
+  await expect
+    .poll(async () => {
+      const c = await color(page, wake);
+      return c.r > c.b * 1.2;
+    })
+    .toBe(true);
+  expect(await position(page)).toBeCloseTo(paused, 2);
+  await expect(page.getByRole('button', { name: 'Play' })).toBeVisible();
+
+  // Undo and redo.
+  await page.keyboard.press('ControlOrMeta+z');
+  await expect(hue).toHaveAttribute('aria-valuenow', '0.5');
+  await expect
+    .poll(async () => {
+      const c = await color(page, wake);
+      return c.b > c.r * 1.5;
+    })
+    .toBe(true);
+  await page.keyboard.press('ControlOrMeta+Shift+z');
+  await expect(hue).toHaveAttribute('aria-valuenow', '0.83');
+
+  // A snapshot holds it.
+  await page.getByRole('button', { name: 'Store snapshot A' }).click();
+  await clickAt(page, hue, 0.2);
+  await expect(hue).toHaveAttribute('aria-valuenow', '0.2');
+  await page.getByRole('button', { name: /^Snapshot A: recall/ }).click();
+  await expect(hue).toHaveAttribute('aria-valuenow', '0.83');
+
+  // Unlinked, the visual material shows its six primaries and Hue.
+  await page.getByRole('switch', { name: 'Linked' }).click();
+  await expect(visual.getByRole('slider', { name: 'Viscosity', exact: true })).toBeVisible();
+  await expect(hue).toBeVisible();
+  await expect(visual.getByRole('button', { name: 'More (3)' })).toBeVisible();
+  await page.getByRole('switch', { name: 'Linked' }).click();
+  await expect(visual.getByRole('button', { name: 'More (2)' })).toBeVisible();
+
+  // Saved with the composition, and back after a reload.
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(page.getByTestId('save-state')).toHaveText('Saved');
+  await page.reload();
+  await expect(wake).toBeVisible({ timeout: 30_000 });
+  await expect(hue).toHaveAttribute('aria-valuenow', '0.83');
+
+  // Another material arrives in its own colors, and so does Water on the way back.
+  await page.getByRole('button', { name: 'Visual Water' }).click();
+  await page.getByRole('option', { name: /^Honey/ }).click();
+  await expect(page.getByRole('button', { name: 'Visual Honey' })).toBeVisible();
+  await expect(hue).toHaveAttribute('aria-valuenow', '0.5');
+  await page.getByRole('button', { name: 'Visual Honey' }).click();
+  await page.getByRole('option', { name: /^Water/ }).click();
+  await expect(page.getByRole('button', { name: 'Visual Water' })).toBeVisible();
+  await expect(hue).toHaveAttribute('aria-valuenow', '0.5');
   expect(errors).toEqual([]);
 });
 

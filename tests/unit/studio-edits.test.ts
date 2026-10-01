@@ -238,6 +238,20 @@ describe('draw by chance', () => {
     expect(moved.visual.properties.brightness).toBe(0.9);
   });
 
+  it('never locks Hue: it plays after a draw, moves only the picture, and starts over with a material', () => {
+    let s = applyChanceDraw(wake(), { ...draw, visualId: 'water' }, catalog);
+    expect(isLocked(s.chance, 'hue')).toBe(false);
+    expect([...lockedIds(s.chance)]).not.toContain('hue');
+    s = editProperty(s, 'visual', 'hue', 0.8, defsOf(s, catalog));
+    expect(s.visual.properties.hue).toBe(0.8);
+    expect(s.sound.properties.hue).toBeUndefined();
+    // Another material arrives in its own colors, and so does Water on the way back.
+    const honey = switchMaterial(s, 'visual', HONEY, catalog);
+    expect(honey.visual.properties.hue).toBeUndefined();
+    const back = switchMaterial(honey, 'visual', WATER_META, catalog);
+    expect(back.visual.properties.hue).toBe(0.5);
+  });
+
   it('keeps album bookkeeping on the record', () => {
     const s: WakeState = {
       ...wake(),
