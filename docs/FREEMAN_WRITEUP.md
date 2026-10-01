@@ -3,6 +3,9 @@
 *Original brief by Freeman (dancer, artist, somatic educator), September 2026.
 Reproduced verbatim for the build team; only formatting was adjusted.*
 
+*© Freeman. All rights reserved. This brief is his own writing and is not covered by the
+project's MIT License.*
+
 ## Purpose
 
 The Synesthesia Project (SP) is an experimental audiovisual instrument for exploring movement as perceptual material. It begins with the proposition that the kinetic signature of any movement can be applied to responsive fields of color, shape, and sound. The moving source itself disappears; its audiovisual wake remains.

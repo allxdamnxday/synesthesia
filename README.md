@@ -46,8 +46,24 @@ experiments) and `/dev/` (harness pages for materials, sound, extraction, render
 | `docs/CONVENTIONS.md` | How code is written and checked |
 | `docs/MATERIALS.md` | Every material and how the signature drives it |
 | `docs/ADDING_A_MATERIAL.md` | Adding a visual or sound material |
-| `docs/THIRD_PARTY.md` | Dependencies and licences |
+| `docs/THIRD_PARTY.md` | Dependencies and licenses |
 | `docs/MAC_TEST_CHECKLIST.md` | What to check on a Mac |
 | `docs/DEPLOY.md` | Deploying the static build |
 | `docs/WALKTHROUGH_SCRIPT.md` | Script for a ~15-minute walkthrough video for Freeman |
 | `docs/milestones/` | Milestone acceptance reports |
+
+## Contributing
+
+See `CONTRIBUTING.md`. `main` is protected and deploys to the live site, so changes come in
+through pull requests.
+
+## License
+
+MIT (`LICENSE`): the code and the project's own documents.
+
+Two things are not covered by it:
+
+- **Freeman's brief** (`docs/FREEMAN_WRITEUP.md`) is his own writing: © Freeman, all rights
+  reserved.
+- **Software and assets from others** keep their own licenses: see `docs/THIRD_PARTY.md`. The
+  app ships their notices as `third-party-notices.txt`, linked from Help.
