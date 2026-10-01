@@ -34,7 +34,9 @@ describe('linked sections', () => {
       'range',
     ]);
     expect(new Set(ids).size).toBe(ids?.length);
-    expect(s.visual.map((d) => d.id)).toEqual(['palette', 'surfaceLight']);
+    expect(s.visual.map((d) => d.id)).toEqual(['palette', 'surfaceLight', 'hue']);
+    // Hue is in view; Palette and Surface light stay under More.
+    expect(s.visual.filter((d) => d.primary).map((d) => d.id)).toEqual(['hue']);
     expect(s.sound.map((d) => d.id)).toEqual(['register']);
   });
 
@@ -42,6 +44,16 @@ describe('linked sections', () => {
     const s = propertySections(defs, false);
     expect(s.both).toBeNull();
     expect(s.visual.map((d) => d.id)).toEqual(WATER_META.properties.map((d) => d.id));
+    // Six primaries, and Hue beside them.
+    expect(s.visual.filter((d) => d.primary).map((d) => d.id)).toEqual([
+      'viscosity',
+      'persistence',
+      'dispersion',
+      'brightness',
+      'intensity',
+      'density',
+      'hue',
+    ]);
     expect(s.sound.map((d) => d.id)).toEqual(WATER_SOUND_META.properties.map((d) => d.id));
   });
 

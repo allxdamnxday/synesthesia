@@ -99,9 +99,9 @@ export class WaterMaterial implements VisualMaterial {
   }
 
   /**
-   * Apply properties that only change how the wake is drawn (brightness, palette for new
-   * dye, surface light) without advancing time, e.g. while paused. Proposed as an optional
-   * VisualMaterial method.
+   * Apply properties that only change how the wake is drawn (brightness, hue, palette for
+   * new dye, surface light) without advancing time, e.g. while paused. Proposed as an
+   * optional VisualMaterial method.
    */
   setProperties(props: PropertyValues): void {
     const params = waterParams(props);

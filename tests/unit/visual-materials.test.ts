@@ -84,6 +84,7 @@ describe('visual material registry', () => {
       'brightness',
       'intensity',
       'density',
+      'hue',
     ]);
     expect(water?.properties.find((p) => p.id === 'palette')?.choices).toEqual([
       'Deep water',

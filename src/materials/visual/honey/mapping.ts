@@ -8,6 +8,7 @@
 import { readProperty } from '../../properties';
 import type { PropertyValues } from '../../types';
 import type { FluidDisplayParams, FluidStepParams } from '../shared/fluid';
+import { hueTurns } from '../shared/hue';
 import { honeyProperty } from './properties';
 
 export type HoneyStepParams = Omit<
@@ -45,6 +46,7 @@ const DENSITY = honeyProperty('density');
 const RANGE = honeyProperty('range');
 const PALETTE = honeyProperty('palette');
 const SURFACE_LIGHT = honeyProperty('surfaceLight');
+const HUE = honeyProperty('hue');
 
 /** Viscosity 0..1 → ν, (short side)²/s: runny syrup to stiff honey (exponential). */
 export function honeyViscosity(v: number): number {
@@ -141,6 +143,8 @@ export function honeyParams(props: PropertyValues): HoneyParams {
       exposure: 1.3 * 2 ** (2.4 * (brightness - 0.5)),
       saturation: 0.8 + 0.5 * brightness,
       surfaceLight,
+      // Hue turns the colors where the honey is drawn, never the honey itself.
+      hue: hueTurns(readProperty(props, HUE)),
     },
     palette,
   };

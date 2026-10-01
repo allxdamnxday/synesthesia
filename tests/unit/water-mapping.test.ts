@@ -74,6 +74,17 @@ describe('Water property mapping', () => {
     expect(at('surfaceLight', 0.3).display.surfaceLight).toBeCloseTo(0.3, 12);
   });
 
+  it('hue turns the colors where the wake is drawn, and nothing else', () => {
+    expect(waterParams(baseline).display.hue).toBe(0);
+    expect(at('hue', 0.75).display.hue).toBeCloseTo(0.25, 12);
+    expect(at('hue', 0).display.hue).toBe(0.5);
+    expect(at('hue', 1).display.hue).toBe(0.5);
+    for (const v of [0, 0.1, 0.9, 1]) {
+      const p = at('hue', v);
+      expect({ ...p, display: { ...p.display, hue: 0 } }).toEqual(waterParams(baseline));
+    }
+  });
+
   it('falls back to the baseline for missing or broken values, and clamps', () => {
     const fromNothing = waterParams({});
     expect(fromNothing).toEqual(waterParams(baseline));

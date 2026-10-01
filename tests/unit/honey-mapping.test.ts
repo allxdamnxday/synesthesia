@@ -128,6 +128,17 @@ describe('Honey property mapping', () => {
     expect(at('surfaceLight', 0.3).display.surfaceLight).toBeCloseTo(0.3, 12);
   });
 
+  it('hue turns the colors where the honey is drawn, and nothing else', () => {
+    expect(honeyParams(baseline).display.hue).toBe(0);
+    expect(at('hue', 0.75).display.hue).toBeCloseTo(0.25, 12);
+    expect(at('hue', 0).display.hue).toBe(0.5);
+    expect(at('hue', 1).display.hue).toBe(0.5);
+    for (const v of [0, 0.1, 0.9, 1]) {
+      const p = at('hue', v);
+      expect({ ...p, display: { ...p.display, hue: 0 } }).toEqual(honeyParams(baseline));
+    }
+  });
+
   it('falls back to the baseline for missing or broken values, and clamps', () => {
     expect(honeyParams({})).toEqual(honeyParams(baseline));
     expect(honeyParams({ ...baseline, elasticity: Number.NaN })).toEqual(honeyParams(baseline));
@@ -151,7 +162,7 @@ describe('Honey property mapping', () => {
 });
 
 describe('Honey properties', () => {
-  it('shows the six shared primaries, hides rigidity, and keeps its own under More', () => {
+  it('shows the six shared primaries and Hue, hides rigidity, and keeps the rest under More', () => {
     const honey = getVisualMaterial('honey')?.meta;
     const ids = honey?.properties.map((p) => p.id) ?? [];
     expect(ids).not.toContain('rigidity');
@@ -162,6 +173,7 @@ describe('Honey properties', () => {
       'dispersion',
       'brightness',
       'intensity',
+      'hue',
     ]);
     expect(honey?.properties.find((p) => p.id === 'palette')?.choices).toEqual([
       'Amber',

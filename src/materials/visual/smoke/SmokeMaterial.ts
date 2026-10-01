@@ -115,7 +115,7 @@ export class SmokeMaterial implements VisualMaterial {
     });
   }
 
-  /** Apply properties that only change how the smoke is drawn (brightness) while paused. */
+  /** Apply properties that only change how the smoke is drawn (brightness, hue) while paused. */
   setProperties(props: PropertyValues): void {
     this.display = this.paramsFor(props).display;
   }
