@@ -719,7 +719,8 @@ implementation follows the intent. To revisit with Freeman only if a material fe
   reverse, Hue on the final draw alone equals Hue all along, a still signature stays black,
   bubbles and strands at rest take Hue before any step); `tests/e2e/studio.spec.ts` (in view,
   a paused wake recolors at once, undo, snapshots, save and reload, another material starts
-  in its own colors).
+  in its own colors); `tests/e2e/render.spec.ts` (a rendered MP4, decoded with ffmpeg, has
+  the turned colors and the same sound sample for sample).
 
 ## Pending
 - **Freeman's MacBook Pro:** model, year, chip, macOS and Chrome versions. Diagnostics' Copy
