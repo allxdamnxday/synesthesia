@@ -26,6 +26,7 @@ import {
   type ShaderProgram,
   type TextureFormat,
 } from '../shared/gl';
+import { HueTurn } from '../shared/hue';
 import { PALETTE_SIZE, WAKE_PALETTE_BYTES } from '../shared/wakePalette';
 import { FilamentSim, POINTS_PER_STRAND } from './FilamentSim';
 import {
@@ -161,6 +162,7 @@ export class FilamentsMaterial implements VisualMaterial {
   private lastDt = 1 / 60;
   private simParams: FilamentSimParams;
   private display: FilamentDisplayParams;
+  private readonly hueTurn = new HueTurn();
   private readonly forceLowPrecision: boolean;
 
   constructor(options: FilamentsOptions = {}) {
@@ -247,7 +249,7 @@ export class FilamentsMaterial implements VisualMaterial {
     this.paintRibbons(sim, dt);
   }
 
-  /** Apply display-only properties (brightness, thickness of the strands) while paused. */
+  /** Apply display-only properties (brightness, hue, thickness of the strands) while paused. */
   setProperties(props: PropertyValues): void {
     const params = filamentParams(props, this.quality);
     this.display = params.display;
@@ -278,6 +280,7 @@ export class FilamentsMaterial implements VisualMaterial {
     gl.uniform1i(display.u('uRibbons'), bindTexture(gl, 0, this.ribbons.texture));
     gl.uniform1f(display.u('uExposure'), Math.max(0, this.display.exposure));
     gl.uniform1f(display.u('uSaturation'), Math.max(0, this.display.saturation));
+    this.hueTurn.apply(gl, display.u('uHueTurn'), this.display.hue);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
 
     // The strands on top.
@@ -297,6 +300,7 @@ export class FilamentsMaterial implements VisualMaterial {
       gl.uniform1f(strand.u('uGlowLight'), GLOW_LIGHT);
       gl.uniform1f(strand.u('uExposure'), Math.max(0, this.display.exposure));
       gl.uniform1f(strand.u('uSaturation'), Math.max(0, this.display.saturation));
+      this.hueTurn.apply(gl, strand.u('uHueTurn'), this.display.hue);
       gl.enable(gl.BLEND);
       gl.blendFunc(gl.ONE, gl.ONE);
       gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 2 * POINTS_PER_STRAND, sim.count);

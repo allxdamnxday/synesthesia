@@ -1,9 +1,9 @@
 /**
  * V5 Filaments: property definitions (SPEC 9.2, 9.4). Rigidity is promoted to primary
  * (how stiff the strands are is their most telling quality) and Dispersion moves under
- * "More" to keep six primaries. Every shared property applies.
+ * "More" to keep six primaries, with Hue shown beside them. Every shared property applies.
  */
-import { sharedProperty } from '../../properties';
+import { hueProperty, sharedProperty } from '../../properties';
 import type { PropertyDef } from '../../types';
 
 export const LENGTH_PROPERTY: PropertyDef = {
@@ -62,6 +62,9 @@ export const FILAMENTS_PROPERTIES: PropertyDef[] = [
   }),
   LENGTH_PROPERTY,
   THICKNESS_PROPERTY,
+  hueProperty(
+    'Turns the colors of the strands and their ribbons of light around the color wheel; the middle keeps them as they are.',
+  ),
 ];
 
 /** Look up one of the filaments' property definitions by id. */
