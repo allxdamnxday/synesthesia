@@ -8,20 +8,22 @@ WebCodecs, AudioWorklet, the clipboard and folder saving only work in a secure c
 
 Set up on 2026-09-29:
 
-- **Code:** the private GitHub repository `allxdamnxday/synesthesia`.
+- **Code:** the GitHub repository `allxdamnxday/synesthesia`, public since 2026-10-01 under
+  the MIT License. `main` is protected: changes arrive by pull request and Vercel's build must
+  pass, for administrators too (*Settings › Branches* on GitHub changes that).
 - **Hosting:** the Vercel project `synesthesia` in the team *Braden Freeman's projects* (free
   Hobby plan), connected to that repository. `vercel.json` sets the build
   (`npm run build:release`, output `dist`).
-- **Production:** every push to `main` builds and goes live on its own.
+- **Production:** every merge to `main` builds and goes live on its own.
 - **Previews:** every other branch and every pull request gets its own preview deployment,
   linked from the pull request. Previews ask for a Vercel login, so work in progress stays
-  private.
+  private. Pull requests from forks get a preview only once you allow it in Vercel.
 - **The address to share:** the production domain listed in the Vercel project under
   *Settings › Domains*. That one is public. The team address
   (`synesthesia-braden-freemans-projects.vercel.app`) and each deployment's own address ask
   for a Vercel login. (`synesthesia.vercel.app` belongs to someone else.)
 - **Rolling back:** in Vercel, *Deployments*, open an earlier production deployment and choose
-  *Promote to Production*, or revert the commit and push.
+  *Promote to Production*, or revert the commit with a pull request.
 
 The rest of this file is the original plan, kept for reference and for moving elsewhere.
 
