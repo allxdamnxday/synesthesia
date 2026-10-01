@@ -37,6 +37,8 @@ export interface RenderOpts {
   kind: SyntheticKind;
   steps: number;
   props?: PropertyValues;
+  /** Applied to the final draw only (every step runs with `props`). */
+  finalProps?: PropertyValues;
   seed?: number;
   width?: number;
   height?: number;
@@ -106,6 +108,7 @@ async function render(
     sampler: samplerFor(opts.kind),
     steps: Math.max(0, Math.floor(opts.steps)),
     props: opts.props,
+    finalProps: opts.finalProps,
     seed: opts.seed ?? 1,
     quality: opts.quality ?? 'draft',
     width: opts.width ?? 480,
