@@ -4,10 +4,15 @@
  * Linked (the default): a "Both" group shows each shared property used by either material
  * once; one slider drives both fields. Each material's own group then shows only its
  * material-specific properties. Unlinked: each material shows all of its own properties.
- * No group shows more than six primary sliders; the rest go under "More".
+ * No group shows more than six primary sliders (a visual material's Hue is shown as well);
+ * the rest go under "More".
  */
 import { sharedIdsInUse } from '../engine/propertyModel';
-import { MAX_PRIMARY_PROPERTIES, readProperty } from '../materials/properties';
+import {
+  MAX_PRIMARY_PROPERTIES,
+  countsTowardPrimaryCap,
+  readProperty,
+} from '../materials/properties';
 import type { PropertyDef, PropertyValues } from '../materials/types';
 import type { Field, FieldDefs } from './edits';
 
@@ -18,14 +23,17 @@ export interface PropertySections {
   sound: PropertyDef[];
 }
 
-/** Keep the first `max` primary properties primary; later ones move under "More". */
+/**
+ * Keep the first `max` primary properties primary; later ones move under "More". Hue stays
+ * in view whatever the count.
+ */
 export function capPrimary(
   defs: readonly PropertyDef[],
   max: number = MAX_PRIMARY_PROPERTIES,
 ): PropertyDef[] {
   let shown = 0;
   return defs.map((def) => {
-    if (!def.primary) return def;
+    if (!def.primary || !countsTowardPrimaryCap(def)) return def;
     shown++;
     return shown <= max ? def : { ...def, primary: false };
   });

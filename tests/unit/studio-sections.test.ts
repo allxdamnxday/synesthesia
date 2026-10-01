@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { sharedProperty } from '../../src/materials/properties';
+import {
+  countsTowardPrimaryCap,
+  hueProperty,
+  sharedProperty,
+} from '../../src/materials/properties';
 import { WATER_SOUND_META } from '../../src/materials/sound/water/meta';
 import type { PropertyDef } from '../../src/materials/types';
 import { SIGNATURE_VIEW_META } from '../../src/materials/visual/signature-view';
@@ -41,11 +45,13 @@ describe('linked sections', () => {
     expect(s.sound.map((d) => d.id)).toEqual(WATER_SOUND_META.properties.map((d) => d.id));
   });
 
-  it('never shows more than six primary sliders in a group', () => {
+  it('never shows more than six primary sliders in a group, and Hue beside them', () => {
     for (const linked of [true, false]) {
       const s = propertySections(defs, linked);
       for (const group of [s.both ?? [], s.visual, s.sound]) {
-        expect(group.filter((d) => d.primary).length).toBeLessThanOrEqual(6);
+        expect(
+          group.filter((d) => d.primary && countsTowardPrimaryCap(d)).length,
+        ).toBeLessThanOrEqual(6);
       }
     }
     const seven: PropertyDef[] = [
@@ -60,6 +66,16 @@ describe('linked sections', () => {
     const capped = capPrimary(seven);
     expect(capped.filter((d) => d.primary).map((d) => d.id)).toHaveLength(6);
     expect(capped[6]?.primary).toBe(false);
+    // Hue stays in view wherever it comes in the list, and takes nobody's place.
+    for (const withHue of [
+      [hueProperty('Turns the colors.'), ...seven],
+      [...seven, hueProperty('Turns the colors.')],
+    ]) {
+      const shown = capPrimary(withHue).filter((d) => d.primary);
+      expect(shown.map((d) => d.id)).toHaveLength(7);
+      expect(shown.map((d) => d.id)).toContain('hue');
+      expect(shown.map((d) => d.id)).not.toContain('range');
+    }
   });
 
   it('a shared property is primary in Both if either material shows it', () => {

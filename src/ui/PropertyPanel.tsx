@@ -20,7 +20,7 @@ export interface PropertyPanelProps {
   defaultExpanded?: boolean;
 }
 
-/** Sliders and choices for one material's properties (SPEC 9.1: at most 6 primary). */
+/** Sliders and choices for one material's properties (SPEC 9.1: at most 6 primary, and Hue). */
 export function PropertyPanel({
   defs,
   values,

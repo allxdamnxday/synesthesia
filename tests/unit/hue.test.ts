@@ -1,4 +1,12 @@
 import { describe, expect, it } from 'vitest';
+import {
+  HUE_PROPERTY_ID,
+  countsTowardPrimaryCap,
+  hueProperty,
+  isSharedPropertyId,
+  readProperty,
+  sharedProperty,
+} from '../../src/materials/properties';
 import { hsvToRgb, type Rgb } from '../../src/materials/visual/shared/fluid/palette';
 import { hueTurns, hueWeights, turnHue } from '../../src/materials/visual/shared/hue';
 
@@ -16,6 +24,29 @@ function expectColor(actual: Rgb, expected: Rgb): void {
 function distance(a: Rgb, b: Rgb): number {
   return Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
 }
+
+describe('the Hue property', () => {
+  it('is the same in every material apart from its description', () => {
+    const def = hueProperty('Turns the colors.');
+    expect(def).toEqual({
+      id: 'hue',
+      label: 'Hue',
+      description: 'Turns the colors.',
+      kind: 'continuous',
+      shared: false,
+      default: 0.5,
+      primary: true,
+    });
+    expect(readProperty({}, def)).toBe(0.5);
+    expect(readProperty({ hue: 3 }, def)).toBe(1);
+  });
+
+  it('is not in the shared vocabulary, and is shown beside the six primaries', () => {
+    expect(isSharedPropertyId(HUE_PROPERTY_ID)).toBe(false);
+    expect(countsTowardPrimaryCap(hueProperty('Turns the colors.'))).toBe(false);
+    expect(countsTowardPrimaryCap(sharedProperty('viscosity', 'visual'))).toBe(true);
+  });
+});
 
 describe('hue', () => {
   it('the middle of the slider is no turn, and its two ends meet half a turn away', () => {

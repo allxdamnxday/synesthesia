@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   MAX_PRIMARY_PROPERTIES,
   MAX_SPECIFIC_PROPERTIES,
+  countsTowardPrimaryCap,
   isSharedPropertyId,
 } from '../../src/materials/properties';
 import {
@@ -45,9 +46,10 @@ describe('visual material registry', () => {
       expect(meta.description).toMatch(/^[A-Z].*\.$/);
       const ids = meta.properties.map((p) => p.id);
       expect(new Set(ids).size).toBe(ids.length);
-      expect(meta.properties.filter((p) => p.primary).length).toBeLessThanOrEqual(
-        MAX_PRIMARY_PROPERTIES,
-      );
+      // Six primaries at most; Hue is shown beside them.
+      expect(
+        meta.properties.filter((p) => p.primary && countsTowardPrimaryCap(p)).length,
+      ).toBeLessThanOrEqual(MAX_PRIMARY_PROPERTIES);
       expect(meta.properties.filter((p) => !p.shared).length).toBeLessThanOrEqual(
         MAX_SPECIFIC_PROPERTIES,
       );
