@@ -79,6 +79,35 @@ describe('Descending bubbles property mapping', () => {
     expect(BUBBLE_TIER_CAPS).toEqual({ draft: 1500, standard: 4000, high: 8000 });
   });
 
+  it('hue turns the colors where the bubbles are drawn, and nothing else', () => {
+    expect(bubbleParams(baseline, 'draft').display.hue).toBe(0);
+    expect(at('hue', 0.75).display.hue).toBeCloseTo(0.25, 12);
+    expect(at('hue', 0).display.hue).toBe(0.5);
+    expect(at('hue', 1).display.hue).toBe(0.5);
+    for (const v of [0, 0.1, 0.9, 1]) {
+      const p = at('hue', v);
+      expect({ ...p, display: { ...p.display, hue: 0 } }).toEqual(bubbleParams(baseline, 'draft'));
+    }
+  });
+
+  it('shows the six shared primaries and Hue; the rest sit under More', () => {
+    expect(BUBBLES_PROPERTIES.filter((p) => p.primary).map((p) => p.id)).toEqual([
+      'viscosity',
+      'elasticity',
+      'persistence',
+      'dispersion',
+      'brightness',
+      'intensity',
+      'hue',
+    ]);
+    expect(BUBBLES_PROPERTIES.filter((p) => !p.primary).map((p) => p.id)).toEqual([
+      'density',
+      'range',
+      'fallSpeed',
+      'size',
+    ]);
+  });
+
   it('falls back to the baseline for missing or broken values', () => {
     expect(bubbleParams({}, 'draft')).toEqual(bubbleParams(baseline, 'draft'));
     expect(bubbleParams({ ...baseline, viscosity: Number.NaN }, 'draft')).toEqual(
