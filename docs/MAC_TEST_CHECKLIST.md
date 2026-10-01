@@ -109,6 +109,12 @@ into a chat with Claude. Each page below has a **Copy report** or **Copy results
 7. Close the tab mid-edit and reopen the composition: "Restored changes you hadn't saved",
    and Discard asks first.
 8. Try Bluetooth headphones: does the playhead match what you hear?
+9. **Hue:** choose each visual material once (a material that failed to start would say
+   so), and drag Hue while it plays and while it is paused. The colors turn at once, and
+   playing stays as smooth as with Hue in the middle. On a two-GPU MacBook Pro, pause with
+   Hue moved and unplug the charger: the wake comes back in the same colors. At the window
+   size Freeman uses, note whether the sliders under Both still fit without scrolling
+   (Hue adds a row above them).
 
 ## 9. Rendering
 
@@ -120,6 +126,9 @@ into a chat with Claude. Each page below has a **Copy report** or **Copy results
    AAC encoder may add a delay the render needs to compensate for).
 3. Render into a folder you made inside Movies; render again and check the " (2)" file.
 4. Start a render and hide Chrome for a minute: it keeps going.
+5. Render one Water and one Filaments composition with Hue well away from the middle. In
+   QuickTime the colors match the preview. Thin red or magenta strands are where the
+   video's compression softens color most: note it if they look duller than in the Studio.
 
 ## 10. Albums
 

@@ -61,7 +61,9 @@ Clip ──► Prepare (trim, speed, rotate, mirror, focus area, sensitivity)
   machine it falls behind rather than diverging from what a render would show.
 - Changing anything that alters the past (seed, signature strength, smoothing, speed,
   loops) re-seeks the visual to the current playhead. Changing a property only affects
-  steps from now on (in preview) and is applied from t = 0 in a render.
+  steps from now on (in preview) and is applied from t = 0 in a render. Properties that
+  only change how the wake is drawn (Brightness, Hue, Surface light) are the exception:
+  they show on the whole wake at once, so the preview and a render agree.
 
 ## Seeds
 

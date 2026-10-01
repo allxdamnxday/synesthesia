@@ -23,6 +23,7 @@ buoyancy and eddies in `plume.ts` and `shaders.ts`).
 | Brightness | Primary | 0.5 | How luminous the smoke is. |
 | Intensity | Primary | 0.5 | How strongly the movement pushes the smoke. |
 | Rise | Primary | 0.7 | How strongly the warm smoke rises; below the middle it is heavy and sinks instead. |
+| Hue | Primary | 0.5 | Turns the faint tints of the smoke around the color wheel; the middle keeps them as they are. |
 | Density | More | 0.5 | How much smoke the movement gives off. |
 | Range | More | 0.5 | How large the movement is in the air: small and centered, or magnified past the edges. |
 
@@ -56,6 +57,7 @@ detail follows the tier), so a Standard preview and a High render show the same 
 | Rise | Buoyancy 5·(2r − 1) short sides/s² per unit of heat: −5 (sinks) → 0 (hangs) at 0.5 → +5 (rises); baseline 0.7 → +2. |
 | Density | Smoke given off 2.5·3^(2d − 1) per unit of push; vents open 0.3 + 0.5·d. |
 | Range | Projection of the movement (0.4× → fitted → 2.5×); the burst radius scales with it. |
+| Hue | Turn of the tints about grey where the smoke is drawn (half a turn back → none → half a turn on). Smoke is pale and its sideways tint is exactly grey, so the change is faint: it mostly moves the warm and the cool. Display only: it shows at once while paused. |
 
 Fixed: heat 2 per unit of push (at most 4); 80% of the smoke from vents (30 per short
 side), wisps 0.05 short sides long; speed limit 4 short sides/s.

@@ -26,14 +26,27 @@ Each material's section below gives its idea, how the wink reads through it, its
 | V4 | Descending bubbles | Clear bubbles falling like snow, shoved and flared by the movement. |
 | V5 | Filaments | Strands like hair or kelp that sweep and paint fading veils of light. |
 
+**Hue** (V1 to V5; the Signature view has none). One property is the same in every
+material and is shown beside its six primaries: Hue turns all of the material's colors
+around the color wheel together. At 0.5 the colors are the material's own; the whole
+slider is one full turn, so 0 and 1 are both half a turn away, and a third of a turn
+(0.83) takes red to green, green to blue and blue to red. The turn is a rotation of RGB
+about the grey axis (`src/materials/visual/shared/hue.ts`), applied where a material is
+drawn and never in its simulation. So it shows at once while paused, a render matches the
+preview, black stays black, white light (glints, highlights) stays white, and two colors
+stay exactly as far apart as they were: a close and an open still read as two colors.
+Greens read brighter than blues, as on any screen, so the wake's brightness moves a little
+with Hue. Hue is not a shared property: it is never linked to the sound or locked by
+chance, and it returns to 0.5 when another material is chosen.
+
 ### V1 Water
 
 A stable-fluids simulation (adapted from Pavel Dobryakov's WebGL-Fluid-Simulation, MIT).
 The signature's field pushes the water wherever it moves; dye is released there in
 proportion to speed, colored by the direction of movement (so a close and an open read as
 two colors), and fades by Persistence. Primary: Viscosity, Persistence, Dispersion,
-Brightness, Intensity, Density. More: Range, Palette, Surface light. Hidden: Elasticity,
-Rigidity (water doesn't spring back or hold a shape).
+Brightness, Intensity, Density, and Hue beside them. More: Range, Palette, Surface light.
+Hidden: Elasticity, Rigidity (water doesn't spring back or hold a shape).
 
 | Property | Solver parameter |
 |---|---|
@@ -46,6 +59,7 @@ Rigidity (water doesn't spring back or hold a shape).
 | Range | projection scale (compressed ↔ magnified) |
 | Palette | direction → dye color (Deep water, Ink, Prism) |
 | Surface light | shading, refraction and glints from the dye's thickness |
+| Hue | turn of the dye's colors about grey where it is drawn (half a turn back → none → half a turn on); the glints stay white. Ink is nearly grey, so Hue changes it little; Prism holds every color, so Hue changes which direction gets which |
 
 | Signature | Water |
 |---|---|
@@ -79,6 +93,7 @@ Code: `src/materials/visual/honey/` (pure mapping in `mapping.ts`, Gaussian kern
 | Dispersion | Primary | 0.5 | How unevenly the honey is pushed, so the wake spreads and folds. |
 | Brightness | Primary | 0.5 | How luminous and saturated the colors are. |
 | Intensity | Primary | 0.5 | How strongly the movement drags the honey. |
+| Hue | Primary | 0.5 | Turns the colors of the honey around the color wheel; the middle keeps the palette as it is. |
 | Density | More | 0.5 | How much color the movement folds into the honey. |
 | Range | More | 0.5 | How large the movement is in the honey: small and centered, or magnified past the edges. |
 | Palette | More | Amber | Amber, Dark honey or Pale gold. Each direction of movement has its own shade. |
@@ -113,6 +128,7 @@ same honey.
 | Range | Projection of the movement: 0.4× (compressed) → fitted → 2.5× (magnified). |
 | Palette | Direction → color table (Amber, Dark honey, Pale gold). |
 | Surface light | Shading, refraction and glints from the color's thickness. |
+| Hue | Turn of the colors about grey where the honey is drawn (half a turn back → none → half a turn on): amber becomes green a third of a turn on, violet a third back. The sheen stays white. Display only: it shows at once while paused. |
 
 Fixed: stroke length 0.06 short sides; speed limit 3 short sides/s; displacement limit
 0.6 short sides.
@@ -142,6 +158,7 @@ buoyancy and eddies in `plume.ts` and `shaders.ts`).
 | Brightness | Primary | 0.5 | How luminous the smoke is. |
 | Intensity | Primary | 0.5 | How strongly the movement pushes the smoke. |
 | Rise | Primary | 0.7 | How strongly the warm smoke rises; below the middle it is heavy and sinks instead. |
+| Hue | Primary | 0.5 | Turns the faint tints of the smoke around the color wheel; the middle keeps them as they are. |
 | Density | More | 0.5 | How much smoke the movement gives off. |
 | Range | More | 0.5 | How large the movement is in the air: small and centered, or magnified past the edges. |
 
@@ -175,6 +192,7 @@ detail follows the tier), so a Standard preview and a High render show the same 
 | Rise | Buoyancy 5·(2r − 1) short sides/s² per unit of heat: −5 (sinks) → 0 (hangs) at 0.5 → +5 (rises); baseline 0.7 → +2. |
 | Density | Smoke given off 2.5·3^(2d − 1) per unit of push; vents open 0.3 + 0.5·d. |
 | Range | Projection of the movement (0.4× → fitted → 2.5×); the burst radius scales with it. |
+| Hue | Turn of the tints about grey where the smoke is drawn (half a turn back → none → half a turn on). Smoke is pale and its sideways tint is exactly grey, so the change is faint: it mostly moves the warm and the cool. Display only: it shows at once while paused. |
 
 Fixed: heat 2 per unit of push (at most 4); 80% of the smoke from vents (30 per short
 side), wisps 0.05 short sides long; speed limit 4 short sides/s.
@@ -210,6 +228,7 @@ projection as the fluids), `hashNoise.ts` (seeded per-bubble randomness) and
 | Dispersion | Primary | 0.5 | How widely the bubbles are scattered and how much they wander as they fall. |
 | Brightness | Primary | 0.5 | How luminous the rims and highlights of the bubbles are. |
 | Intensity | Primary | 0.5 | How strongly the movement pushes the bubbles. |
+| Hue | Primary | 0.5 | Turns the colors of the bubbles and their glow around the color wheel; the middle keeps them as they are. |
 | Density | More | 0.5 | How many bubbles fall at once. |
 | Range | More | 0.5 | How large the movement is among the bubbles: small and centered, or magnified past the edges. |
 | Fall speed | More | 0.5 | How fast the bubbles sink through the water. |
@@ -249,6 +268,7 @@ canvas size shows the same water.
 | Range | Projection of the movement: 0.4× (compressed) → fitted → 2.5× (magnified), the same as every material. |
 | Fall speed | 0.11·4^(2f − 1) short sides/s (0.03 → 0.11 → 0.44); each bubble × (0.55 + 0.45·its size), so bigger bubbles sink faster. |
 | Size | Mean radius 0.01·2.4^(2s − 1) short sides (0.004 → 0.01 → 0.024: about 4.5 → 11 → 26 px at 1080p); each bubble × 0.55 … 1.85, mostly small. Display only: changes show at once while paused. |
+| Hue | Turn of the rims' colors about grey (half a turn back → none → half a turn on): the pearl of resting bubbles and the direction colors of pushed ones turn together; the highlight stays white. Display only: it shows at once while paused. |
 
 Fixed: glow is full at 0.35 short sides/s of pushed speed; motion stretch 2 per short
 side per second; new bubbles start 0.05–0.11 above the top edge; smaller bubbles are a
@@ -307,6 +327,7 @@ simulation in `FilamentSim.ts`, ribbons and strands in `shaders.ts` and
 | Rigidity | Primary | 0.5 | How stiff the strands are: soft ones curl with the flow, stiff ones swing like rods. |
 | Brightness | Primary | 0.5 | How luminous the strands and their ribbons of light are. |
 | Intensity | Primary | 0.5 | How strongly the movement pushes the strands. |
+| Hue | Primary | 0.5 | Turns the colors of the strands and their ribbons of light around the color wheel; the middle keeps them as they are. |
 | Dispersion | More | 0.5 | How tangled the strands lie, and how much the movement scatters them. |
 | Density | More | 0.5 | How many strands there are. |
 | Range | More | 0.5 | How large the movement is among the strands: small and centered, or magnified past the edges. |
@@ -315,7 +336,7 @@ simulation in `FilamentSim.ts`, ribbons and strands in `shaders.ts` and
 
 Every shared property applies. **Rigidity** is promoted to primary (how stiff the strands
 are is their most telling quality) and **Dispersion** moves under More to keep six
-primaries.
+primaries; **Hue** is shown beside them.
 
 #### Signature → Filaments
 
@@ -345,6 +366,7 @@ canvas size shows the same strands.
 | Range | Projection of the movement: 0.4× (compressed) → fitted → 2.5× (magnified), the same as every material. |
 | Length | 0.28·2.5^(2L − 1) short sides (0.11 → 0.28 → 0.7). |
 | Thickness | Strand width 0.002·3^(2t − 1) short sides (about 0.7 → 2.2 → 6.5 px at 1080p; never drawn under a pixel, dimmer instead), tapering to 45% at the tip. Ribbons are box-filtered over the same width and gain light × (width ÷ baseline width)^0.7. The strands' width shows at once while paused. |
+| Hue | Turn of the colors about grey (half a turn back → none → half a turn on), strands and ribbons alike. The ribbon buffer keeps the strands' own colors and is turned where it is shown, so ribbons already painted turn too. Display only: it shows at once while paused. |
 
 Fixed: 20 points per strand, 6 constraint iterations per step; strands rest at 40%
 light, fainter toward the tip; ribbon buffer at most 540 / 1080 / 2160 px on its short

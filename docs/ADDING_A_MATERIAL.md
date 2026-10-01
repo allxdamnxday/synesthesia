@@ -16,6 +16,10 @@ the offline render. Read `docs/CONVENTIONS.md` first.
   the rest sit under "More". Every property is 0–1 (or a choice index). Labels are
   sentence case; each has one plain-language sentence of description (it appears in
   Help and tooltips).
+- **Hue** (visual materials): every visual material ends its list with
+  `hueProperty(description)` from `src/materials/properties.ts`, the one color control
+  they all share. It is shown beside the six primaries (it does not count toward them)
+  and counts as one of the three material-specific properties.
 - **Baselines reveal timing** (SPEC 9.3): with the synthetic wink at baseline, the close
   and the open must each be clearly visible or audible. Every primary property must
   change the wake in the direction its label promises.
@@ -58,6 +62,13 @@ src/materials/visual/<id>/
   (SPEC 14.2); a tier change creates a fresh instance.
 - `setProperties?(props)` applies display-only changes while paused, so the Studio can
   redraw without stepping.
+- **Hue is applied where the material draws, never where it steps.** Include `HUE_GLSL`
+  (`src/materials/visual/shared/hue.ts`) in the shaders that put color on the canvas and
+  call `turnHue()` on the color before the saturation mix and the tone curve; leave white
+  light (glints, highlights) unturned. Map the property with `hueTurns()` into the display
+  parameters and set the uniform with a `HueTurn`. A pass that runs in `step()` (dye,
+  ribbons) must keep the material's own colors, so a change of Hue recolors what is
+  already there and the baseline renders exactly as it did.
 - Register the entry in `src/materials/visual/index.ts`.
 
 ## A sound material
@@ -109,5 +120,7 @@ src/materials/sound/<id>/
   material** automatically: determinism, response to the signature, every primary property
   changes the output, click-free loops (sound). Add unit tests for your mapping and
   control code, and a material-specific spec if it has behaviour worth pinning down.
+  For a visual material, add it to the Hue test in `visual.spec.ts` with the Brightness at
+  which it draws its colors exactly as mixed (saturation 1).
 - Write `docs/materials/<visual|sound>-<id>.md` (description, properties, feature →
   parameter table) and add it to `docs/MATERIALS.md`.

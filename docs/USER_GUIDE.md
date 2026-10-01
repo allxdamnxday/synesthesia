@@ -121,6 +121,10 @@ press **Play** (the first time the Studio opens, a note says so).
   Turn Linked off to set them separately. **More** shows the less-used properties.
   Double-click a slider to return it to the material's baseline; hold Shift while dragging
   for fine control; arrow keys nudge.
+- **Hue**, under the visual material, turns all of its colors around the color wheel
+  together. The middle is the material's own colors, and the two ends of the slider meet
+  half a turn away. It works while paused, and a video shows the same colors. Each
+  material starts in its own colors when you choose it.
 - **Mute** and **Solo** let you study the picture or the sound alone.
 - **Movement** holds settings for the signature itself: **Signature strength** (how hard it
   pushes), **Smoothing**, **Speed**, **Loops**, **Repeat** (loop, or back and forth), and
@@ -240,6 +244,9 @@ clear them if the computer runs very low on space, or if its data is cleared.
 | Rigidity | How hard-edged and crisp shapes are | How sharp the attacks are; pitch snaps to a scale |
 | Density | How much material there is | How many voices, grains or pulses |
 | Range | From compressed to expanded: the scale of the movement | Pitch range, narrow to wide |
+
+Every visual material also has **Hue**. It belongs to the picture alone: it is never
+linked to the sound, and Draw by chance never locks it.
 
 **Help** in the instrument lists every material and what each of its properties does.
 

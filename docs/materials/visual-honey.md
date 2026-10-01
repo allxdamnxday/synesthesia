@@ -25,6 +25,7 @@ Code: `src/materials/visual/honey/` (pure mapping in `mapping.ts`, Gaussian kern
 | Dispersion | Primary | 0.5 | How unevenly the honey is pushed, so the wake spreads and folds. |
 | Brightness | Primary | 0.5 | How luminous and saturated the colors are. |
 | Intensity | Primary | 0.5 | How strongly the movement drags the honey. |
+| Hue | Primary | 0.5 | Turns the colors of the honey around the color wheel; the middle keeps the palette as it is. |
 | Density | More | 0.5 | How much color the movement folds into the honey. |
 | Range | More | 0.5 | How large the movement is in the honey: small and centered, or magnified past the edges. |
 | Palette | More | Amber | Amber, Dark honey or Pale gold. Each direction of movement has its own shade. |
@@ -59,6 +60,7 @@ same honey.
 | Range | Projection of the movement: 0.4× (compressed) → fitted → 2.5× (magnified). |
 | Palette | Direction → color table (Amber, Dark honey, Pale gold). |
 | Surface light | Shading, refraction and glints from the color's thickness. |
+| Hue | Turn of the colors about grey where the honey is drawn (half a turn back → none → half a turn on): amber becomes green a third of a turn on, violet a third back. The sheen stays white. Display only: it shows at once while paused. |
 
 Fixed: stroke length 0.06 short sides; speed limit 3 short sides/s; displacement limit
 0.6 short sides.
