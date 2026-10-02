@@ -21,7 +21,7 @@ function increasing(values: number[]): boolean {
 }
 
 describe('Filaments property mapping', () => {
-  it('lists six primaries with Rigidity among them and Dispersion under More', () => {
+  it('lists six primaries with Rigidity among them, then Hue; Dispersion sits under More', () => {
     const primary = FILAMENTS_PROPERTIES.filter((p) => p.primary).map((p) => p.id);
     expect(primary).toEqual([
       'viscosity',
@@ -30,6 +30,7 @@ describe('Filaments property mapping', () => {
       'rigidity',
       'brightness',
       'intensity',
+      'hue',
     ]);
     const more = FILAMENTS_PROPERTIES.filter((p) => !p.primary).map((p) => p.id);
     expect(more).toEqual(['dispersion', 'density', 'range', 'length', 'thickness']);
@@ -87,6 +88,19 @@ describe('Filaments property mapping', () => {
       expect(filamentCount(0.5, quality)).toBe(filamentCount(0.5, 'draft'));
     }
     expect(FILAMENT_TIER_CAPS).toEqual({ draft: 150, standard: 400, high: 800 });
+  });
+
+  it('hue turns the colors where the strands are drawn, and nothing else', () => {
+    expect(filamentParams(baseline, 'draft').display.hue).toBe(0);
+    expect(at('hue', 0.75).display.hue).toBeCloseTo(0.25, 12);
+    expect(at('hue', 0).display.hue).toBe(0.5);
+    expect(at('hue', 1).display.hue).toBe(0.5);
+    for (const v of [0, 0.1, 0.9, 1]) {
+      const p = at('hue', v);
+      expect({ ...p, display: { ...p.display, hue: 0 } }).toEqual(
+        filamentParams(baseline, 'draft'),
+      );
+    }
   });
 
   it('falls back to the baseline for missing or broken values', () => {

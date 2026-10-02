@@ -18,6 +18,8 @@
  * | Range       | projection scale of the signature (compressed ↔ magnified)            |
  * | Length      | strand length (0.11 → 0.28 → 0.7 short sides)                         |
  * | Thickness   | strand and ribbon width (about 0.6 → 1.7 → 5 px at 1080p)             |
+ * | Hue         | turn of the strands' and ribbons' colors about grey, where they are   |
+ * |             | drawn                                                                 |
  *
  * Signature → filaments: the field, sampled at every point of every strand through the
  * Range projection, pushes the points; the strand's constraints (length, curve, root)
@@ -27,6 +29,7 @@
  */
 import { readProperty } from '../../properties';
 import type { PropertyValues, Quality } from '../../types';
+import { hueTurns } from '../shared/hue';
 import { filamentsProperty } from './properties';
 
 /** Most strands simulated at each quality tier (SPEC 14.2). */
@@ -71,6 +74,8 @@ export interface FilamentDisplayParams {
   saturation: number;
   /** Ribbon fade rate, 1/s. */
   trailFade: number;
+  /** Hue turn of the strands' and ribbons' colors, in turns (0 = their own). */
+  hue: number;
 }
 
 export interface FilamentParams {
@@ -89,6 +94,7 @@ const DENSITY = filamentsProperty('density');
 const RANGE = filamentsProperty('range');
 const LENGTH = filamentsProperty('length');
 const THICKNESS = filamentsProperty('thickness');
+const HUE = filamentsProperty('hue');
 
 /** Density 0..1 → strand count: 20 → ~125 at baseline → 800 (exponential). */
 export function filamentCount(density: number, quality: Quality): number {
@@ -157,6 +163,7 @@ export function filamentParams(props: PropertyValues, quality: Quality): Filamen
       exposure: 2 ** (2.4 * (brightness - 0.5)),
       saturation: 0.7 + 0.65 * brightness,
       trailFade: filamentTrailFade(persistence),
+      hue: hueTurns(readProperty(props, HUE)),
     },
   };
 }

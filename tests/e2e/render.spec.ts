@@ -301,6 +301,33 @@ function psnr(a: string, b: string): number {
   return m[1] === 'inf' ? Number.POSITIVE_INFINITY : Number(m[1]);
 }
 
+/** Mean red, green and blue (0..255) over every decoded frame. */
+function meanColor(file: string): [number, number, number] {
+  const { stdout } = run('ffmpeg', [
+    '-v',
+    'error',
+    '-i',
+    file,
+    '-map',
+    '0:v:0',
+    '-vf',
+    'scale=160:90:flags=area',
+    '-f',
+    'rawvideo',
+    '-pix_fmt',
+    'rgb24',
+    'pipe:1',
+  ]);
+  const sum = [0, 0, 0];
+  for (let i = 0; i + 2 < stdout.length; i += 3) {
+    sum[0] += stdout[i] ?? 0;
+    sum[1] += stdout[i + 1] ?? 0;
+    sum[2] += stdout[i + 2] ?? 0;
+  }
+  const n = Math.max(1, stdout.length / 3);
+  return [sum[0] / n, sum[1] / n, sum[2] / n];
+}
+
 /**
  * When the flash for an onset at `onset` seconds should appear: the test material flashes
  * on the first frame drawn after the 1/60 s step containing the onset. Onsets on a step
@@ -524,6 +551,43 @@ test.describe('offline render to MP4', () => {
       testInfo,
       'determinism',
       `${md5a.length} frames ${sameFrames ? 'identical (framemd5)' : `PSNR ${quality.toFixed(1)} dB`}; decoded sound max difference ${maxDiff}; files ${bytesA.length} and ${bytesB.length} bytes, ${differing} bytes differ (creation time and chunk order)`,
+    );
+  });
+
+  test('a render carries Hue: the same wake, its colors a third of a turn on', async ({
+    page,
+  }, testInfo) => {
+    const opts: RenderBytesOptions = { seconds: 2, width: 640, height: 360, fps: 30 };
+    const own = await renderToFile(page, testInfo, 'hue-own.mp4', opts);
+    const turned = await renderToFile(page, testInfo, 'hue-turned.mp4', {
+      ...opts,
+      props: { visual: { hue: 0.5 + 1 / 3 } },
+    });
+    const before = meanColor(own.file);
+    const after = meanColor(turned.file);
+    const [r, g, b] = before;
+    // Water's wake is blue. A third of a turn on, red comes from blue, green from red and
+    // blue from green, as in the preview (the video's color sampling softens it a little).
+    expect(b).toBeGreaterThan(r * 1.5);
+    expect(after[0]).toBeGreaterThan(after[2] * 1.2);
+    const apart = (x: number[], y: number[]) =>
+      x.reduce((sum, v, i) => sum + Math.abs(v - (y[i] ?? 0)), 0);
+    expect(apart(after, [b, r, g])).toBeLessThan(0.35 * apart(after, [g, b, r]));
+
+    // Hue belongs to the picture: the sound is the same sample for sample.
+    const soundA = decodeAudio(own.file).samples;
+    const soundB = decodeAudio(turned.file).samples;
+    expect(soundA.length).toBe(soundB.length);
+    let maxDiff = 0;
+    for (let i = 0; i < soundA.length; i++) {
+      maxDiff = Math.max(maxDiff, Math.abs((soundA[i] ?? 0) - (soundB[i] ?? 0)));
+    }
+    expect(maxDiff).toBeLessThan(1e-4);
+    const show = (c: number[]) => c.map((v) => v.toFixed(1)).join(', ');
+    note(
+      testInfo,
+      'hue',
+      `mean color ${show(before)} at the baseline, ${show(after)} a third of a turn on`,
     );
   });
 

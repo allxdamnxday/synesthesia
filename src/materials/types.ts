@@ -21,7 +21,7 @@ export interface PropertyDef {
   default: number;
   /** For 'choice'. */
   choices?: string[];
-  /** Shown by default. At most 6 primary properties per material. */
+  /** Shown by default. At most 6 primary properties per material, not counting Hue. */
   primary: boolean;
 }
 

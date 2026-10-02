@@ -27,6 +27,7 @@ simulation in `FilamentSim.ts`, ribbons and strands in `shaders.ts` and
 | Rigidity | Primary | 0.5 | How stiff the strands are: soft ones curl with the flow, stiff ones swing like rods. |
 | Brightness | Primary | 0.5 | How luminous the strands and their ribbons of light are. |
 | Intensity | Primary | 0.5 | How strongly the movement pushes the strands. |
+| Hue | Primary | 0.5 | Turns the colors of the strands and their ribbons of light around the color wheel; the middle keeps them as they are. |
 | Dispersion | More | 0.5 | How tangled the strands lie, and how much the movement scatters them. |
 | Density | More | 0.5 | How many strands there are. |
 | Range | More | 0.5 | How large the movement is among the strands: small and centered, or magnified past the edges. |
@@ -35,7 +36,7 @@ simulation in `FilamentSim.ts`, ribbons and strands in `shaders.ts` and
 
 Every shared property applies. **Rigidity** is promoted to primary (how stiff the strands
 are is their most telling quality) and **Dispersion** moves under More to keep six
-primaries.
+primaries; **Hue** is shown beside them.
 
 ### Signature → Filaments
 
@@ -65,6 +66,7 @@ canvas size shows the same strands.
 | Range | Projection of the movement: 0.4× (compressed) → fitted → 2.5× (magnified), the same as every material. |
 | Length | 0.28·2.5^(2L − 1) short sides (0.11 → 0.28 → 0.7). |
 | Thickness | Strand width 0.002·3^(2t − 1) short sides (about 0.7 → 2.2 → 6.5 px at 1080p; never drawn under a pixel, dimmer instead), tapering to 45% at the tip. Ribbons are box-filtered over the same width and gain light × (width ÷ baseline width)^0.7. The strands' width shows at once while paused. |
+| Hue | Turn of the colors about grey (half a turn back → none → half a turn on), strands and ribbons alike. The ribbon buffer keeps the strands' own colors and is turned where it is shown, so ribbons already painted turn too. Display only: it shows at once while paused. |
 
 Fixed: 20 points per strand, 6 constraint iterations per step; strands rest at 40%
 light, fainter toward the tip; ribbon buffer at most 540 / 1080 / 2160 px on its short

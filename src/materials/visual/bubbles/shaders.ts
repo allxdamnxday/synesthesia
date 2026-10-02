@@ -1,12 +1,14 @@
 /**
  * Descending bubbles shaders. One instanced quad per bubble. The vertex shader places a
  * unit disc through the bubble's 2×2 shape matrix (size, motion stretch and wobble) and
- * picks its tint: pearl at rest, the direction color of its last push while it glows.
+ * picks its tint: pearl at rest, the direction color of its last push while it glows,
+ * both turned by Hue.
  * The fragment shader draws a bright rim that fades toward a clear centre, light from
  * above (brighter top rim), a small highlight and a faint caustic, anti-aliased over one
  * device pixel so bubbles stay crisp at any pixel ratio. Bubbles too small to show a rim
  * become soft dots with the same light. Additive on true black.
  */
+import { HUE_GLSL } from '../shared/hue';
 
 export const BUBBLE_VERTEX = /* glsl */ `
 precision highp float;
@@ -21,6 +23,7 @@ uniform vec3 uRestColor;
 uniform float uExposure;
 uniform float uSaturation;
 uniform float uGlowGain;     // extra light at full glow
+${HUE_GLSL}
 out vec2 vLocal;
 out float vRadiusPx;
 out vec3 vRim;
@@ -51,6 +54,8 @@ void main () {
     float turn = atan(g.y, g.x) * 0.15915494309;
     tint = mix(uRestColor, textureLod(uPalette, vec2(turn, 0.5), 0.0).rgb, amount);
   }
+  // Hue turns the rim's color; the highlight stays white.
+  tint = turnHue(tint);
   float luma = dot(tint, vec3(0.2126, 0.7152, 0.0722));
   tint = max(mix(vec3(luma), tint, uSaturation), 0.0);
   float light = aLight.x * aLight.y * uExposure;

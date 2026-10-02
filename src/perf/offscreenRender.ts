@@ -26,6 +26,11 @@ export interface OffscreenRenderOptions {
   steps: number;
   /** Overrides on top of the material's baseline. */
   props?: PropertyValues;
+  /**
+   * Further overrides applied only to the final draw, after every step ran with `props`.
+   * A property that only changes how the wake is drawn gives the same frame either way.
+   */
+  finalProps?: PropertyValues;
   seed?: number;
   quality?: Quality;
   width?: number;
@@ -72,6 +77,8 @@ export async function renderOffscreen(
     });
     material.reset(seed);
     const props = { ...baselineValues(material.properties), ...(opts.props ?? {}) };
+    // Display-only properties apply from the first frame, as in the Studio and a render.
+    material.setProperties?.(props);
     const checkpoints = [...(opts.checkpoints ?? [])].sort((a, b) => a - b);
     let next = 0;
     for (let i = 0; i < opts.steps; i++) {
@@ -82,6 +89,7 @@ export async function renderOffscreen(
       }
       material.step(opts.sampler.sample(i * FIXED_DT), props, FIXED_DT);
     }
+    if (opts.finalProps) material.setProperties?.({ ...props, ...opts.finalProps });
     material.draw();
     const pixels = readDrawingBuffer(gl);
     opts.onCapture?.(opts.steps, canvas, gl);
@@ -107,6 +115,20 @@ export function meanLuma(pixels: Uint8Array): number {
       0.2126 * (pixels[i] ?? 0) + 0.7152 * (pixels[i + 1] ?? 0) + 0.0722 * (pixels[i + 2] ?? 0);
   }
   return n > 0 ? sum / n / 255 : 0;
+}
+
+/** Mean red, green and blue of RGBA bytes, each 0..1 (the color of the frame as a whole). */
+export function meanRgb(pixels: Uint8Array): [number, number, number] {
+  let r = 0;
+  let g = 0;
+  let b = 0;
+  const n = pixels.length / 4;
+  for (let i = 0; i < pixels.length; i += 4) {
+    r += pixels[i] ?? 0;
+    g += pixels[i + 1] ?? 0;
+    b += pixels[i + 2] ?? 0;
+  }
+  return n > 0 ? [r / n / 255, g / n / 255, b / n / 255] : [0, 0, 0];
 }
 
 /** Fraction of pixels brighter than a small threshold (how much of the frame is lit). */

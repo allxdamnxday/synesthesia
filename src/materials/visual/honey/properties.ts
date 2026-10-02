@@ -2,7 +2,7 @@
  * V2 Honey: property definitions (SPEC 9.2, 9.4). Hides Rigidity: honey has no hard
  * edges, and its thickness is already Viscosity.
  */
-import { sharedProperty } from '../../properties';
+import { hueProperty, sharedProperty } from '../../properties';
 import type { PropertyDef } from '../../types';
 
 export const HONEY_PALETTES = ['Amber', 'Dark honey', 'Pale gold'] as const;
@@ -58,6 +58,9 @@ export const HONEY_PROPERTIES: PropertyDef[] = [
   }),
   HONEY_PALETTE_PROPERTY,
   HONEY_SURFACE_LIGHT_PROPERTY,
+  hueProperty(
+    'Turns the colors of the honey around the color wheel; the middle keeps the palette as it is.',
+  ),
 ];
 
 /** Look up one of Honey's property definitions by id. */

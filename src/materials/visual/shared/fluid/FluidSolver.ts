@@ -61,6 +61,7 @@ import {
   type ShaderProgram,
   type TextureFormat,
 } from '../gl';
+import { HueTurn } from '../hue';
 import { PALETTE_SIZE } from './palette';
 import { SPOT_MEAN, SPOT_TEXTURE_SIZE, generateSpotTexture } from './spots';
 import {
@@ -189,6 +190,8 @@ export interface FluidDisplayParams {
   saturation: number;
   /** 0..1: shading, refraction and glints that suggest looking up through liquid. */
   surfaceLight: number;
+  /** Hue turn of the dye's colors, in turns (0 or absent: as dyed). */
+  hue?: number;
 }
 
 export const DEFAULT_STEP_PARAMS: Readonly<Omit<FluidStepParams, 'dt'>> = {
@@ -304,6 +307,7 @@ export class FluidSolver {
   private readonly paletteTex: WebGLTexture;
   private readonly spotTex: WebGLTexture;
   private spotSeed: number | null = null;
+  private readonly hueTurn = new HueTurn();
   private disposed = false;
 
   constructor(gl: WebGL2RenderingContext, options: FluidSolverOptions) {
@@ -517,6 +521,7 @@ export class FluidSolver {
     gl.uniform1f(p.u('uSlopeReach'), SURFACE_SLOPE_REACH);
     gl.uniform1f(p.u('uRefraction'), SURFACE_REFRACTION);
     gl.uniform2f(p.u('uAspectScale'), this.width / short, this.height / short);
+    this.hueTurn.apply(gl, p.u('uHueTurn'), params.hue ?? 0);
     gl.uniform1i(p.u('uDye'), bindTexture(gl, 0, this.dye.read.texture));
     this.blit(null);
   }

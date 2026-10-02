@@ -13,6 +13,7 @@
  * | Range         | projection scale (compressed ↔ magnified)                   |
  * | Palette       | direction → dye color                                       |
  * | Surface light | shading, refraction and glints from the dye's thickness     |
+ * | Hue           | turn of the dye's colors about grey, where it is drawn      |
  *
  * The signature field drives force and dye everywhere it moves: the per-cell speed is the
  * spatially resolved `energy` feature, so energy → dye emission falls out directly.
@@ -20,6 +21,7 @@
 import { readProperty } from '../../properties';
 import type { PropertyValues } from '../../types';
 import type { FluidDisplayParams, FluidStepParams } from '../shared/fluid';
+import { hueTurns } from '../shared/hue';
 import { waterProperty } from './properties';
 
 export type WaterStepParams = Omit<
@@ -43,6 +45,7 @@ const DENSITY = waterProperty('density');
 const RANGE = waterProperty('range');
 const PALETTE = waterProperty('palette');
 const SURFACE_LIGHT = waterProperty('surfaceLight');
+const HUE = waterProperty('hue');
 
 /** ν at Viscosity 1, (short side)²/s. Low for water; Honey uses a much higher range. */
 export const WATER_MAX_VISCOSITY = 6e-3;
@@ -107,6 +110,7 @@ export function waterParams(props: PropertyValues): WaterParams {
       exposure: 2 ** (2.4 * (brightness - 0.5)),
       saturation: 0.7 + 0.65 * brightness,
       surfaceLight,
+      hue: hueTurns(readProperty(props, HUE)),
     },
     palette,
   };

@@ -1,11 +1,11 @@
 /**
  * V4 Descending bubbles: property definitions (SPEC 9.2, 9.4). The six shared primaries
- * are shown by default; Density, Range, Fall speed and Size sit under "More".
+ * and Hue are shown by default; Density, Range, Fall speed and Size sit under "More".
  *
  * Rigidity is hidden: a bubble has nothing to bend, and how its shape gives and springs
  * back after a push is already Elasticity.
  */
-import { sharedProperty } from '../../properties';
+import { hueProperty, sharedProperty } from '../../properties';
 import type { PropertyDef } from '../../types';
 
 export const FALL_SPEED_PROPERTY: PropertyDef = {
@@ -56,6 +56,9 @@ export const BUBBLES_PROPERTIES: PropertyDef[] = [
   }),
   FALL_SPEED_PROPERTY,
   SIZE_PROPERTY,
+  hueProperty(
+    'Turns the colors of the bubbles and their glow around the color wheel; the middle keeps them as they are.',
+  ),
 ];
 
 /** Look up one of the bubbles' property definitions by id. */

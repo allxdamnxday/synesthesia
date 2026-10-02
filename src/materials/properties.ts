@@ -122,6 +122,26 @@ export function sharedProperty(
   };
 }
 
+/**
+ * Hue: the color control every visual material has (docs/DECISIONS.md, 2026-10-01). It has
+ * no meaning in sound, so it is not part of the shared vocabulary: never linked, and never
+ * locked or drawn by chance.
+ */
+export const HUE_PROPERTY_ID = 'hue';
+
+/** Build the Hue PropertyDef for one visual material; only the description differs. */
+export function hueProperty(description: string): PropertyDef {
+  return {
+    id: HUE_PROPERTY_ID,
+    label: 'Hue',
+    description,
+    kind: 'continuous',
+    shared: false,
+    default: 0.5,
+    primary: true,
+  };
+}
+
 /** Baseline values for a list of property definitions. */
 export function baselineValues(properties: readonly PropertyDef[]): PropertyValues {
   const values: PropertyValues = {};
@@ -149,5 +169,13 @@ export function readProperty(
 
 /** Most material-specific properties a material may add (SPEC 9.2). */
 export const MAX_SPECIFIC_PROPERTIES = 3;
-/** Most primary (always visible) properties per material (SPEC 9.1). */
+/** Most primary (always visible) properties per material (SPEC 9.1), not counting Hue. */
 export const MAX_PRIMARY_PROPERTIES = 6;
+
+/**
+ * Whether a property counts toward MAX_PRIMARY_PROPERTIES. Hue doesn't: it is shown beside
+ * the six, never instead of one of them.
+ */
+export function countsTowardPrimaryCap(def: Pick<PropertyDef, 'id'>): boolean {
+  return def.id !== HUE_PROPERTY_ID;
+}

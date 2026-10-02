@@ -1,5 +1,5 @@
 /** V1 Water: property definitions (SPEC 9.2, 9.4). Hides Elasticity and Rigidity. */
-import { sharedProperty } from '../../properties';
+import { hueProperty, sharedProperty } from '../../properties';
 import type { PropertyDef } from '../../types';
 
 export const WATER_PALETTES = ['Deep water', 'Ink', 'Prism'] as const;
@@ -52,6 +52,9 @@ export const WATER_PROPERTIES: PropertyDef[] = [
   }),
   PALETTE_PROPERTY,
   SURFACE_LIGHT_PROPERTY,
+  hueProperty(
+    'Turns every color of the dye around the color wheel; the middle keeps the palette as it is.',
+  ),
 ];
 
 /** Look up one of Water's property definitions by id. */

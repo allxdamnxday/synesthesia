@@ -343,6 +343,7 @@ for (const size of SIZES) {
         page.getByRole('button', { name: 'Visual Water' }),
         page.getByRole('button', { name: 'Sound Water' }),
         page.getByRole('button', { name: 'Mute visual' }),
+        page.getByRole('slider', { name: 'Hue' }),
         page.getByRole('slider', { name: 'Viscosity' }),
         page.getByRole('textbox', { name: 'Notes' }),
       ]) {

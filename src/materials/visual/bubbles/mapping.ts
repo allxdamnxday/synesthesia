@@ -19,6 +19,7 @@
  * | Range       | projection scale of the signature (compressed ↔ magnified)            |
  * | Fall speed  | sinking speed (0.03 → 0.44 short sides per second)                    |
  * | Size        | bubble radius (0.004 → 0.024 short sides)                             |
+ * | Hue         | turn of the rims' colors about grey, where they are drawn             |
  *
  * Signature → bubbles: the field, sampled at each bubble through the Range projection, is
  * a force on the bubble's displacement from its falling path (so the speed of the
@@ -28,6 +29,7 @@
  */
 import { readProperty } from '../../properties';
 import type { PropertyValues, Quality } from '../../types';
+import { hueTurns } from '../shared/hue';
 import { bubblesProperty } from './properties';
 
 /** Most bubbles simulated at each quality tier (SPEC 14.2). */
@@ -82,6 +84,8 @@ export interface BubbleDisplayParams {
   exposure: number;
   /** 1 = as tinted; below toward grey, above more saturated. */
   saturation: number;
+  /** Hue turn of the rims' colors, in turns (0 = their own). */
+  hue: number;
 }
 
 export interface BubbleParams {
@@ -99,6 +103,7 @@ const DENSITY = bubblesProperty('density');
 const RANGE = bubblesProperty('range');
 const FALL_SPEED = bubblesProperty('fallSpeed');
 const SIZE = bubblesProperty('size');
+const HUE = bubblesProperty('hue');
 
 /** Density 0..1 → bubble count: 100 → ~900 at baseline → 8,000 (exponential). */
 export function bubbleCount(density: number, quality: Quality): number {
@@ -189,6 +194,7 @@ export function bubbleParams(props: PropertyValues, quality: Quality): BubblePar
       radius: bubbleRadius(size),
       exposure: 2 ** (2.4 * (brightness - 0.5)),
       saturation: 0.7 + 0.65 * brightness,
+      hue: hueTurns(readProperty(props, HUE)),
     },
   };
 }

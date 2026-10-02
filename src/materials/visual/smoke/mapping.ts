@@ -9,6 +9,7 @@
 import { readProperty } from '../../properties';
 import type { PropertyValues } from '../../types';
 import { rangeScale, type FluidDisplayParams, type FluidStepParams } from '../shared/fluid';
+import { hueTurns } from '../shared/hue';
 import { smokeProperty } from './properties';
 
 export type SmokeStepParams = Omit<
@@ -59,6 +60,7 @@ const INTENSITY = smokeProperty('intensity');
 const RISE = smokeProperty('rise');
 const DENSITY = smokeProperty('density');
 const RANGE = smokeProperty('range');
+const HUE = smokeProperty('hue');
 
 /**
  * Smoke's flow is solved on this grid (short side, cells) at every quality tier; only
@@ -163,6 +165,8 @@ export function smokeParams(props: PropertyValues): SmokeParams {
       exposure: 2 ** (2.4 * (brightness - 0.5)),
       saturation: 0.6 + 0.5 * brightness,
       surfaceLight: 0,
+      // Hue turns the tints where the smoke is drawn, never the smoke itself.
+      hue: hueTurns(readProperty(props, HUE)),
     },
   };
 }

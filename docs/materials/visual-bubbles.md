@@ -29,6 +29,7 @@ projection as the fluids), `hashNoise.ts` (seeded per-bubble randomness) and
 | Dispersion | Primary | 0.5 | How widely the bubbles are scattered and how much they wander as they fall. |
 | Brightness | Primary | 0.5 | How luminous the rims and highlights of the bubbles are. |
 | Intensity | Primary | 0.5 | How strongly the movement pushes the bubbles. |
+| Hue | Primary | 0.5 | Turns the colors of the bubbles and their glow around the color wheel; the middle keeps them as they are. |
 | Density | More | 0.5 | How many bubbles fall at once. |
 | Range | More | 0.5 | How large the movement is among the bubbles: small and centered, or magnified past the edges. |
 | Fall speed | More | 0.5 | How fast the bubbles sink through the water. |
@@ -68,6 +69,7 @@ canvas size shows the same water.
 | Range | Projection of the movement: 0.4× (compressed) → fitted → 2.5× (magnified), the same as every material. |
 | Fall speed | 0.11·4^(2f − 1) short sides/s (0.03 → 0.11 → 0.44); each bubble × (0.55 + 0.45·its size), so bigger bubbles sink faster. |
 | Size | Mean radius 0.01·2.4^(2s − 1) short sides (0.004 → 0.01 → 0.024: about 4.5 → 11 → 26 px at 1080p); each bubble × 0.55 … 1.85, mostly small. Display only: changes show at once while paused. |
+| Hue | Turn of the rims' colors about grey (half a turn back → none → half a turn on): the pearl of resting bubbles and the direction colors of pushed ones turn together; the highlight stays white. Display only: it shows at once while paused. |
 
 Fixed: glow is full at 0.35 short sides/s of pushed speed; motion stretch 2 per short
 side per second; new bubbles start 0.05–0.11 above the top edge; smaller bubbles are a

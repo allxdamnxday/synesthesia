@@ -106,6 +106,17 @@ describe('Smoke property mapping', () => {
     }
   });
 
+  it('hue turns the tints where the smoke is drawn, and nothing else', () => {
+    expect(smokeParams(baseline).display.hue).toBe(0);
+    expect(at('hue', 0.75).display.hue).toBeCloseTo(0.25, 12);
+    expect(at('hue', 0).display.hue).toBe(0.5);
+    expect(at('hue', 1).display.hue).toBe(0.5);
+    for (const v of [0, 0.1, 0.9, 1]) {
+      const p = at('hue', v);
+      expect({ ...p, display: { ...p.display, hue: 0 } }).toEqual(smokeParams(baseline));
+    }
+  });
+
   it('falls back to the baseline for missing or broken values, and clamps', () => {
     expect(smokeParams({})).toEqual(smokeParams(baseline));
     expect(smokeParams({ ...baseline, rise: Number.NaN })).toEqual(smokeParams(baseline));
@@ -177,6 +188,7 @@ describe('Smoke properties', () => {
       'brightness',
       'intensity',
       'rise',
+      'hue',
     ]);
     const rise = smoke?.properties.find((p) => p.id === 'rise');
     expect(rise?.shared).toBe(false);

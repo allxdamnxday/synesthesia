@@ -5,13 +5,14 @@
  * Changes from the original: GLSL ES 3.00; highp throughout; mouse splats replaced by
  * signature forcing and dye injection (Range projection, seeded jitter from an exact
  * integer hash); implicit viscous diffusion; exponential decay; the textbook ½ factor
- * in the pressure gradient; resolution-independent vorticity; a display pass with
- * exposure, saturation, tone mapping, "surface light" shading and dithering instead of
- * bloom and sunrays.
+ * in the pressure gradient; resolution-independent vorticity; a display pass with a hue
+ * turn, exposure, saturation, tone mapping, "surface light" shading and dithering instead
+ * of bloom and sunrays.
  *
  * Shader bodies omit `#version`; see ../gl/shader.ts. Units: velocity is in simulation
  * grid cells per second (as in the original), texture coordinates have y up.
  */
+import { HUE_GLSL } from '../hue';
 
 /** Shared vertex shader: full-screen triangle plus the four neighbour coordinates. */
 export const BASE_VERTEX = /* glsl */ `
@@ -400,13 +401,14 @@ void main () {
 `;
 
 /**
- * Dye to screen. Exposure and saturation, a soft tone curve whose highlights roll off
- * toward white (the "glow"), optional surface light, and a tiny ordered dither so slow
- * fades don't band. Empty water stays exactly black.
+ * Dye to screen. The hue turn, exposure and saturation, a soft tone curve whose highlights
+ * roll off toward white (the "glow"), optional surface light, and a tiny ordered dither so
+ * slow fades don't band. Empty water stays exactly black.
  *
  * Surface light treats the dye as a thin layer whose thickness tilts the surface seen
  * from below: the layer is shaded by a light above the bowl, refracts what is behind it
- * a little, and glints on its slopes.
+ * a little, and glints on its slopes. The layer's shape and its glints come from the dye
+ * as it was released, so Hue turns the colors without moving the light.
  */
 export const DISPLAY_FRAGMENT = /* glsl */ `
 ${PRECISION}
@@ -421,6 +423,7 @@ uniform float uSlopeScale;  // dye thickness gradient -> surface slope
 uniform float uSlopeReach;  // half the slope footprint, in short sides
 uniform float uRefraction;  // how far the tilted layer shifts the view (short sides)
 uniform vec2 uAspectScale;  // (w/short, h/short), keeps the light isotropic
+${HUE_GLSL}
 out vec4 fragColor;
 
 float luma (vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
@@ -439,6 +442,7 @@ uint ditherHash (uvec2 p) {
 
 void main () {
   vec3 c = dyeAt(vUv);
+  vec3 glints = vec3(0.0);
   if (uSurfaceLight > 0.0) {
     // A wide footprint (in short sides) keeps the surface smooth rather than grainy.
     vec2 o = uSlopeReach / uAspectScale;
@@ -458,8 +462,10 @@ void main () {
     vec3 h = normalize(light + vec3(0.0, 0.0, 1.0));
     float glint = max(pow(max(dot(n, h), 0.0), 32.0) - pow(h.z, 32.0), 0.0);
     float presence = smoothstep(0.03, 0.25, luma(c));
-    c += glint * presence * uSurfaceLight * 0.9 * vec3(0.92, 0.96, 1.0);
+    glints = glint * presence * uSurfaceLight * 0.9 * vec3(0.92, 0.96, 1.0);
   }
+  // Hue turns the dye; the light glinting on it stays white.
+  c = turnHue(c) + glints;
   c *= uExposure;
   float y = luma(c);
   c = max(mix(vec3(y), c, uSaturation), 0.0);

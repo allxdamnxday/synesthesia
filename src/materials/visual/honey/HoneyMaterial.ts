@@ -107,8 +107,8 @@ export class HoneyMaterial implements VisualMaterial {
   }
 
   /**
-   * Apply properties that only change how the wake is drawn (brightness, palette for new
-   * color, surface light) without advancing time, e.g. while paused.
+   * Apply properties that only change how the wake is drawn (brightness, hue, palette for
+   * new color, surface light) without advancing time, e.g. while paused.
    */
   setProperties(props: PropertyValues): void {
     const params = this.paramsFor(props);

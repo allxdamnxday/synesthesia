@@ -2,7 +2,7 @@
  * V3 Smoke: property definitions (SPEC 9.2, 9.4). Hides Elasticity (smoke has no shape to
  * spring back to) and Rigidity (smoke has no edges to make crisp).
  */
-import { sharedProperty } from '../../properties';
+import { hueProperty, sharedProperty } from '../../properties';
 import type { PropertyDef } from '../../types';
 
 export const RISE_PROPERTY: PropertyDef = {
@@ -39,6 +39,9 @@ export const SMOKE_PROPERTIES: PropertyDef[] = [
     description:
       'How large the movement is in the air: small and centered, or magnified past the edges.',
   }),
+  hueProperty(
+    'Turns the faint tints of the smoke around the color wheel; the middle keeps them as they are.',
+  ),
 ];
 
 /** Look up one of Smoke's property definitions by id. */

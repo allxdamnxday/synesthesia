@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
+  HUE_PROPERTY_ID,
   MAX_PRIMARY_PROPERTIES,
   MAX_SPECIFIC_PROPERTIES,
+  countsTowardPrimaryCap,
+  hueProperty,
   isSharedPropertyId,
 } from '../../src/materials/properties';
 import {
@@ -45,9 +48,10 @@ describe('visual material registry', () => {
       expect(meta.description).toMatch(/^[A-Z].*\.$/);
       const ids = meta.properties.map((p) => p.id);
       expect(new Set(ids).size).toBe(ids.length);
-      expect(meta.properties.filter((p) => p.primary).length).toBeLessThanOrEqual(
-        MAX_PRIMARY_PROPERTIES,
-      );
+      // Six primaries at most; Hue is shown beside them.
+      expect(
+        meta.properties.filter((p) => p.primary && countsTowardPrimaryCap(p)).length,
+      ).toBeLessThanOrEqual(MAX_PRIMARY_PROPERTIES);
       expect(meta.properties.filter((p) => !p.shared).length).toBeLessThanOrEqual(
         MAX_SPECIFIC_PROPERTIES,
       );
@@ -82,12 +86,32 @@ describe('visual material registry', () => {
       'brightness',
       'intensity',
       'density',
+      'hue',
     ]);
     expect(water?.properties.find((p) => p.id === 'palette')?.choices).toEqual([
       'Deep water',
       'Ink',
       'Prism',
     ]);
+  });
+
+  it('every material carries the same Hue, last and in view; the Signature view has none', () => {
+    const materials = listVisualMaterials().filter((m) => m.meta.id !== SIGNATURE_VIEW_ID);
+    expect(materials.map((m) => m.meta.id)).toEqual([
+      'water',
+      'honey',
+      'smoke',
+      'bubbles',
+      'filaments',
+    ]);
+    for (const { meta } of materials) {
+      const hue = meta.properties[meta.properties.length - 1];
+      expect(hue, meta.name).toEqual(hueProperty(hue?.description ?? ''));
+      expect(hue?.description, meta.name).toMatch(/color wheel/);
+      expect(meta.properties.filter((p) => p.id === HUE_PROPERTY_ID)).toHaveLength(1);
+    }
+    const view = getVisualMaterial(SIGNATURE_VIEW_ID)?.meta;
+    expect(view?.properties.some((p) => p.id === HUE_PROPERTY_ID)).toBe(false);
   });
 
   it('the Signature view has only its readout choice', () => {

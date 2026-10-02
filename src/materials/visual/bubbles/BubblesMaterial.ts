@@ -18,6 +18,7 @@ import {
   resetPassState,
   type ShaderProgram,
 } from '../shared/gl';
+import { HueTurn } from '../shared/hue';
 import { PALETTE_SIZE, WAKE_PALETTE_BYTES } from '../shared/wakePalette';
 import { BubbleSim } from './BubbleSim';
 import {
@@ -69,6 +70,7 @@ export class BubblesMaterial implements VisualMaterial {
   private quality: Quality = 'standard';
   private simParams: BubbleSimParams;
   private display: BubbleDisplayParams;
+  private readonly hueTurn = new HueTurn();
 
   constructor() {
     const baseline = bubbleParams(baselineValues(BUBBLES_PROPERTIES), this.quality);
@@ -133,7 +135,7 @@ export class BubblesMaterial implements VisualMaterial {
     this.sim?.step(frame, params.sim, dt);
   }
 
-  /** Apply display-only properties (brightness, size) without advancing time. */
+  /** Apply display-only properties (brightness, hue, size) without advancing time. */
   setProperties(props: PropertyValues): void {
     const params = bubbleParams(props, this.quality);
     this.display = params.display;
@@ -170,6 +172,7 @@ export class BubblesMaterial implements VisualMaterial {
     gl.uniform1f(program.u('uExposure'), Math.max(0, this.display.exposure));
     gl.uniform1f(program.u('uSaturation'), Math.max(0, this.display.saturation));
     gl.uniform1f(program.u('uGlowGain'), GLOW_GAIN);
+    this.hueTurn.apply(gl, program.u('uHueTurn'), this.display.hue);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.ONE, gl.ONE);
     gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, count);

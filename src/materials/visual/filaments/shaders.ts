@@ -16,11 +16,16 @@
  *   wide, and it also handles sweeps thinner than a pixel. Sliding along itself paints
  *   nothing (a uniform strand sliding along its length looks the same).
  * - FADE: multiplies the ribbon buffer by a constant through blending (dst × α).
- * - DISPLAY: ribbon buffer → screen with exposure, saturation and a soft tone curve.
+ * - DISPLAY: ribbon buffer → screen with the hue turn, exposure, saturation and a soft tone
+ *   curve.
  * - STRAND: the strands themselves as tapered, anti-aliased strips (one instance per
  *   strand, two vertices per point), dim at rest and glowing in the color of their
  *   direction while they move.
+ *
+ * Hue turns colors only in DISPLAY and STRAND, which draw. RIBBON paints during a step, so
+ * the ribbon buffer always holds the strands' own colors.
  */
+import { HUE_GLSL } from '../shared/hue';
 
 const HEADER = /* glsl */ `
 precision highp float;
@@ -198,6 +203,7 @@ in vec2 vUv;
 uniform sampler2D uRibbons;
 uniform float uExposure;
 uniform float uSaturation;
+${HUE_GLSL}
 out vec4 fragColor;
 
 uint ditherHash (uvec2 p) {
@@ -209,7 +215,7 @@ uint ditherHash (uvec2 p) {
 }
 
 void main () {
-  vec3 c = max(texture(uRibbons, vUv).rgb, 0.0) * uExposure;
+  vec3 c = turnHue(max(texture(uRibbons, vUv).rgb, 0.0)) * uExposure;
   float y = dot(c, vec3(0.2126, 0.7152, 0.0722));
   c = max(mix(vec3(y), c, uSaturation), 0.0);
   c = vec3(1.0) - exp(-c);
@@ -234,6 +240,7 @@ uniform float uGlowSpeed;    // speed (short sides/s) at which a strand fully gl
 uniform float uGlowLight;    // extra light of a fully glowing strand
 uniform float uExposure;
 uniform float uSaturation;
+${HUE_GLSL}
 out float vAcross;           // pixels from the centre line
 out float vHalfWidth;        // drawn half width, pixels
 out vec3 vColor;
@@ -268,7 +275,7 @@ void main () {
   float glow = 1.0 - exp(-speed / uGlowSpeed);
   vec3 tint = uRestColor * (1.0 + 0.08 * vec3(looks.x, -0.3 * looks.x, -looks.x));
   vec3 moving = length(moved) > 1e-6 ? directionColor(moved) : tint;
-  vec3 c = tint * uRestLight + moving * (uGlowLight * glow);
+  vec3 c = turnHue(tint * uRestLight + moving * (uGlowLight * glow));
   float y = dot(c, vec3(0.2126, 0.7152, 0.0722));
   c = max(mix(vec3(y), c, uSaturation), 0.0);
   // Fainter toward the tip.

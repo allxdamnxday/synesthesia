@@ -642,6 +642,86 @@ implementation follows the intent. To revisit with Freeman only if a material fe
 - **Not changed:** `CLAUDE.md` and `SPEC.md` still describe v0 as a surprise built solo; they
   need rewriting for the new arrangement once it is settled.
 
+## 2026-10-01: Hue, a color control on every visual material
+- **Why:** Braden wanted to be able to adjust the materials' colors. Every color was fixed in
+  the code; only Water and Honey offered a choice (three palettes each, under More), and Smoke,
+  Descending bubbles and Filaments offered none.
+- **Decision:** one more property, **Hue**, on Water, Honey, Smoke, Descending bubbles and
+  Filaments (not the Signature view, which is diagnostic). It turns all of a material's colors
+  around the color wheel together. 0.5, the baseline, is the material's own colors; the whole
+  slider is one full turn, so 0 and 1 are both half a turn away, and a third of a turn (0.83)
+  takes red to green, green to blue and blue to red. Braden chose this over more palettes and
+  over picking colors by hand (below), and chose to have it always in view.
+- **How:** a rotation of RGB about the grey axis (`src/materials/visual/shared/hue.ts`), which
+  comes to three weights: `out = k·rgb + n·gbr + p·brg`. It is applied only where a material
+  draws (the fluids' display pass, the bubbles' rim tint, the filaments' ribbon display and
+  strands), never in `step()`. The rotation is linear, so turning dye or ribbons already laid
+  down gives the picture a turned palette would have given. So:
+  - it shows at once, also while paused, and a render matches the preview (a change of
+    Palette, by contrast, only colors new dye);
+  - black stays black, and grey and white stay as they are; glints and highlights, left
+    unturned on purpose, stay white;
+  - two colors stay exactly as far apart as they were, so a wink's close and open still read
+    as two colors at every Hue (SPEC 9.3);
+  - the fluids' surface relief is still read from the dye as released, so Hue never moves the
+    light on the surface.
+- **The baseline is unchanged; no material version changes.** With no turn the shader returns
+  the color untouched. 37 frame hashes from the materials harness (five materials × wink,
+  sweep and swirl; Draft and Standard; Water's two capability fallbacks; Brightness and
+  Surface light away from the baseline; still frames; Filaments at High; the Signature view)
+  are identical before and after on the builder's machine (GTX 1660 Super, Direct3D 11). Saved
+  compositions look as they did and show no "material has changed" notice. An older build that
+  opens a composition with Hue moved ignores it.
+- **A rule bent: Hue is shown beside the six primaries.** SPEC 9.1 and 13.1 allow six primary
+  properties per material, and every material already had six. Rather than hide Hue under More
+  or demote something, `countsTowardPrimaryCap()` in `src/materials/properties.ts` says Hue
+  does not count; `capPrimary` and the registry test both use it, so the exception lives in one
+  place. Linked, the Visual group shows Hue above More; unlinked, six primaries and Hue.
+  `MAX_PRIMARY_PROPERTIES` stays 6 for everything else, Both and the sound materials included.
+- **Material-specific on purpose, not shared.** Hue has no meaning in sound, and a tenth shared
+  property would change what Draw by chance draws for every existing seed and album. So Hue is
+  never linked, never locked or drawn by chance (album tracks start at 0.5) and, like Palette,
+  returns to the baseline when another visual material is chosen. It counts as one of a
+  material's three own properties, which fills that limit for Water, Honey, Descending bubbles
+  and Filaments (Smoke keeps one). If one of them needs another property of its own, exempting
+  Hue from that limit too is the obvious move.
+- **Known limits:**
+  - Smoke's tints are pale and its sideways tint is exactly grey, so Hue is faint there (it
+    mostly moves the warm and the cool). Water's Ink palette is nearly as quiet. Prism holds
+    every color, so Hue changes which direction gets which rather than the overall look.
+  - The rotation keeps the sum of the channels, not their luminance: greens read brighter
+    than blues, as on any screen, so the wake's brightness moves a little with Hue.
+  - Between thirds of a turn a saturated color can leave what a screen shows and is clipped,
+    so yellows, cyans and magentas come out a little dimmer than reds, greens and blues.
+  - On a graphics card that can't blend into float targets, Filaments keeps 8-bit ribbons,
+    which clamp before the turn; dense overlaps may differ slightly from other machines.
+- **Also fixed:** the offscreen render (thumbnails, the materials harness) never applied
+  display properties before drawing, so a frame drawn with no steps showed bubbles and strands
+  at the baseline Brightness and Size. It now does what the Studio and a render do.
+- **Alternatives:** palettes for every material (curated and always legible, but a fourth own
+  property for Bubbles and Filaments, nine palettes to design, and a change only colors new
+  wake); the artist's own colors per direction (the most freedom, but a new kind of property
+  and control, the Mac's color picker to test, and it can make the close and the open the same
+  color; a possible next step); a pass over the finished picture (an extra full-screen buffer
+  and pass, after the tone curve and in 8 bits); turning the palette before the dye is released
+  (exact colors, but nothing shows while paused, and old and new colors mix while playing); a
+  luminance-preserving rotation (blues turned to yellow come out olive); a 3×3 matrix uniform
+  (a transposed matrix silently reverses the turn; three weights can't be transposed).
+- **Revisit with Freeman:** whether Hue should carry over from one material to the next;
+  whether chance should be able to draw it; whether hue has a counterpart in sound; whether
+  Smoke wants a stronger color control of its own.
+- **Watch on the Mac** (`docs/MAC_TEST_CHECKLIST.md` 8.9 and 9.5): each material starts,
+  dragging Hue stays smooth on integrated graphics, the extra row in the panel, rendered
+  colors against the preview in QuickTime.
+- **Tests:** `tests/unit/hue.test.ts` (the turn and the property); each material's mapping
+  test (Hue changes nothing but its own display value); `tests/e2e/visual.spec.ts` (the middle
+  changes nothing, the slider's ends meet, a third of a turn cycles the channels and not the
+  reverse, Hue on the final draw alone equals Hue all along, a still signature stays black,
+  bubbles and strands at rest take Hue before any step); `tests/e2e/studio.spec.ts` (in view,
+  a paused wake recolors at once, undo, snapshots, save and reload, another material starts
+  in its own colors); `tests/e2e/render.spec.ts` (a rendered MP4, decoded with ffmpeg, has
+  the turned colors and the same sound sample for sample).
+
 ## Pending
 - **Freeman's MacBook Pro:** model, year, chip, macOS and Chrome versions. Diagnostics' Copy
   report records the macOS version, CPU type (Intel or Apple Silicon), GPU and Chrome
