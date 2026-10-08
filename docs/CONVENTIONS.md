@@ -90,7 +90,9 @@ Change a shared contract only when necessary, additively, and say so in your rep
   pointer events with capture and a `touch-action` (see DECISIONS 2026-09-29), and anything
   shown on hover or done with a modifier key needs a touch equivalent.
   `tests/e2e/responsive.spec.ts` covers new screens.
-- The canvas surround is true black. The source clip never appears outside Prepare.
+- The canvas surround is true black. The source clip appears on Prepare and, while the
+  artist raises its slider, as the Studio's clip layer; never in a render, a thumbnail or
+  anything stored (SPEC C7).
 - Each screen (and each dialog or popover the guide explains) links to its guide section
   with `<GuideLink section="…" />` from `src/ui/GuideLink.tsx`; when a heading changes,
   update `GUIDE_SECTIONS`. Where to go next should be visible, not in a menu.

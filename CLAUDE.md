@@ -36,9 +36,11 @@ and applies that one constant signature to interchangeable visual and sound mate
 
 - Static web app only. No backend, accounts, analytics, telemetry, or runtime network
   requests. Self-host every asset (OpenCV.js, wasm, fonts, sample media).
-- **Signature is not material.** The signature file never contains source pixels. The
-  source clip appears only on the Prepare screen and is never rendered in Studio or
-  in exports.
+- **Signature is not material.** The signature file never contains source pixels, and the
+  source clip is never stored and never appears in a render, a thumbnail or an export. On
+  screen it appears on the Prepare screen and, only while the artist raises it, as the
+  Studio's clip layer (SPEC 6.3): hidden by default, and only in the visit its signature
+  was made in. (Amended 2026-10-08 at Freeman's request; see `docs/DECISIONS.md`.)
 - **Determinism.** Never use `Math.random()`, `Date.now()`, or `performance.now()` inside
   `src/signature`, `src/engine`, `src/materials`, `src/chance`, or `src/render`
   (except for progress/ETA display). Use the seeded PRNG in `src/chance/prng.ts`.

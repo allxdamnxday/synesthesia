@@ -88,6 +88,12 @@ handles mute and timeline changes).
   the wake); step the visual within a budget (up to 8 steps while playing; adaptive 8–600
   while catching up, halving on slow frames, 12 ms CPU cap), drawing once caught up.
   "Catching up…" shows after 0.5 s.
+- **Clip layer** (`src/studio/clipLayer.ts`, SPEC 6.3): while the Clip slider is above 0
+  and the clip is in memory (`src/state/visitClips.ts`, this visit only), a `<video>` lies
+  over the canvas. The runtime tells it where the canvas is and where the playhead is each
+  frame (`setOverlay()`); `clipLayerMath.ts` turns that into a clip time (the sampler's
+  loops, back and forth and tail) and a place (extraction's crop and orientation, on the
+  material's Range projection). It is DOM only: stills and renders never see it.
 - **`setComposition()`** decides what to rebuild with `snapshotChanges`: a new visual
   material or seed recreates the material and seeks it to the playhead; a Movement change
   reconfigures the sampler and re-seeks; a property change applies from the next step (while

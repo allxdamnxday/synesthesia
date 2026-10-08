@@ -87,7 +87,7 @@ revisit it.
 | C4 | **Local-first.** User data lives in browser storage and in files the user explicitly exports. Nothing is uploaded anywhere. |
 | C5 | **Works offline** after first load (Milestone 8). |
 | C6 | **Deterministic.** Signature + composition + seed fully define a render. Same machine and same inputs give the same output. |
-| C7 | **Source disappears.** The signature file contains no source pixels. The clip is visible only on the Prepare screen and never appears in Studio or exports. |
+| C7 | **Source disappears.** The signature file contains no source pixels, and the clip is never stored and never appears in a render, a thumbnail or an export. On screen the clip is visible on the Prepare screen and, only while the artist raises it, as the Studio's clip layer (6.3): hidden by default, and only in the visit its signature was made in. *(Amended 2026-10-08 at Freeman's request; see `docs/DECISIONS.md`.)* |
 | C8 | **Seeded randomness only.** No `Math.random()` or clock-based randomness in engine, material, signature, chance, or render code. |
 
 ---
@@ -171,7 +171,9 @@ Freeman's eight steps map onto four main screens:
   9.4) plays alongside sparklines for energy, direction, expansion/contraction,
   continuity, and density. A **Hide source** toggle (on by default after extraction)
   lets the artist see the signature with the source gone.
-- Name and save the signature, then **Open in Studio**.
+- Name and save the signature, then **Open in Studio**. Once saved, the clip stays in
+  memory until the page is closed or reloaded (it is never stored), so the Studio can show
+  it (6.3).
 - Advanced panel (collapsed): analysis width, grid columns, extraction smoothing.
 
 ### 6.3 Studio
@@ -191,7 +193,15 @@ Freeman's eight steps map onto four main screens:
 - **Save**, **Save as new**, **Render MP4**.
 - **Presentation mode** (F key): hides all UI and shows only the wake.
 - **Undo/redo** for property changes (Cmd/Ctrl+Z, Shift+Cmd/Ctrl+Z).
-- The source clip never appears here.
+- **Clip layer** (added 2026-10-08): a **Clip** slider, 0–100% and at 0% every time a
+  composition opens, lays the source clip over the wake. The clip is cropped, turned and
+  placed where the signature acts (the focus area lies on the rectangle the material's
+  Range projects the movement onto) and it follows the transport (speed, loops, back and
+  forth, tail). It is a way of looking, not part of the composition: it is not saved,
+  undone, stored in snapshots or drawn by chance, and it never appears in a thumbnail or a
+  render. The slider is offered only while the clip is in memory: the visit its signature
+  was made in (6.2).
+- Otherwise the source clip never appears here: at 0% there is no clip in the Studio at all.
 
 ### 6.4 Album (Milestone 7)
 
@@ -991,6 +1001,7 @@ Hide source toggle; synthetic fixtures + tests.
 **Accept:** fixture feature signs match 8.5; a real wink clip with a focus area produces
 a visibly localized, coherent field; exporting and re-importing a signature yields the
 identical `contentHash`; the source clip cannot appear anywhere outside Prepare.
+*(Since 2026-10-08 the Studio's clip layer shows it on request; see C7 and 6.3.)*
 
 ### M2: Engine, Studio, V1 Water
 

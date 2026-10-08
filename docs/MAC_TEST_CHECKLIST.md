@@ -115,6 +115,14 @@ into a chat with Claude. Each page below has a **Copy report** or **Copy results
    Hue moved and unplug the charger: the wake comes back in the same colors. At the window
    size Freeman uses, note whether the sliders under Both still fit without scrolling
    (Hue adds a row above them).
+10. **Clip:** make a signature from an iPhone clip (a `.mov`, filmed upright, with a box
+    around the part that moves), then **Save and open in Studio**. Raise **Clip** at the top
+    of the controls: the clip appears the right way up, and what moves in it sits where the
+    wake responds. Play at Speed 1, then 0.25 and 2: the clip stays with the wake, with no
+    drift and no stutter as each loop comes round. With Loops 2 and Repeat on Back and
+    forth, the clip steps backwards on the way back (choppier is expected; note it if it
+    freezes). With Clip at 50%, playing stays as smooth as without it (watch Activity
+    Monitor on an Intel MacBook). Reload the page: the Clip slider is gone.
 
 ## 9. Rendering
 
