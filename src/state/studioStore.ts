@@ -88,6 +88,7 @@ import { recordEdit, type Gesture } from '../studio/undo';
 import type { SliderPhase } from '../ui/Slider';
 import { usePresentationStore } from './presentationStore';
 import { newSeed } from './seed';
+import { forgetVisitClip } from './visitClips';
 
 export type StudioStatus =
   'idle' | 'loading' | 'ready' | 'missing-composition' | 'missing-signature' | 'failed';
@@ -169,6 +170,13 @@ export interface StudioState {
   sound: SoundProblem | null;
   /** Preview quality tier; null while this computer is being measured. */
   quality: Quality | null;
+  /**
+   * How strongly the clip shows over the wake, 0 (hidden) to 1 (SPEC 6.3 "Clip layer").
+   * A way of looking, not part of the composition: never saved, undone or rendered.
+   */
+  clipOpacity: number;
+  /** The clip could not be played, so its layer was taken away. */
+  clipFailed: boolean;
   presentation: boolean;
   renderOpen: boolean;
   /** Mirrors the Draw by chance popover. */
@@ -181,6 +189,9 @@ export interface StudioState {
   /** Leaving the Studio: write any pending autosave and close the session. */
   leave: () => Promise<void>;
   setQuality: (quality: Quality) => void;
+  setClipOpacity: (opacity: number) => void;
+  /** The clip layer reports that its clip can't be played any more. */
+  clipFailedToPlay: () => void;
 
   attachController: (controller: TransportController) => void;
   detachController: (controller: TransportController) => void;
@@ -370,6 +381,9 @@ export const useStudioStore = create<StudioState>()((set, get) => {
       picture: null,
       sound: null,
       quality,
+      // Each composition opens with the source out of sight.
+      clipOpacity: 0,
+      clipFailed: false,
       presentation: false,
       renderOpen: false,
       chanceOpen: false,
@@ -432,6 +446,8 @@ export const useStudioStore = create<StudioState>()((set, get) => {
     picture: null,
     sound: null,
     quality: null,
+    clipOpacity: 0,
+    clipFailed: false,
     presentation: false,
     renderOpen: false,
     chanceOpen: false,
@@ -572,6 +588,8 @@ export const useStudioStore = create<StudioState>()((set, get) => {
         activeSlot: null,
         notices: [],
         transport: EMPTY_TRANSPORT,
+        clipOpacity: 0,
+        clipFailed: false,
         presentation: false,
         renderOpen: false,
         chanceOpen: false,
@@ -581,6 +599,13 @@ export const useStudioStore = create<StudioState>()((set, get) => {
     },
 
     setQuality: (quality) => set({ quality }),
+    setClipOpacity: (opacity) =>
+      set({ clipOpacity: Number.isFinite(opacity) ? Math.min(1, Math.max(0, opacity)) : 0 }),
+    clipFailedToPlay: () => {
+      const hash = get().signature?.contentHash;
+      if (hash) forgetVisitClip(hash);
+      set({ clipOpacity: 0, clipFailed: true });
+    },
 
     attachController: (controller) => set({ controller }),
     detachController: (controller) => {

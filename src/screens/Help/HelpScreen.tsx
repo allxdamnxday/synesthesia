@@ -35,7 +35,7 @@ const SESSION_GUIDE: readonly GuideSectionSlug[] = [
 const WORDS: Array<[string, string]> = [
   [
     'Clip',
-    'The video you bring in. It stays on the Prepare screen and never appears anywhere else.',
+    'The video you bring in. You see it on the Prepare screen and, if you raise the Clip slider, over the wake in the Studio until you close or reload the page. It is never kept.',
   ],
   [
     'Signature',
@@ -189,7 +189,9 @@ export function HelpScreen() {
             </li>
             <li>
               <strong>Open it in the Studio.</strong> Choose a visual material and a sound material,
-              press play, and adjust their properties while you watch and listen.
+              press play, and adjust their properties while you watch and listen. To see the clip
+              over its wake, raise <em>Clip</em> at the top of the controls (it is there until you
+              close or reload the page).
             </li>
             <li>
               <strong>Compare.</strong> Store versions in snapshots A to D and switch between them

@@ -26,7 +26,7 @@ measurement where a person's eye or ear is the real judge; still worth a manual 
 | Fixture feature signs match SPEC 8.5 | Pass | `tests/e2e/extraction.spec.ts`: dot right direction 0.000, dot up 1.569, expanding ring divergence > 0, contracting < 0, clockwise bar curl > 0, still energy ≈ 0 and density 0, noisy still density ≈ 0 after the automatic floor, stopping dot onset at 0.23 s and continuity 0.26 at the stop; plus movement fully inside the frame (divergence and curl use a local fit, see DECISIONS) |
 | A real wink clip with a focus area produces a visibly localized, coherent field | Manual | No real wink clip was available to the build. Record one (iPhone, Most Compatible), box the eye in Prepare: the strokes should appear only around the eyelid, down on the close and up on the open |
 | Exporting and re-importing a signature yields the identical contentHash | Pass | `tests/unit/hash.test.ts` (JSON round trip, −0), `tests/e2e/library-storage.spec.ts` (real download → import keeps the hash; a tampered file is refused) |
-| The source clip cannot appear anywhere outside Prepare | Pass | The clip is never stored (only its movement); `tests/e2e/prepare.spec.ts` (no `<video>` anywhere after leaving Prepare), `tests/e2e/studio.spec.ts` (no `<video>` in the Studio); renders use materials only |
+| The source clip cannot appear anywhere outside Prepare | Pass | The clip is never stored (only its movement); `tests/e2e/prepare.spec.ts` (no `<video>` anywhere after leaving Prepare), `tests/e2e/studio.spec.ts` (no `<video>` in the Studio); renders use materials only. Since 2026-10-08 the Studio's clip layer shows the clip on request (SPEC C7 as amended; `tests/e2e/clip-layer.spec.ts`) |
 
 ## M2 Engine, Studio, V1 Water
 

@@ -722,6 +722,77 @@ implementation follows the intent. To revisit with Freeman only if a material fe
   in its own colors); `tests/e2e/render.spec.ts` (a rendered MP4, decoded with ffmpeg, has
   the turned colors and the same sound sample for sample).
 
+## 2026-10-08: The clip as a layer over the wake in the Studio
+- **Decision:** the Studio has a **Clip** slider (0–100%) that lays the source clip over the
+  wake, so the movement and what it leaves can be seen in one picture. Braden asked for it
+  on 2026-10-08 ("see the original uploaded clip as a separate layer in the video player
+  frame with adjustable opacity… to clearly show the output effect in relation to the
+  original") and chose: in the Studio (Prepare keeps its side-by-side view), on screen only,
+  the clip kept for this visit only.
+- **A rule amended, at Freeman's request as Braden reported it.** SPEC C7 and 6.3 and the
+  CLAUDE.md rule said the clip never appears outside Prepare. They now say: never stored,
+  never in a render, a thumbnail or an export; on screen in Prepare and, only while the
+  artist raises it, as this layer. Freeman's write-up is unchanged ("The moving source
+  itself disappears; its audiovisual wake remains"), and it stays the default experience:
+  every composition opens at 0%, where there is no clip in the page at all (no `<video>`
+  element, no decoder), so the Studio costs and shows exactly what it did before.
+- **This visit only.** When a signature is saved on Prepare, the clip's `File` (a handle,
+  not a copy) is kept in memory by the signature's content hash (`src/state/visitClips.ts`).
+  Nothing is stored; the `clips` store in SPEC 11.1 stays unused. After a reload or on
+  another day the slider is not there. It is left out rather than shown disabled, so the
+  panel stays quiet for the many compositions opened on later days; Prepare says so when
+  the signature is saved, and a line under the slider says so in the Studio.
+- **Where the clip sits: where the signature acts.** The part of the clip the signature was
+  read from (the focus area, or the whole frame, turned and mirrored as in Prepare, with
+  extraction's own pixel crop) is laid exactly on the rectangle the material projects the
+  movement onto, so it follows the material's **Range** and what moves in the clip sits
+  where the wake responds. The rest of the clip spills around that rectangle and is cut at
+  the canvas edge. The crop is fitted to the field's rectangle, whose shape is rounded to
+  whole grid cells, so the clip can be stretched by a few percent at most.
+- **When: the moment the signature is at.** Composition time becomes signature time by the
+  sampler's own rules (`signatureMomentAt`, checked against the real sampler for every
+  combination of speed, loops and repeat in `tests/unit/studio-clip-layer.test.ts`), then
+  clip time by Prepare's `clipTimeForSignature`. Playing forwards the `<video>` runs by
+  itself at the composition's Speed, eased up to 10% faster or slower to stay in step and
+  moved outright only when more than 0.15 s out (a loop coming round, a seek). A `<video>`
+  can't run backwards, so on the way back in **Back and forth** it is stepped by seeking,
+  which looks choppier. In the tail it rests on the frame where the movement ended.
+  Smoothing and Signature strength don't change it: it is the source, not the signature.
+- **A way of looking, not part of the composition.** The opacity lives in the Studio's
+  state: not saved, not an undo step, not in snapshots, never drawn by chance. It returns
+  to 0 when a composition opens and is kept across Save and Save as new. It is a plain
+  cross-fade over the opaque canvas (100% is the clip alone). The preview runtime only
+  gained `setOverlay()`: the layer is DOM above the canvas, so `renderStill()`, thumbnails
+  and the offline render cannot see it, and no deterministic folder was touched.
+- **Shown as set in Present, and with Mute visual.** Presentation mode shows the picture as
+  it is set, clip included (comparing in front of someone is the point). Muting the visual
+  leaves the clip, so the clip can be watched with the sound alone.
+- **If the clip can't be played any more** (its file was moved or changed), the layer is
+  taken away, the slider is replaced by a note, and the clip is forgotten.
+- **Alternatives:** keeping the clip in the library next to its signature (there on every
+  visit, but hundreds of megabytes for a phone clip; Braden chose this visit only);
+  choosing the file again each time (nothing stored, more steps; an "Add the clip" button
+  could be added later without changing anything else); baking the layer into renders (the
+  clip decoded inside the offline render and the opacity saved in the composition); a
+  layered view on Prepare only; the whole clip fitted to the canvas (simpler, but with a
+  focus box the movement would not sit where the wake responds); a screen or additive blend
+  instead of opacity; drawing the clip inside the WebGL canvas (source pixels in the
+  material path).
+- **Revisit with Freeman:** whether Present should leave the clip out; whether a later
+  visit should be able to bring the clip back; whether the opacity should start where it
+  was left; whether the clip wants dimming or greyscale so the wake reads over it.
+- **Watch on the Mac** (`docs/MAC_TEST_CHECKLIST.md` 8.10): an iPhone `.mov` filmed
+  upright lies the right way up and in place; the clip stays with the wake at Speed 0.25, 1
+  and 2; playing stays smooth with the layer up on integrated graphics (a second video
+  decode beside WebGL).
+- **Not updated:** `AGENTS.md` (Braden's untracked copy of CLAUDE.md) still has the old
+  wording of the rule.
+- **Tests:** `tests/unit/studio-clip-layer.test.ts` (time, following, place, Range, the
+  visit's clips); `tests/e2e/clip-layer.spec.ts` (hidden and absent by default, exactly over
+  the canvas, the focus box on the movement's rectangle, opacity on screen, the frame at
+  the playhead paused and playing, kept across Save, shown in Present, gone after a reload;
+  a turned and mirrored clip, and Range; no slider for an imported signature).
+
 ## Pending
 - **Freeman's MacBook Pro:** model, year, chip, macOS and Chrome versions. Diagnostics' Copy
   report records the macOS version, CPU type (Intel or Apple Silicon), GPU and Chrome

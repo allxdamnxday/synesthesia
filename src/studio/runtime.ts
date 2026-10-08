@@ -19,6 +19,9 @@
  *
  * The same material code, `VisualRunner` and seed helpers drive the offline render: see
  * `renderStill()` for a one-frame example.
+ *
+ * An overlay (`setOverlay()`, the clip layer) is told where the canvas is and where the
+ * playhead is each frame. It is only ever on screen: stills and renders never see it.
  */
 import type { Composition } from '../engine/composition';
 import { visualRng, visualSeed } from '../engine/seeds';
@@ -37,7 +40,7 @@ import { samplerConfigFor } from '../render/timeline';
 import { createSampler } from '../signature/sampler';
 import type { KineticSignature, SignatureSampler } from '../signature/types';
 import { WallClock, type PlaybackClock } from './clock';
-import { backingSize, fitAspect } from './layout';
+import { backingSize, fitAspect, type Box } from './layout';
 import { StudioSound, type SoundProblem } from './sound';
 import {
   CATCHING_UP_HINT_MS,
@@ -89,6 +92,14 @@ export interface StudioRuntimeOptions {
   events: RuntimeEvents;
   /** Play sound (default true). Without it the picture runs on the wall clock. */
   sound?: boolean;
+}
+
+/** Something laid over the wake that follows the playhead (the clip layer, ./clipLayer.ts). */
+export interface StageOverlay {
+  /** Where the canvas is in the host, in CSS pixels. */
+  place(box: Box): void;
+  /** The playhead (composition seconds) for the frame being shown. */
+  sync(t: number, playing: boolean): void;
 }
 
 export interface StillOptions {
@@ -146,6 +157,8 @@ export class StudioRuntime {
   private lastEmitTs = 0;
   private lastEmitted: RuntimeTransport | null = null;
   private readonly resizeObserver: ResizeObserver | null;
+  private overlay: StageOverlay | null = null;
+  private box: Box | null = null;
 
   constructor(options: StudioRuntimeOptions) {
     this.host = options.host;
@@ -313,6 +326,14 @@ export class StudioRuntime {
     this.emitTransport(performance.now(), true);
   }
 
+  /** Lay something over the wake (or take it away with null); it follows from now on. */
+  setOverlay(overlay: StageOverlay | null): void {
+    this.overlay = overlay;
+    if (!overlay || this.disposed) return;
+    if (this.box) overlay.place(this.box);
+    overlay.sync(this.clock.now(), this.clock.playing);
+  }
+
   /** Change the preview quality tier (re-creates the material at the new tier). */
   setQuality(quality: Quality): void {
     if (this.disposed || quality === this.quality) return;
@@ -353,6 +374,7 @@ export class StudioRuntime {
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
+    this.overlay = null;
     if (this.raf) cancelAnimationFrame(this.raf);
     this.raf = 0;
     this.resizeObserver?.disconnect();
@@ -473,6 +495,7 @@ export class StudioRuntime {
     this.lastFrameTs = ts;
     const t = this.seekHold.apply(this.clock.now(ts), ts);
     this.advance(t, ts, interval);
+    this.overlay?.sync(t, this.clock.playing);
     this.emitTransport(ts, false, t);
     if (this.clock.playing || this.seeking || (this.needsDraw && this.runner !== null)) {
       this.raf = requestAnimationFrame(this.frame);
@@ -594,6 +617,8 @@ export class StudioRuntime {
     style.top = `${box.top}px`;
     style.width = `${box.width}px`;
     style.height = `${box.height}px`;
+    this.box = box;
+    this.overlay?.place(box);
     const backing = backingSize(box.width, box.height, window.devicePixelRatio, this.quality);
     if (this.canvas.width === backing.width && this.canvas.height === backing.height) return;
     this.canvas.width = backing.width;
