@@ -195,7 +195,7 @@ test('shape a clip, extract its signature, save it and open it in the Studio', a
   await page.getByRole('button', { name: 'Open in Studio' }).click();
   await expect(page).toHaveURL(/#\/studio\/new\/[0-9a-f-]{36}$/);
   const id = decodeURIComponent(page.url().split('/').pop() ?? '');
-  // The clip is gone with the Prepare screen.
+  // In the Studio the clip is out of sight until its slider is raised (clip-layer.spec.ts).
   await expect(page.locator('video')).toHaveCount(0);
 
   const saved = await storedSignature(page, id);

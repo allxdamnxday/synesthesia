@@ -376,7 +376,7 @@ test('play, compare, draw by chance, save and reopen a composition', async ({ pa
   await page.keyboard.press('Escape');
   await expect(page.getByRole('complementary', { name: 'Composition controls' })).toBeVisible();
 
-  // The source clip never appears in the Studio.
+  // No clip unless its slider is raised (clip-layer.spec.ts); this signature was imported.
   await expect(page.locator('video')).toHaveCount(0);
   expect(errors).toEqual([]);
 });
