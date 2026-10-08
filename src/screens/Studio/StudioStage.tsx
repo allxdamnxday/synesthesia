@@ -1,7 +1,12 @@
 import { useEffect, useRef, useState, type CSSProperties, type Ref } from 'react';
 import { overlayAllowed } from '../../app/firstRun';
 import { href } from '../../app/router';
+import type { Composition } from '../../engine/composition';
+import { getVisualMaterial } from '../../materials/registry';
 import { useStudioStore, type TransportController } from '../../state/studioStore';
+import { clipForVisit } from '../../state/visitClips';
+import { ClipLayer, type ClipLayerView } from '../../studio/clipLayer';
+import { projectionRange } from '../../studio/clipLayerMath';
 import { measureThisComputer } from '../../studio/measure';
 import { FALLBACK_QUALITY } from '../../studio/quality';
 import { StudioRuntime, type PictureProblem } from '../../studio/runtime';
@@ -38,19 +43,33 @@ function pictureMessage(problem: PictureProblem, materialId: string) {
   }
 }
 
+/** How the clip layer should look for this composition and opacity. */
+function clipView(composition: Composition, opacity: number): ClipLayerView {
+  const { materialId, properties } = composition.visual;
+  return {
+    opacity,
+    timeline: composition.timeline,
+    range: projectionRange(properties, getVisualMaterial(materialId)?.meta),
+  };
+}
+
 /**
  * The wake. The canvas (made by the preview runtime) keeps the composition's render aspect,
  * letterboxed in true black. On the very first Studio visit the stage first measures this
- * computer for "Automatic" preview quality.
+ * computer for "Automatic" preview quality. While the Clip slider is up, the clip lies over
+ * the canvas (SPEC 6.3 "Clip layer"); at 0 there is no clip here at all.
  */
 export function StudioStage({ ref }: { ref?: Ref<HTMLDivElement> }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const runtimeRef = useRef<StudioRuntime | null>(null);
+  const clipLayerRef = useRef<ClipLayer | null>(null);
   const session = useStudioStore((s) => s.session);
   const quality = useStudioStore((s) => s.quality);
   const composition = useStudioStore((s) => s.composition);
   const picture = useStudioStore((s) => s.picture);
   const presentation = useStudioStore((s) => s.presentation);
+  const clipShown = useStudioStore((s) => s.clipOpacity > 0);
+  const clipOpacity = useStudioStore((s) => s.clipOpacity);
   const [cursorHidden, setCursorHidden] = useState(false);
   const measuring = quality === null;
 
@@ -120,6 +139,35 @@ export function StudioStage({ ref }: { ref?: Ref<HTMLDivElement> }) {
   useEffect(() => {
     if (composition) runtimeRef.current?.setComposition(composition);
   }, [composition]);
+
+  // The clip layer exists only while the Clip slider is up (after the runtime, which it
+  // follows, has been made above).
+  useEffect(() => {
+    if (measuring || !clipShown) return;
+    const host = hostRef.current;
+    const runtime = runtimeRef.current;
+    const state = useStudioStore.getState();
+    const file = state.signature ? clipForVisit(state.signature.contentHash) : null;
+    if (!host || !runtime || !state.signature || !state.composition || !file) return;
+    const layer = new ClipLayer({
+      host,
+      file,
+      signature: state.signature,
+      ...clipView(state.composition, state.clipOpacity),
+      onProblem: () => useStudioStore.getState().clipFailedToPlay(),
+    });
+    clipLayerRef.current = layer;
+    runtime.setOverlay(layer);
+    return () => {
+      runtime.setOverlay(null);
+      layer.dispose();
+      clipLayerRef.current = null;
+    };
+  }, [measuring, session, clipShown]);
+
+  useEffect(() => {
+    if (composition) clipLayerRef.current?.update(clipView(composition, clipOpacity));
+  }, [composition, clipOpacity]);
 
   // Presentation mode: the pointer (and, on touch screens, the Close button) fades away
   // when it rests; a touch brings the button back.

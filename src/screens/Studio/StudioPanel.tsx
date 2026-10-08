@@ -10,6 +10,7 @@ import { MaterialPicker } from '../../ui/MaterialPicker';
 import { PropertyPanel } from '../../ui/PropertyPanel';
 import { SegmentedControl } from '../../ui/SegmentedControl';
 import { Toggle } from '../../ui/Toggle';
+import { ClipControl } from './ClipControl';
 import { MovementControls } from './MovementControls';
 import { CompositionSeed } from './CompositionSeed';
 import styles from './Studio.module.css';
@@ -33,7 +34,10 @@ function soundMessage(problem: SoundProblem, materialId: string): string {
   }
 }
 
-/** The controls beside the wake (SPEC 13.3): materials, shared properties, movement, seed, notes. */
+/**
+ * The controls beside the wake (SPEC 13.3): the clip layer (while the clip is here),
+ * materials, shared properties, movement, seed, notes.
+ */
 export function StudioPanel() {
   const composition = useStudioStore((s) => s.composition);
   const sound = useStudioStore((s) => s.sound);
@@ -55,6 +59,7 @@ export function StudioPanel() {
 
   return (
     <aside className={styles.panel} aria-label="Composition controls">
+      <ClipControl />
       <MaterialSection
         field="visual"
         kind="Visual"

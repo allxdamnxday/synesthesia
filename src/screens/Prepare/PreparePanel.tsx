@@ -462,6 +462,9 @@ export function SignaturePanel({
                 Back to library
               </a>
             </div>
+            <p className={styles.help}>
+              Until this page is closed or reloaded, the Studio can show this clip over the wake.
+            </p>
           </>
         ) : (
           <>

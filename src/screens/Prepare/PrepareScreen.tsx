@@ -42,6 +42,7 @@ import { frameDuration, safeFps, trimTooLong } from './trim';
 import { useObjectUrl } from './useObjectUrl';
 import { MAX_CLIP_SECONDS } from '../../signature/types';
 import { takePendingClip } from '../../state/pendingClip';
+import { keepClipForVisit } from '../../state/visitClips';
 
 const VIDEO_NAME = /\.(mp4|m4v|mov|webm|mkv|avi|3gp)$/i;
 
@@ -77,8 +78,10 @@ function technicalDetail(error: unknown): string {
  * Prepare (SPEC 6.2): bring in a clip, shape it (trim, speed, rotate, mirror, focus area,
  * sensitivity), extract its signature, then name it and save it.
  *
- * The clip lives only here: the File and its object URL are component state, never stored,
- * and both are dropped when the screen closes (the URL is revoked, the <video> emptied).
+ * The clip is shown here and is never stored: its object URL is revoked and the <video>
+ * emptied when the screen closes. Once its signature is saved, the File itself is kept in
+ * memory for the rest of this visit, so the Studio can lay the clip over the wake
+ * (src/state/visitClips.ts).
  */
 export function PrepareScreen(_props: { params?: Record<string, string> }) {
   const { status, clip, settings, body, saved, hideSource } = usePrepareStore(
@@ -270,39 +273,43 @@ export function PrepareScreen(_props: { params?: Record<string, string> }) {
 
   const cancel = useCallback(() => jobRef.current?.cancel(), []);
 
-  const save = useCallback(async (thenOpen: boolean) => {
-    const state = usePrepareStore.getState();
-    if (!state.body || savingRef.current) return;
-    if (state.saved) {
-      if (thenOpen) navigate(`/studio/new/${encodeURIComponent(state.saved.id)}`);
-      return;
-    }
-    savingRef.current = true;
-    setSaving(true);
-    setSaveError(null);
-    try {
-      const signature = finalizeSignature(
-        { ...state.body, preferredSpeed: state.settings.speed },
-        state.name,
-      );
-      let thumbnail = '';
-      try {
-        thumbnail = signatureThumbnail(signature);
-      } catch (error) {
-        console.warn('Could not draw the thumbnail now; the library will try again.', error);
+  const save = useCallback(
+    async (thenOpen: boolean) => {
+      const state = usePrepareStore.getState();
+      if (!state.body || savingRef.current) return;
+      if (state.saved) {
+        if (thenOpen) navigate(`/studio/new/${encodeURIComponent(state.saved.id)}`);
+        return;
       }
-      const meta = await saveSignature(signature, thumbnail ? { thumbnail } : {});
-      usePrepareStore.getState().signatureSaved(meta);
-      void useLibraryStore.getState().refresh();
-      if (thenOpen) navigate(`/studio/new/${encodeURIComponent(meta.id)}`);
-    } catch (error) {
-      console.error('Saving the signature failed:', errorDetail(error));
-      setSaveError(userMessage(error));
-    } finally {
-      savingRef.current = false;
-      setSaving(false);
-    }
-  }, []);
+      savingRef.current = true;
+      setSaving(true);
+      setSaveError(null);
+      try {
+        const signature = finalizeSignature(
+          { ...state.body, preferredSpeed: state.settings.speed },
+          state.name,
+        );
+        let thumbnail = '';
+        try {
+          thumbnail = signatureThumbnail(signature);
+        } catch (error) {
+          console.warn('Could not draw the thumbnail now; the library will try again.', error);
+        }
+        const meta = await saveSignature(signature, thumbnail ? { thumbnail } : {});
+        if (file) keepClipForVisit(signature.contentHash, file);
+        usePrepareStore.getState().signatureSaved(meta);
+        void useLibraryStore.getState().refresh();
+        if (thenOpen) navigate(`/studio/new/${encodeURIComponent(meta.id)}`);
+      } catch (error) {
+        console.error('Saving the signature failed:', errorDetail(error));
+        setSaveError(userMessage(error));
+      } finally {
+        savingRef.current = false;
+        setSaving(false);
+      }
+    },
+    [file],
+  );
 
   const openInStudio = useCallback(() => {
     const id = usePrepareStore.getState().saved?.id;
