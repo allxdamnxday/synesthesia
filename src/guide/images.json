@@ -29,6 +29,11 @@
     "width": 1280,
     "height": 800
   },
+  "images/guide/studio-clip.png": {
+    "file": "studio-clip.webp",
+    "width": 1280,
+    "height": 800
+  },
   "images/guide/studio-chance.png": {
     "file": "studio-chance.webp",
     "width": 1280,

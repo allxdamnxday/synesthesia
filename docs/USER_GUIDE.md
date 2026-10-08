@@ -95,7 +95,8 @@ marks show **moments of sudden movement**.
 ![The bare wake, with the movement's lines below](images/guide/prepare-signature.png)
 
 Name the signature and choose **Save and open in Studio** to go straight on and play it, or
-**Save** to keep it and stay here. The clip itself stays on this screen and is never kept.
+**Save** to keep it and stay here. The clip itself is never kept. Until you close or reload
+the page, though, the Studio can show it over the wake (see **Clip**, below).
 
 **If it looks faint:** a clip that moves the whole time (water, a curtain) can fool the
 automatic sensitivity. Prepare says so; choose **Extract again**, open **Advanced**, turn on
@@ -126,6 +127,17 @@ press **Play** (the first time the Studio opens, a note says so).
   half a turn away. It works while paused, and a video shows the same colors. Each
   material starts in its own colors when you choose it.
 - **Mute** and **Solo** let you study the picture or the sound alone.
+- **Clip**, at the top of the controls, lays the clip over the wake so you can see the
+  movement and what it leaves in one picture. It starts at 0%, with the clip out of sight;
+  raise it to bring the clip in, all the way for the clip alone. The clip sits where its
+  movement acts on the material, so it grows and shrinks with **Range**, and it plays in
+  step with the wake (on the way back in **Back and forth** it steps rather than glides).
+  It is only for looking: it is never part of a video or a saved composition. The slider is
+  there only until you close or reload the page in which you made the signature, because
+  the clip is never kept.
+
+![The clip over its wake](images/guide/studio-clip.png)
+
 - **Movement** holds settings for the signature itself: **Signature strength** (how hard it
   pushes), **Smoothing**, **Speed**, **Loops**, **Repeat** (loop, or back and forth), and
   **Tail** (how long the wake settles afterwards).

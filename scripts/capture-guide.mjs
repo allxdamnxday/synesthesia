@@ -99,6 +99,21 @@ await page.getByRole('textbox', { name: 'Name' }).fill('Expanding ring');
 await page.getByRole('button', { name: 'Save', exact: true }).click();
 await page.waitForTimeout(800);
 
+// The Studio with this clip over its wake (the Clip slider is only there in the visit the
+// clip was brought in, so this comes before anything reloads the page).
+await page.getByRole('button', { name: 'Open in Studio' }).click();
+await page.getByRole('button', { name: 'Render MP4' }).waitFor({ timeout: 60_000 });
+await page
+  .getByText('Getting to know this computer…')
+  .waitFor({ state: 'hidden', timeout: 30_000 })
+  .catch(() => {});
+await page.getByRole('button', { name: 'Play' }).click();
+await pauseBetween(1.1, 1.5);
+// A click in the middle of the slider: the clip at half strength.
+await page.getByRole('slider', { name: 'Clip', exact: true }).click();
+await page.getByTestId('clip-layer').waitFor();
+await shot('studio-clip');
+
 // Library with the sample wink imported too.
 await go('#/');
 const importer = page.waitForEvent('filechooser');
